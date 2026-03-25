@@ -1,0 +1,72 @@
+name: Denizen
+authors: ['The DenizenScript Team']
+version: ${project.version} (build ${BUILD_NUMBER}-${BUILD_CLASS})
+main: com.denizenscript.denizen.Denizen
+softdepend: [Citizens, Vault]
+
+api-version: '1.17'
+
+libraries:
+  - org.mongodb:mongodb-driver-sync:4.8.1
+  - redis.clients:jedis:4.3.1
+
+commands:
+  denizen:
+    description: Lists denizen commands.
+    usage: /denizen help
+    permission: denizen.basic
+  denizenclickable:
+    description: Executes a Denizen clickable command.
+    usage: /denizenclickable
+    permission: denizen.clickable
+  ex:
+    description: Executes a Denizen script command.
+    usage: /ex (-q) <Denizen script command> (arguments)
+    permission: denizen.ex
+  exs:
+    description: Executes a Denizen script command in a sustained queue.
+    usage: /exs (-q) <Denizen script command> (arguments)
+    permission: denizen.ex
+
+permissions:
+  denizen.*:
+    description: Gives access to Denizen commands
+    default: op
+    children:
+      denizen.basic: true
+      denizen.dscript: true
+      denizen.ex: true
+      denizen.debug: true
+      denizen.submit: true
+      denizen.npc.health: true
+      denizen.npc.sneak: true
+      denizen.npc.effect: true
+      denizen.npc.fish: true
+      denizen.npc.sleep: true
+      denizen.npc.stand: true
+      denizen.npc.sit: true
+      denizen.npc.nameplate: true
+      denizen.npc.nickname: true
+      denizen.npc.trigger: true
+      denizen.npc.assign: true
+      denizen.npc.constants: true
+      denizen.npc.pushable: true
+      denizen.npc.mirror: true
+  denizen.npc.*:
+    description: Gives access to the /npc commands added by Denizen
+    default: op
+    children:
+      denizen.npc.health: true
+      denizen.npc.sneak: true
+      denizen.npc.effect: true
+      denizen.npc.fish: true
+      denizen.npc.sleep: true
+      denizen.npc.stand: true
+      denizen.npc.sit: true
+      denizen.npc.nameplate: true
+      denizen.npc.nickname: true
+      denizen.npc.trigger: true
+      denizen.npc.assign: true
+      denizen.npc.constants: true
+      denizen.npc.pushable: true
+      denizen.npc.mirror: true

@@ -1,0 +1,355 @@
+# Denizen config.
+
+Debug:
+    # Whether debug information about Denizen should EVER appear in the server console by default
+    # NOTE: You almost ALWAYS want this ON! Leave it at 'true'! To hide debug from scripts, set "debug: false" on the script containers that work fine.
+    # Disabling this can prevent your logs from showing error messages and other important notices!
+    Show: true
+    # Whether the '/ex' command should tell you to check debug when you use it.
+    Ex command help: true
+    # Whether the '/ex' command should show debug by default. (if set to false, this inverts the '-q' option)
+    Ex command debug: true
+    # The max length of a line of debug output. Shorten this if your console is hard to read.
+    Line length: 300
+    # The max length of debug output. After this length, all further output will be cut off.
+    Trim length limit: 4096
+    # Whether to permit the "system.redirect_logging" mechanism
+    Allow console redirection: false
+    # Whether to send basic statistic information to the Denizen central server.
+    # This is purely to maintain basic information on things like how many servers run any given version of Denizen.
+    # Please do not disable this unless it is throwing errors (Please report any errors you receive as well).
+    Stats: true
+    # Whether to force the help command to be the default bukkit help (required to fix issues with command script help options).
+    Override help: true
+    # The default debug mode for script containers.
+    # This should almost always be left at 'true'.
+    Container default: true
+    # How many debug messages can appear within the span of a single tick before they simply get blocked.
+    # This is available as a backup safety feature to prevent debug output from crashing a server.
+    # Set the value lower to better protect this, set the value higher to willfully debug a very very long script.
+    Limit per tick: 5000
+    # Whether to show some extra info output (will spam your console).
+    Extra info: false
+    # Whether to show extra advanced detailed 'verbose' info output (will FLOOD your console!).
+    Verbose: false
+    # Optional text to prefix all debug output.
+    Prefix: ""
+    # Whether to show full information about scripts being loaded (at startup and "/ex reload" usage).
+    Show loading info: false
+    # Whether to show deprecation warnings that are scheduled as future warnings.
+    Show future warnings: false
+    # Enable this to show a warning in logs when packets are sent asynchronously.
+    # Async packets are largely unsupported with a few exceptions, but some plugins send them regardless.
+    # This setting helps you catch those plugins if enabled.
+    Warn on async packets: false
+    # Rate between when slowed warnings appear (in milliseconds). This is used for minor warnings such as newer deprecation notices, to avoid error message flood.
+    Warning rate: 10000
+    # If set true, core systems will check what thread is performing certain critical actions, and give a warning if the wrong one is used.
+    Verify thread: false
+    # Optionally you can set an alternate URL here to any valid instance of https://github.com/DenizenScript/DenizenPastingWebsite - 'default' corresponds to https://paste.denizenscript.com/New/Log
+    Paste URL: default
+
+Scripts:
+    # Whether backwards compatibility for older Spigot names should be enabled (e.g. 'GENERIC_MAX_HEALTH' as an attribute instead of 'max_health').
+    # This is not needed if your scripts all use modern names. Take caution where names may be stored (eg in flag data).
+    Support legacy Spigot names: true
+    World:
+        Events:
+            On player chats:
+                # Whether to use the dangerous 'async' chat event (not recommended!)
+                Use asynchronous event: false
+            On time changes:
+                Frequency of check: 250t
+    Interact:
+        # Default speed for interact script queues
+        Queue speed: instant
+    # Default speed for new queues (via run command usually)
+    Queue speed: instant
+    # What character encoding to use. 'default' indicates system default, 'utf8' is suggested as a preferred encoding in most cases.
+    Encoding: utf8
+    Command:
+        # If set to 'true', the command scripts engine will automatically initialize when the server loads.
+        # If false, it will only initialize once at least one command script is loaded.
+        # This defaults to false to avoid any possible interference on servers that don't use command scripts.
+        Auto init: false
+    Economy:
+        # If enabled, async calls to economy scripts or PlaceholderAPI tags will be sent through to the main thread.
+        # This will remove the illegal-async-access warning, at the cost of risking thread lockup or other issues.
+        # If you're wondering why async is blocked, see explanation @ https://i.alexgoodwin.media/i/misc/2fdd06.png
+        # IF YOU HAVE ASYNC WARNINGS FROM DENIZEN, THIS IS NOT HOW TO FIX IT.
+        # YOU SHOULD YELL AT THE DEVELOPER OF WHATEVER PLUGIN IS TRYING TO MAKE SYNC-ONLY CALLS ASYNC.
+        # ASYNC USAGES OF THE BUKKIT API ARE NEVER ALLOWED EXCEPT WHERE EXPLICITLY DOCUMENTED OTHERWISE.
+        Pass async to main thread: false
+
+# Settings related to queues.
+Queues:
+    # Toggle which parts of a queue ID are used for the queue ID generator.
+    # At least one (or both) of "numeric" or "words" must be enabled (otherwise, queue IDs cannot be unique).
+    Id parts:
+        # Whether to include the queue prefix - usually the script name.
+        Prefix: true
+        # Whether to include the numeric ID - incremental number, guaranteed unique.
+        # Be warned that disabling this reduces the guarantee of unique IDs.
+        Numeric: true
+        # Whether to include random words - helps easily distinguish queues in logs. Can create partial uniqueness if numeric is turned off.
+        Words: true
+
+# The default options for new Denizen NPCs
+# Whether to spawn NPCs with given traits, and what settings to have by default
+Traits:
+    Health:
+        Enabled: false
+        # Whether to block drops from NPCs that have the health trait by default.
+        Block drops: false
+        Respawn:
+            # Whether the health trait should control respawn by default.
+            Enabled: false
+            # How long after death before ethe NPC should respawn by default.
+            Delay: 10s
+        Animated death:
+            # Whether the NPC should play a death animation by default.
+            Enabled: false
+
+# Whether triggers are on by default, and their individual settings
+Triggers:
+    Chat:
+        Enabled: true
+        Use asynchronous event: false
+        # Note: cooldowns, ranges, etc. for all triggers should be edited in your script's "trigger" command, not in the config
+        Cooldown: 2s
+        Range: 3
+        Overhearing range: 4
+        Prerequisites:
+            Must be looking in direction of NPC: true
+            Must be able to see NPC: true
+        Formats:
+            Player to NPC: "You -> <npc.nickname>: <text>"
+            Player to NPC overheard: "<player.name> -> <npc.nickname>: <text>"
+        Appears globally:
+            If triggers missing: true
+            If triggers failed: true
+            If NPC uninteractable: true
+    Click:
+        Enabled: true
+        Cooldown: 2s
+        # Set to a positive value to set a click radius limit. Cannot exceed player click range (hand reach).
+        Range: -1
+    Damage:
+        Enabled: false
+        Cooldown: 0.5s
+    Proximity:
+        Enabled: false
+        Cooldown: 1s
+        Range: 10
+
+Commands:
+    Engage:
+        # the default timeout for engage, if not specifically set otherwise
+        Timeout: 150s
+    While:
+        # how many times the WHILE command can loop before it gives up
+        # Set to 0 for infinite
+        Max loops: 10000
+    Chat:
+        # settings for the Chat command, these override Citizens2 settings
+        Options:
+            Multiple targets format: "%target%, %target%, %target%, and others"
+            # set to -1 to disable bystanders overhearing, or 0 for all players on the server to hear
+            Range for bystanders: 5.0
+        Formats:
+            No target: "[<[talker].name>]: <[message]>"
+            To target: "[<[talker].name>] -> You: <[message]>"
+            With target to bystanders: "[<[talker].name>] -> <[target].name>: <[message]>"
+            With targets to bystanders: "[<[talker].name>] -> [<[targets]>]: <[message]>"
+    CreateWorld:
+        # Whether non-alphanumeric symbols are allowed in world names. Letters, numbers, unicode text, '-', '_', and ' ' are allowed always.
+        # If this is changed to 'true', then other symbols like '/' can be used in a world name (effectively putting the world inside a subfolder).
+        Allow symbols in names: false
+        # Whether 'weird' paths are allowed. These are paths containing '..', inside the "plugins/" folder, or other almost-certainly-invalid paths like that.
+        Allow weird paths: false
+    Delete:
+        # Whether scripts are allowed to delete files from your server
+        # This is mostly to clean up saves, but could potentially be abused.
+        # Set to 'false' if you're worried about security.
+        Allow file deletion: true
+    Remove:
+        # If set to true, the 'remove' command will always show a warning if it's removing all entities of a type from the world.
+        # This is usually an intentional action, but can happen by mistake.
+        # If entities are disappearing in groups unexpectedly, enable this config option to verify whether the 'remove' command is the source.
+        Always warn on mass delete: false
+    Restart:
+        # Whether scripts are allowed to stop or restart your server.
+        # This is usually only done intentionally, and quite identifiable if done on accident,
+        # Though you may wish to disable this if your server is stopping and you don't know why,
+        # or are just concerned about security in general.
+        # Generally only restart should be on. Exception examples include a server manager system, which would restart
+        # a server that stops more 'properly' than the restart command might.
+        #
+        # Note that it is still possible at this time to 'execute' a stop or restart instruction, which can be
+        # blocked by blocking the commands themselves with the command event, like so: 'on stop|restart command'
+        Allow server stop: false
+        Allow server restart: true
+    Filecopy:
+        # Whether scripts are allowed to copy files across your server
+        # Note that this could be abused by overwriting existing files.
+        # Set to 'false' if you're worried about security.
+        Allow copying files: true
+    Log:
+        # The log command writes to file, which is potentially dangerous
+        # Set to 'false' if you're worried about security.
+        Allow logging: true
+    Yaml:
+        # Whether the YAML command (or any other file-alteration command) is allowed to save outside the minecraft server folder.
+        # Set to 'false' if you want good security.
+        Allow saving outside folder: false
+        # Optionally: set a limited path, where all edits must be contained to.
+        # A good path to use for extra security is: plugins/Denizen/data/
+        # Leave at "none" to disable this optional protection.
+        Limit path: none
+    Redis:
+        # Whether to allow the redis command.
+        Allow: true
+    SQL:
+        # Whether to allow the SQL command.
+        Allow: true
+    Mongo:
+        # Whether to allow the Mongo command.
+        Allow: true
+    Webget:
+        # Whether to allow scripts to read arbitrary data from the web, which can also potentially enable tracking of your private server data.
+        # Generally this is safe, but set to 'false' if you want very strict security.
+        Allow: true
+    WebServer:
+        # Whether to allow the 'webserver' command. This command is potentially abusable to expose your server's data.
+        # In legitimate usage, this command can still accidentally leak information or induce server lag.
+        Allow: false
+        # The file path root under plugins/Denizen/ that any usages of the "FILE:" or "CACHED_FILE:" determinations must refer to files under (in addition to other file read security restrictions).
+        Webroot: webroot/
+    File:
+        # Set 'true' to enable the 'fileread' generic command.
+        # This setting does not affect YAML or other specific-file-type commands.
+        Allow read: false
+        # Set 'true' to enable the 'filewrite' generic command.
+        # This setting does not affect YAML or other specific-file-type commands.
+        Allow write: false
+        # The restricted file path, under plugins/Denizen/, for "fileread" and "filewrite" to be limited to. Set to 'none' to remove the path restriction.
+        Restrict path: data/
+    # GENERAL SECURITY NOTE: Always run your server on a user with access to nothing but the minecraft folder
+    # Otherwise, a bad script or plugin could potentially damage things (though being careful with these settings should reduce the risk of a script doing so)
+    # ALSO: Always read scripts you download for anything suspicious looking, EG the log command, the file_delete mechanism, ...
+    Security:
+        # Some actions on a server are technically possible and supported by Denizen, but considered 'restricted'
+        # That is, misuse of them could potentially lead to you or your server getting in trouble.
+        # For example, generating fake tab list entries that look like real players is considered forbidden by Mojang, and may result in your server being blacklisted.
+        # Scripters caught abusing these tools may also be refused support by the Denizen team or on other support platforms.
+        # However, the code needed to do that can also perform useful behaviors, such as better organizing the tab list, or allowing custom tab completions.
+        # As such, you are able to change the 'Allow restricted actions' setting to 'true' if you wish to achieve the non-restricted results that require restricted code access.
+        # Note that you have been warned of the potential consequences of abusing these tools,
+        # and that none of Denizen, the Denizen team, Spigot, Mojang, etc. in any way support or endorse abusing these tools.
+        # Enable at your own risk.
+        Allow restricted actions: false
+
+Tags:
+    # How long a tag can parse before force-closing the tag parser engine. Set to 0 to disable tag parse timing entirely.
+    Timeout: 10
+    # Whether the tag system should still timeout when debug is off.
+    Timeout when silent: false
+    # Settings for tags like cuboid.blocks, location.find.blocks, ...
+    Block tags:
+        # How many blocks can be read, max, before stopping the tag in place
+        Max blocks: 1000000
+    Chat history:
+        # How many player messages will be stored for each player (<player.chat_history>, etc.)
+        Max messages: 10
+    List flags:
+        # The list_flags and flag_map tools are not meant for normal usage in real scripts.
+        # If you have a very specific use-case that requires this, it is recommended you ask on the Denizen Discord and verify it actually makes sense.
+        # If you've verified the idea makes sense, you can swap this option to 'true' to disable the default warning.
+        I know what im doing and need this: false
+    # If the 'nullify skull skin ids' option is changed to 'true', any skull_skin that has a valid texture but is missing a UUID or name, will automatically supply null values for the UUID and Name.
+    # Skulls that are missing *both* name and id will be nullified regardless of this setting. Skulls that contain *both* an ID and name will retain their set values regardless of this setting.
+    # The benefit of enabling this is it prevents locking the server thread to download the data from Mojang servers.
+    # The risk is that it may interfere with other plugins or systems that expect correct data to be set.
+    Nullify skull skin ids: false
+    # If true, polygons default to WorldEdit style block-inclusive logic. If false, use precise 'exclusive' logic.
+    Polygon default inclusive: false
+
+# Java Reflection is the toolkit for accessing raw underlying Java data.
+# Denizen partially exposes this, for example in 'JavaReflectedObjectTag', as some scripts may have use for this.
+# This however often isn't needed, and sometimes can be abused to access things a script shouldn't have access to.
+# Accordingly, security-minded server owners might prefer to lock all reflection-allow options to 'false' to be safe.
+# However, the default settings of allowing reads but not writes or executions is safe for most servers.
+# Only servers that really need it should enable write/execute options.
+Reflection:
+    # Whether to allow tags to read raw field data in scripts. This is generally safe.
+    Allow reading fields: true
+    # Whether to allow scripts to reflect into core object methods like "toString" or "equals". This is usually safe, but might be abusable in certain edge edges, if for example some object somewhere improperly handles the "equals" method to execute logic or similar.
+    Allow core methods: true
+    #
+    # ==== WARNING ====
+    # If a scripter or script's documentation has told you to enable access to reflection methods in your config, that script should be scrutinized very carefully.
+    # Make sure either you know exactly what it's going to do, or you very much trust whoever gave you it.
+    # These tools are very powerful and dangerous.
+    # =================
+    #
+    # Whether to allow the 'reflectionset' command. This command is highly abusable and should be left disabled.
+    Allow set command: false
+    # Whether the 'reflectionset' command may set to 'private' fields. This is very likely to be dangerous if enabled.
+    Allow set private fields: false
+    # Whether the 'reflectionset' command may set to 'final' fields. This is very likely to be dangerous if enabled.
+    Allow set final fields: false
+
+Saves:
+    # How long (in seconds) before the offline player flag cache times out.
+    # Set to -1 to keep offline player flags loaded perpetually, or to 0 to never cache.
+    Offline player cache timeout: 300
+    # When set to 'true', player data will be loaded offthread during the login sequence, to avoid adding load to the server while players join.
+    Load async on login: true
+    # When set to 'true', all automatic flag cleanups will be skipped.
+    # This might save some processing time on servers that rarely use flag expirations, but otherwise should be left as 'false'.
+    Skip flag cleaning: false
+    # When set to 'true', skips flag cleaning for ChunkTag and LocationTag flags.
+    Skip chunk flag cleaning: false
+    # When set to 'true', player flag autosaving will be delayed whenever world saves are disabled (eg via '/save-off').
+    # Player flags will still save as normal during shutdown, or when world saving is enabled.
+    # This checks based on your default world (server.worlds.first).
+    Only save if world save is on: false
+    # Delay (DurationTag) after modifying a PlayerTag's offline world-data (gamemode, inventory, etc) before it is saved to file.
+    # Larger delays are better for performance when this is used often. Shorter delays are better for interop.
+    # Set to '0' for instant save on modification. Set to '999h' to only save at shutdown.
+    Save world player file delay: 10s
+    # Duration to retain offline player data being purging.
+    # Higher values are better for perf but worse for RAM. Lower values are better for interop. Set to '0' to never cache.
+    World player data max cache: 1h
+
+Packets:
+    # Whether to allow Denizen to intercept packets from and to player clients.
+    # This enables access to certain ScriptEvents, such as PlayerSteers and PlayerReceivesMessage.
+    # It also enables hiding item script IDs and most likely has no real reason to be disabled.
+    # Note that changing this setting requires a full server restart.
+    Interception: true
+    # Whether to automatically initialize the packet interceptor at startup.
+    # If false, it will only initialize once at least one packet-interception command or event is used.
+    # This defaults to false to avoid any possible interference on servers that don't need packet interception.
+    # If this is false, some packet-interception related tags may not work.
+    Auto init: false
+
+# This is a special map of custom colors by name, for the '&' tag base to use. 'default' is used when the name is unrecognized. You can add extra keys here.
+# Tags work here and will be pre-parsed at load time. RGB color codes work here.
+Colors:
+    # The base text color. 'narrate' command usages should usually start with <&[base]>
+    base: <&2>
+    # Special/stand-out/focused/emphasized text within a message. 'narrate' commands that need to emphasize a value should use this on those values.
+    emphasis: <&b>
+    # Error messages. 'narrate' commands displaying an error message should use this.
+    error: <red>
+    # Warning messages. 'narrate' commands displaying a warning message should use this.
+    warning: <yellow>
+    # Your preferred color for item names. Item script "display name" keys should usually use this.
+    item: <gold>
+    # Your preferred item lore base color. Item script "lore" lines should start with this.
+    lore: <&7>
+    # Your preferred color for NPC names. Scripts that use the "create" command should usually use this.
+    npc: <&a>
+    # Default: the backup for when a color label is unrecognized. Generally don't touch this.
+    default: <white>

@@ -1,0 +1,511 @@
+package com.denizenscript.denizen.utilities;
+
+import com.denizenscript.denizencore.utilities.debugging.*;
+
+import static com.denizenscript.denizencore.utilities.Deprecations.pointlessSubtagPrefix;
+
+public class BukkitImplDeprecations {
+
+    // ==================== REMOVE THESE ====================
+    // Every warning inside this section should be removed from the codebase.
+
+    // Added on 2019/08/11
+    // Safe to remove now.
+    public static Warning oldEconomyTags = new StrongWarning("oldEconomyTags", "player.money.currency* tags are deprecated in favor of server.economy.currency* tags.");
+
+    // Added on 2019/09/18, but was deprecated earlier.
+    // 2022-year-end commonality: #27
+    // Safe to remove now.
+    public static Warning playerRightClicksEntityContext = new StrongWarning("playerRightClicksEntityContext", "'context.location' in event 'on player right clicks entity' is deprecated: use 'context.entity.location'.");
+
+    // Added on 2019/09/25, but was deprecated earlier.
+    // Bad candidate for functionality removal - used to be commonly used
+    // 2022-year-end commonality: #13
+    // 2023-year-end commonality: #19
+    // Safe to remove now.
+    public static Warning qtyTags = new StrongWarning("qtyTags", "'qty' in a tag or command is deprecated: use 'quantity'.");
+
+    // In Bukkit impl, Relevant as of 2019/09/25, made current on 2020/02/12, made strong 2022/12/31.
+    // Safe to remove now.
+    public static Warning npcNicknameTag = new StrongWarning("npcNicknameTag", pointlessSubtagPrefix + "npc.name.nickname is now just npc.nickname. Note that this historically appeared in the config.yml file, so check there if you're unsure what's using this tag.");
+    public static Warning npcPreviousLocationTag = new StrongWarning("npcPreviousLocationTag", pointlessSubtagPrefix + "npc.location.previous_location is now just npc.previous_location.");
+    public static Warning npcAnchorListTag = new StrongWarning("npcAnchorListTag", pointlessSubtagPrefix + "npc.anchor.list is now just npc.list_anchors.");
+    public static Warning playerMoneyFormatTag = new StrongWarning("playerMoneyFormatTag", pointlessSubtagPrefix + "player.money.format is now just player.formatted_money.");
+    public static Warning playerFoodLevelFormatTag = new StrongWarning("playerFoodLevelFormatTag", pointlessSubtagPrefix + "player.food_level.format is now just player.formatted_food_level.");
+    public static Warning playerBanInfoTags = new StrongWarning("playerBanInfoTags", pointlessSubtagPrefix + "player.ban_info.* tags are now just player.ban_*.");
+    public static Warning playerNameTags = new StrongWarning("playerNameTags", pointlessSubtagPrefix + "player.name.* tags are now just player.*_name.");
+    public static Warning playerSidebarTags = new StrongWarning("playerSidebarTags", pointlessSubtagPrefix + "player.sidebar.* tags are now just player.sidebar_*.");
+    public static Warning playerAttackCooldownTags = new StrongWarning("playerAttackCooldownTags", pointlessSubtagPrefix + "player.attack_cooldown.* tags are now just player.attack_cooldown_*.");
+    public static Warning playerXpTags = new StrongWarning("playerXpTags", pointlessSubtagPrefix + "player.xp.* tags are now just player.xp_*.");
+    public static Warning entityMaxOxygenTag = new StrongWarning("entityMaxOxygenTag", pointlessSubtagPrefix + "entity.oxygen.max is now just entity.max_oxygen.");
+    public static Warning itemBookTags = new StrongWarning("itemBookTags", pointlessSubtagPrefix + "item.book.* tags are now just item.book_*.");
+    public static Warning playerItemInHandSlotTag = new StrongWarning("playerItemInHandSlotTag", pointlessSubtagPrefix + "player.item_in_hand_slot is now just player.held_item_slot.");
+
+    // Added on 2019/09/24, made normal 2021/11/2021, made strong 2022/12/31.
+    // Safe to remove now.
+    public static Warning oldRecipeScript = new StrongWarning("oldRecipeScript", "Item script single-recipe format is outdated. Use the modern 'recipes' list key (see meta docs).");
+
+    // Added 2020/04/24, made strong 2022/12/31.
+    // Safe to remove now.
+    public static Warning itemInventoryTag = new StrongWarning("itemInventoryTag", "The tag 'item.inventory' is deprecated: use inventory_contents instead.");
+
+    // Added 2020/05/21, made strong 2022/12/31.
+    // Safe to remove now.
+    public static Warning itemSkinFullTag = new StrongWarning("itemSkinFullTag", pointlessSubtagPrefix + "item.skin.full is now item.skull_skin.");
+
+    // Added 2020/06/03 but deprecated long ago, made strong 2022/12/31.
+    // Safe to remove now.
+    public static Warning oldBossBarMech = new StrongWarning("oldBossBarMech", "The show_boss_bar mechanism is deprecated: use the bossbar command instead.");
+    public static Warning oldTimeMech = new StrongWarning("oldTimeMech", "The player.*time mechanisms are deprecated: use the time command instead.");
+    public static Warning oldWeatherMech = new StrongWarning("oldWeatherMech", "The player.*weather mechanisms are deprecated: use the weather command instead.");
+    public static Warning oldKickMech = new StrongWarning("oldKickMech", "The player.kick mechanism is deprecated: use the kick command instead.");
+    public static Warning oldMoneyMech = new StrongWarning("oldMoneyMech", "The player.money mechanism is deprecated: use the money command instead.");
+
+    // added 2020/07/04, made normal 2021/11/2021, made strong 2022/12/31.
+    // Safe to remove now.
+    public static Warning cuboidFullTag = new StrongWarning("cuboidFullTag", "The tag cuboid.full is deprecated: this should just never be used.");
+    public static Warning furnaceTimeTags = new StrongWarning("furnaceTimeTags", "The furnace_burn_time, cook time, and cook total time tag/mechs have been replaced by _duration instead of _time equivalents (using DurationTag now).");
+    public static Warning playerTimePlayedTags = new StrongWarning("playerTimePlayedTags", "The tags player.first_played, last_played, ban_expiration, and ban_created have been replaced by tags of the same name with '_time' added to the end (using TimeTag now).");
+
+    // added 2020/07/19, made normal 2021/11/2021, made strong 2022/12/31.
+    // Safe to remove now.
+    public static Warning airLevelEventDuration = new StrongWarning("airLevelEventDuration", "The 'entity changes air level' event uses 'air_duration' context now instead of the old tick count number.");
+    public static Warning damageEventTypeMap = new StrongWarning("damageEventTypeMap", "The 'entity damaged' context 'damage_[TYPE]' is deprecated in favor of 'damage_type_map', which is operated as a MapTag.");
+
+    // added 2020/07/28, made normal 2021/11/2021, made strong 2022/12/31.
+    public static Warning headCommand = new StrongWarning("headCommand", "The 'head' command is deprecated: use the 'equip' command with a 'player_head' item using the 'skull_skin' mechanism.");
+
+    // added 2020/08/01, made normal 2021/11/2021, made strong 2022/12/31.
+    // Safe to remove now.
+    public static Warning entityRemoveWhenFar = new StrongWarning("entityRemoveWhenFar", "The EntityTag remove_when_far_away property is deprecated in favor of the persistent property (which is the exact inverse).");
+    public static Warning entityPlayDeath = new StrongWarning("entityPlayDeath", "The EntityTag 'play_death' mechanism is deprecated: use the animate command.");
+
+    // added 2020/08/19, made normal 2021/11/2021, made strong 2022/12/31.
+    // Safe to remove now.
+    public static Warning npcSpawnMechanism = new StrongWarning("npcSpawnMechanism", "The NPCTag 'spawn' mechanism is deprecated: use the spawn command.");
+
+    // Added 2020/05/17, made current on 2020/10/24.
+    // 2022-year-end commonality: #28
+    // Safe to remove now.
+    public static Warning itemFlagsProperty = new StrongWarning("itemFlagsProperty", "The item.flags property has been renamed to item.hides, to avoid confusion with the new flaggable itemtags system.");
+
+    // Added 2020/11/22, made current 2021/11/2021, made strong 2024/01/02.
+    // Safe to remove now.
+    public static Warning biomeSpawnableTag = new StrongWarning("biomeSpawnableTag", pointlessSubtagPrefix + "The tag BiomeTag.spawnable_entities.(type) is deprecated: the type is now an input context instead.");
+
+    // Added 2020/11/30, made current 2021/11/2021, made strong 2024/01/02.
+    // Safe to remove now.
+    public static Warning npcDespawnMech = new StrongWarning("npcDespawnMech", "The NPCTag despawn mechanism is deprecated: use the despawn command.");
+
+    // Added 2021/02/25, made current 2022/12/31, made strong 2024/01/02.
+    // Safe to remove now.
+    public static Warning zapPrefix = new StrongWarning("zapPrefix", "The 'zap' command should be used with the scriptname and step as two separate arguments, not just one.");
+
+    // Added 2020/03/05, made current on 2021/04/16, made current 2022/12/31, made strong 2024/01/02.
+    // Safe to remove now.
+    public static Warning oldPlayEffectSpecials = new StrongWarning("oldPlayEffectSpecials", "The playeffect input of forms like 'iconcrack_' have been deprecated in favor of using the special_data input (refer to meta docs).");
+
+    // Added 2020/04/16, made current 2022/12/31, made strong 2024/01/02.
+    // Safe to remove now.
+    public static Warning entityStandingOn = new StrongWarning("entityStandingOn", pointlessSubtagPrefix + "entity.location.standing_on is now just entity.standing_on.");
+
+    // Added 2021/05/05, made current 2022/12/31, made strong 2024/01/02.
+    // Safe to remove now.
+    public static Warning materialLit = new StrongWarning("materialLit", "The MaterialTag property 'lit' is deprecated in favor of 'switched'.");
+    public static Warning materialCampfire = new StrongWarning("materialCampfire", "The MaterialTag property 'campfire' are deprecated in favor of 'type'.");
+    public static Warning materialDrags = new StrongWarning("materialDrags", "The MaterialTag property 'drags' are deprecated in favor of 'mode'.");
+
+    // Added 2021/06/15, but was irrelevant years earlier, made current 2022/12/31, made strong 2024/01/02.
+    // Safe to remove now.
+    public static Warning itemMessage = new StrongWarning("itemMessage", "The PlayerTag mechanism 'item_message' is deprecated in favor of using the actionbar.");
+
+    // Added 2021/11/14, made current 2022/12/31, made strong 2024/01/02.
+    // Safe to remove now.
+    public static Warning blockSpreads = new StrongWarning("blockSpreads", "There are two '<block> spreads' events - use 'block spreads type:<block>' or 'liquid spreads type:<block>'");
+
+    // Added 2021/11/15, made current 2022/12/31, made strong 2024/01/02.
+    // Safe to remove now.
+    public static Warning horseJumpsFormat = new StrongWarning("horseJumpsFormat", "The '<color> horse jumps' event is deprecated: don't put the color in the event line. (Deprecated for technical design reasons).");
+
+    // Added 2019/11/11, made slow 2021/11/2021, made current 2022/12/31, made strong 2024/01/02.
+    // Safe to remove now.
+    public static Warning entityLocationCursorOnTag = new StrongWarning("entityLocationCursorOnTag", "entity.location.cursor_on tags should be replaced by entity.cursor_on (be careful with the slight differences though).");
+
+    // Added 2021/05/05, made current 2022/12/31, made strong 2024/01/02.
+    // Safe to remove now.
+    public static Warning locationDistanceTag = new StrongWarning("locationDistanceTag", "locationtag.tree_distance is deprecated in favor of location.material.distance");
+
+    // Added 2024/02/10, made strong 2025/01/15.
+    // Safe to remove now.
+    public static Warning fakePlayer = new StrongWarning("fakePlayer", "The 'fake_player' entity was an experiment that was always redundant due to the availability of Citizens NPCs. If you use 'fake_player' please let us know on Discord ASAP.");
+
+    // ==================== STRONG deprecations ====================
+    // These show up every time, and warn any online ops. These are made clear they need to be fixed ASAP.
+
+    // In Bukkit impl, Relevant as of 2019/09/25, made current on 2020/02/12, made strong 2022/12/31.
+    // 2023-year-end commonality: #36
+    // 2024-year-end commonality: #21
+    public static Warning entityHealthTags = new StrongWarning("entityHealthTags", pointlessSubtagPrefix + "entity.health.* tags are now just entity.health_*.");
+
+    // In Bukkit impl, Added on 2019/08/19
+    // Bad candidate for functionality removal - sometimes used by accident (when misreading the escape-tag docs)
+    public static Warning pointlessTextTags = new StrongWarning("pointlessTextTags", "Several text tags like '&dot' or '&cm' are pointless (there's no reason you can't just directly write them in). Please replace them with the actual intended text.");
+
+    // Added 2021/09/08, but was irrelevant years earlier, made normal 2024/01/02, made strong 2025/01/15.
+    // 2022-year-end commonality: #31
+    // Safe to remove now.
+    public static Warning isValidTag = new StrongWarning("isValidTag", "The 'server.x_is_valid' style tags are deprecated: use '.exists', '.is_spawned.if_null[false]', etc.");
+
+    // Added 2022/05/07, made normal 2024/01/02, made strong 2025/01/15.
+    // Safe to remove now.
+    public static Warning armorStandRawSlot = new StrongWarning("armorStandRawSlot", "The EntityTag.disabled_slots.raw tag and EntityTag.disabled_slots_raw mechanism are deprecated, use the EntityTag.disabled_slots_data tag and EntityTag.disabled_slots mechanism instead.");
+
+    // Added 2022/07/28, made normal 2024/01/02, made strong 2025/01/15.
+    // Safe to remove now.
+    public static Warning internalEventReflectionContext = new StrongWarning("internalEventReflectionContext", "The context.field_<name> and fields special tags for 'internal bukkit event' are deprecated in favor of the 'reflect_event' global context.");
+
+    // Added 2022/10/14, made normal 2024/01/02, made strong 2025/01/15.
+    // Safe to remove now.
+    public static Warning skeletonSwingArm = new StrongWarning("skeletonSwingArm", "The 'SKELETON_START/STOP_SWING_ARM' animations are deprecated in favor of the 'EntityTag.aggressive' property.");
+    public static Warning entityArmsRaised = new StrongWarning("entityArmsRaised", "The 'EntityTag.arms_raised' property is deprecated in favor of 'EntityTag.aggressive'.");
+
+    // Added 2022/12/16, made normal 2024/01/02, made strong 2025/01/15.
+    // Safe to remove now.
+    public static Warning entitySkeletonArmsRaised = new StrongWarning("entitySkeletonArmsRaised", "The 'EntityTag.skeleton_arms_raised' mechanism is deprecated in favor of 'EntityTag.aggressive'.");
+
+    // Added 2021/10/24, made slow 2022/12/31, made normal 2024/01/02, made strong 2025/01/15.
+    // Safe to remove now.
+    public static Warning entityArmorPose = new StrongWarning("entityArmorPose", "The old EntityTag.armor_pose and armor_pose_list tags are deprecated in favor of armor_pose_map.");
+
+    // Added 2020/07/03, made slow 2022/12/31, made normal 2024/01/02, made strong 2025/01/15.
+    // Safe to remove now.
+    public static Warning attachToMech = new StrongWarning("attachToMech", "The entity 'attach_to' mechanism is deprecated: use the new 'attach' command instead!");
+
+    // Added 2021/04/13, made slow 2022/12/31, made normal 2024/01/02, made strong 2025/01/15.
+    // Safe to remove now.
+    public static Warning materialHasDataPackTag = new StrongWarning("materialHasDataPackTag", "The tag 'MaterialTag.has_vanilla_data_tag[...]' is deprecated in favor of MaterialTag.vanilla_tags.contains[<name>]");
+    public static Warning materialPropertyTags = new StrongWarning("materialPropertyTags", "Old MaterialTag.is_x property tags are deprecated in favor of PropertyHolderObject.supports[property-name]");
+
+    // Added 2024/04/02, is for a feature that was broken from the start in 2022, made strong 2025/01/15.
+    // Safe to remove now.
+    public static Warning forcedNoPersist = new StrongWarning("forcedNoPersist", "The 'forced_no_persist' was misspelled and inverted, use 'force_no_persist' instead.");
+
+    // ==================== Normal deprecations ====================
+    // These show up every time, and should get the server owner's attention quickly if they check their logs.
+
+    // Added on 2018/12/23
+    // Bad candidate for functionality removal - a bit handy to use in "/ex", despite being clearly bad in standard scripts.
+    // Recommend never removing.
+    // 2022-year-end commonality: #17
+    // 2023-year-end commonality: #8
+    // 2024-year-end commonality: #10
+    public static Warning playerByNameWarning = new Warning("playerByNameWarning", "Warning: loading player by name - use the UUID instead (or use tag server.match_player)!");
+
+    // Added 2020/06/13, made slow 2022/12/31, made normal 2024/01/02.
+    // 2023-year-end commonality: #16
+    // 2024-year-end commonality: #18
+    public static Warning listStyleTags = new Warning("listStyleTags", "'list_' tags are deprecated: just remove the 'list_' prefix.");
+
+    // Added 2020/04/19, Relevant for many years now, made slow 2022/12/31, made normal 2025/01/15.
+    // 2022-year-end commonality: #35
+    // 2023-year-end commonality: #32
+    // 2024-year-end commonality: #13
+    public static Warning interactScriptPriority = new Warning("interactScriptPriority", "Assignment script 'interact scripts' section should not have numbered priority values, these were removed years ago. Check https://guide.denizenscript.com/guides/troubleshooting/updates-since-videos.html#assignment-script-updates for more info.");
+
+    // Added 2020/12/25, made slow 2022/12/31, made normal 2025/01/15.
+    // 2022-year-end commonality: #36
+    // Safe to remove now.
+    public static Warning itemEnchantmentTags = new Warning("itemEnchantmentTags", pointlessSubtagPrefix + "The ItemTag.enchantments.* tags are deprecated: use enchantment_map and relevant MapTag subtags.");
+
+    // Added 2021/02/05, made very-slow 2022/12/31, made slow 2024/01/02, made normal 2025/01/15.
+    // Safe to remove now.
+    public static Warning itemProjectile = new Warning("itemProjectile", "The item_projectile custom entity type is deprecated: modern minecraft lets you set the item of any projectile, like 'snowball[item=stick]'");
+
+    // Added 2021/03/02, made very-slow 2022/12/31, made slow 2024/01/02, made normal 2025/01/15.
+    // Safe to remove now.
+    public static Warning itemScriptColor = new Warning("itemScriptColor", "The item script 'color' key is deprecated: use the 'color' mechanism under the 'mechanisms' key instead.");
+
+    // Added 2021/07/26, made very-slow 2022/12/31, made slow 2024/01/02, made normal 2025/01/15.
+    // Safe to remove now.
+    public static Warning itemEnchantmentsLegacy = new Warning("itemEnchantmentsLegacy", "The tag 'ItemTag.enchantments' is deprecated: use enchantment_map, or enchantment_types.");
+    public static Warning echantmentTagUpdate = new Warning("echantmentTagUpdate", "Several legacy enchantment-related tags are deprecated in favor of using EnchantmentTag.");
+
+    // Added 2022/01/30, made very-slow 2022/12/31, made slow 2024/01/02, made normal 2025/01/15.
+    // 2023-year-end commonality: #29
+    // Safe to remove now.
+    public static Warning entityItemEnderman = new Warning("entityItemEnderman", "The property 'entity.item' for endermen has been replaced by 'entity.material' due to usage of block materials.");
+
+    // Added 2021/06/19, made very-slow 2022/12/31, made slow 2024/01/02, made normal 2025/01/15.
+    public static Warning entityMapTraceTag = new Warning("entityMapTraceTag", "The tag 'EntityTag.map_trace' is deprecated in favor of EntityTag.trace_framed_map");
+
+    // Added 2021/06/27, made very-slow 2022/12/31, made slow 2024/01/02, made normal 2025/01/15.
+    // 2023-year-end commonality: #11
+    // 2024-year-end commonality: #12
+    public static Warning serverUtilTags = new Warning("serverUtilTags", "Some 'server.' tags for core features are deprecated in favor of 'util.' equivalents, including 'java_version', '*_file', 'ram_*', 'disk_*', 'notes', 'last_reload', 'scripts', 'sql_connections', '*_time_*', ...");
+
+    // Added 2021/06/27, made very-slow 2022/12/31, made slow 2024/01/02, made normal 2025/01/15.
+    // Safe to remove now.
+    public static Warning serverObjectExistsTags = new Warning("serverObjectExistsTags", "The 'object_is_valid' tag is a historical version of modern '.exists' or '.is_truthy' fallback tags.");
+
+    // Added 2021/06/27, made very-slow 2022/12/31, made slow 2024/01/02, made normal 2025/01/15.
+    // Safe to remove now.
+    public static Warning hsbColorGradientTag = new Warning("hsbColorGradientTag", "The tag 'ElementTag.hsb_color_gradient' is deprecated: use 'color_gradient' with 'style=hsb'");
+
+    // Added 2021/11/07, made very-slow 2022/12/31, made slow 2024/01/02, made normal 2025/01/15.
+    // Safe to remove now.
+    public static Warning assignmentRemove = new Warning("assignmentRemove", "'assignment remove' without a script is deprecated: use 'clear' to clear all scripts, or 'remove' to remove one at a time.");
+    public static Warning npcScriptSingle = new Warning("npcScriptSingle", "'npc.script' is deprecated in favor of 'npc.scripts' (plural).");
+
+    // Added 2024/02/04, made normal 2025/01/15.
+    // Safe to remove now.
+    public static Warning oldStructureTypes = new Warning("oldStructureTypes", "'server.structure_types' is based on outdated API and doesn't support modern datapack features. Use 'server.structures' instead.");
+    public static Warning findStructureTags = new Warning("findStructureTags", "'LocationTag.find.structure' and related tags are deprecated in favor of 'LocationTag.find_structure'.");
+
+    // Added 2025/03/14
+    public static Warning settingBoatType = new Warning("settingBoatType", "As of MC 1.21, separate boat wood types are separate entity types, meaning the wood type of an existing boat entity cannot be changed without spawning a new one.");
+
+    // Added 2025/07/10
+    public static Warning entityKnockback = new Warning("entityKnockback", "The 'EntityTag.knockback' property is deprecated. You should adjust the knockback enchantment on the weapon itself.");
+
+    // Added 2025/10/24
+    public static Warning explosionPrimeDetermination = new Warning("explosionPrimeDetermination", "The determination to control fire in the '<entity> explosion primes' event is now formatted as 'FIRE:<ElementTag(Boolean)>'.");
+
+    // ==================== SLOW deprecations ====================
+    // These aren't spammed, but will show up repeatedly until fixed. Server owners will probably notice them.
+
+    // In Paper module, Added 2022/03/20
+    // bump to normal warning and/or past warning after 1.18 is the minimum supported version (change happened in MC 1.18)
+    public static Warning paperNoTickViewDistance = new SlowWarning("paperNoTickViewDistance", "Paper's 'no_tick_view_distance' is deprecated in favor of modern minecraft's 'simulation_distance' and 'view_distance' separation");
+
+    // Added 2023/06/30
+    // Bump to normal/past warning after 1.19 is the minimum supported version (change happened in 1.19)
+    public static Warning biomeGlobalDownfallType = new SlowWarning("biomeGlobalDownfallType", "The 'BiomeTag.downfall_type' tag is deprecated in favor of 'BiomeTag.downfall_at', as biome downfall is now location-based");
+    public static Warning biomeSettingDownfallType = new SlowWarning("biomeSettingDownfallType", "The 'BiomeTag.downfall_type' mechanism is removed, as Minecraft no longer allows for this value to be set.");
+
+    // Added 2023/09/16
+    // Bump to normal warning after 1.19 is the minimum supported version (change happened in 1.19)
+    public static Warning boatType = new SlowWarning("boatType", "The 'EntityTag.boat_type' property is deprecated in favor of 'EntityTag.color' in 1.19+.");
+
+    // Added 2021/03/29, made very-slow 2022/12/31, made slow 2024/05/09.
+    // 2022-year-end commonality: #7
+    // 2023-year-end commonality: #31
+    // Safe to remove now.
+    public static Warning legacyAttributeProperties = new SlowWarning("legacyAttributeProperties", "The 'attribute' properties are deprecated in favor of the 'attribute_modifiers' properties which more fully implement the attribute system.");
+
+    // Added 2024/05/31
+    // 2024-year-end commonality: #15
+    public static Warning oldNbtProperty = new SlowWarning("oldNbtProperty", "'ItemTag.raw_nbt' is deprecated in favor of 'ItemTag.custom_data', as item NBT was removed by Mojang in favor of item components.");
+
+    // Added 2021/10/18, made very-slow 2022/12/31, made slow 2025/01/15.
+    // 2022-year-end commonality: #10
+    // Safe to remove now.
+    public static Warning entityMechanismsFormat = new SlowWarning("entityMechanismsFormat", "Entity script containers previously allowed mechanisms in the script's root, however they should now be under a 'mechanisms' key.");
+
+    // Added 2021/08/30, made very-slow 2022/12/31, made slow 2025/01/15.
+    // 2022-year-end commonality: #23
+    // Safe to remove now.
+    public static Warning takeMoney = new SlowWarning("takeMoney", "Using the 'take' command to take money is deprecated in favor of the 'money' command.");
+
+    // Added 2021/03/27, made very-slow 2024/01/02, made slow 2025/01/15.
+    // 2022-year-end commonality: #6
+    // 2023-year-end commonality: #13
+    // Safe to remove now.
+    public static Warning locationFindEntities = new SlowWarning("locationFindEntities", "The tag 'LocationTag.find.entities.within' and 'blocks' tags are replaced by the 'find_entities' and 'find_blocks' versions. They are mostly compatible, but now have advanced matcher options.");
+
+    // Added 2021/03/27, made very-slow 2024/01/02, made slow 2025/01/15.
+    // 2022-year-end commonality: #16
+    // 2023-year-end commonality: #26
+    // Safe to remove now.
+    public static Warning inventoryNonMatcherTags = new SlowWarning("inventoryNonMatcherTags", "The 'InventoryTag' tags 'contains', 'quantity', 'find', 'exclude' with raw items are deprecated and replaced by 'contains_item', 'quantity_item', 'find_item', 'exclude_item' that use advanced matcher logic.");
+
+    // Added 2021/03/27, made very-slow 2024/01/02, made slow 2025/01/15.
+    // 2022-year-end commonality: #14
+    // 2023-year-end commonality: #10
+    // 2024-year-end commonality: #17
+    public static Warning takeRawItems = new SlowWarning("takeRawItems", "The 'take' command's ability to remove raw items without any command prefix, and the 'material' and 'scriptname' options are deprecated: use the 'item:<matcher>' option.");
+
+    // Added 2021/08/30, made very-slow 2024/01/02, made slow 2025/01/15.
+    // 2022-year-end commonality: #26
+    // 2023-year-end commonality: #22
+    // Safe to remove now.
+    public static Warning playerResourcePackMech = new SlowWarning("playerResourcePackMech", "The 'resource_pack' mechanism is deprecated in favor of using the 'resourcepack' command.");
+
+    // Added 2022/02/21, made very-slow 2024/01/02, made slow 2025/01/15.
+    // 2022-year-end commonality: #8
+    // 2023-year-end commonality: #17
+    // Safe to remove now.
+    public static Warning oldPotionEffects = new SlowWarning("oldPotionEffects", "The comma-separated-list potion effect tags like 'list_effects' are deprecated in favor of MapTag based tags - 'effects_data'. Refer to meta documentation for details.");
+
+    // Added 2022/05/07, made very-slow 2024/01/02, made slow 2025/01/15.
+    // 2022-year-end commonality: #37
+    // Safe to remove now.
+    public static Warning armorStandDisabledSlotsOldFormat = new SlowWarning("armorStandDisabledSlotsOldFormat", "The EntityTag.disabled_slots tag and the SLOT/ACTION format in the EntityTag.disabled_slots mechanism are deprecated in favour of the EntityTag.disabled_slots_data tag and the MapTag format.");
+
+    // Added 2021/06/17, made very-slow 2024/01/02.
+    // 2022-year-end commonality: #18
+    // 2023-year-end commonality: #30
+    // Safe to remove now.
+    public static Warning debugBlockAlpha = new SlowWarning("debugBlockAlpha", "The 'alpha' argument for the 'debugblock' command is deprecated: put the alpha in the color input instead.");
+
+    // Added 2025/03/16
+    // Bump once 1.21 is the minimum supported version (as that is where boat types were split)
+    public static Warning gettingBoatType = new SlowWarning("gettingBoatType", "Getting boat wood types is deprecated, as separate boat types are separate entity types now: should check the entity type.");
+
+    // Added 2025/09/14
+    public static Warning lookCommandNoEntities = new SlowWarning("lookCommandNoEntities", "The 'look' command now requires both the entity and location inputs.");
+
+    // ==================== VERY SLOW deprecations ====================
+    // These are only shown minimally, so server owners are aware of them but not bugged by them. Only servers with active scripters (using 'ex reload') will see them often.
+
+    // Added 2021/06/15, made very-slow 2024/01/02
+    // Bad candidate for functionality removal - tags have been around a long time and some were used often.
+    // 2024-year-end commonality: #19
+    public static Warning locationOldCursorOn = new VerySlowWarning("locationOldCursorOn", "Several of the old 'LocationTag.cursor_on', 'precise_target_position', 'precise_impact_normal' variants are deprecated in favor of the 'ray_trace' tags.");
+
+    // Added 2020/10/18, made very-slow 2022/12/31.
+    // Bad candidate for functionality removal due to frequency of use and likelihood of pre-existing data in save files.
+    // 2022-year-end commonality: #2
+    // 2023-year-end commonality: #3
+    // 2024-year-end commonality: #7
+    public static Warning itemDisplayNameMechanism = new VerySlowWarning("itemDisplayNameMechanism", "The item 'display_name' mechanism is now just the 'display' mechanism.");
+
+    // Added 2020/12/05, made very-slow 2022/12/31.
+    // Bad candidate for functionality removal due to frequency of use and likelihood of pre-existing data remaining in world data.
+    // 2022-year-end commonality: #4
+    // 2023-year-end commonality: #14
+    // 2024-year-end commonality: #9
+    public static Warning itemNbt = new VerySlowWarning("itemNbt", "The item 'nbt' property is deprecated: use ItemTag flags instead!");
+
+    // Added 2021/02/03, made very-slow 2022/12/31.
+    // Bad candidate for functional removal due to the "scriptname" variant being useful for debugging sometimes.
+    // 2022-year-end commonality: #3
+    // 2023-year-end commonality: #24
+    // Safe to remove now.
+    public static Warning hasScriptTags = new VerySlowWarning("hasScriptTags", "The ItemTag.scriptname and EntityTag.scriptname and ItemTag.has_script and NPCTag.has_script tags are deprecated: use '.script.name' or a null check on .script.");
+
+    // Added 2023/07/21, bump when 1.17 is gone.
+    public static Warning chunkRefreshSections = new VerySlowWarning("chunkRefreshSections", "ChunkTag.refresh_chunk_sections, as of MC 1.18, is just a replica of ChunkTag.refresh_chunk, and so that mech should be used instead.");
+
+    // Added 2024/07/13
+    // 2024-year-end commonality: #22
+    public static Warning pre1_21AttributeFormat = new VerySlowWarning("pre1_21AttributeFormat", "Attribute modifiers were changed in 1.21, now using slot groups instead of slots and namespaced keys instead of UUIDS; check relevant meta docs for more information.");
+
+    // Added 2023/01/15, made very-slow 2025/01/15.
+    // Safe to remove now.
+    public static Warning entityShootsMaterialEvent = new VerySlowWarning("entityShootsMaterialEvent", "The '<entity> shoots <material>' event is deprecated in favor of '<projectile> hits' with the 'block' and 'shooter' switches.");
+
+    // Added 2023/01/15, made very-slow 2025/01/15.
+    // 2023-year-end commonality: #28
+    // 2024-year-end commonality: #16
+    public static Warning projectileHitsBlockLocationContext = new VerySlowWarning("projectileHitsBlockLocationContext", "'context.location' in the '<projectile> hits' event is deprecated in favor of 'context.hit_block'.");
+
+    // Added 2023/01/15, made very-slow 2025/01/15.
+    // 2023-year-end commonality: #5
+    // 2024-year-end commonality: #8
+    public static Warning projectileHitsEventMatchers = new VerySlowWarning("projectileHitsEventMatchers", "The block/entity matchers in '<projectile> hits <block>/<entity>' are deprecated in favor of the 'block' and 'entity' switches.");
+
+    // Added 2023/03/05, made very-slow 2025/01/15.
+    // Safe to remove now.
+    public static Warning serverSystemMechanisms = new VerySlowWarning("serverSystemMechanisms", "Some 'server' mechanisms for core features are deprecated in favor of 'system' equivalents.");
+
+    // Added 2023/03/27, made very-slow 2025/01/15.
+    // Safe to remove now.
+    public static Warning oldAgeLockedControls = new VerySlowWarning("oldAgeLockedControls", "Several old ways of controlling whether an entity's age is locked are deprecated in favor of the 'EntityTag.age_locked' tag/mech pair.");
+
+    // Added 2023/10/04, made very-slow 2025/01/15.
+    // 2023-year-end commonality: #4
+    // 2024-year-end commonality: #5
+    public static Warning translateLegacySyntax = new VerySlowWarning("translateLegacySyntax", "<&translate[...].with[...]> is deprecated in favor of the modern <&translate[key=...;with=...]> syntax.");
+
+    // Added 2024/02/19, made very-slow 2025/01/15.
+    // Safe to remove now.
+    public static Warning lecternPage = new VerySlowWarning("lecternPage", "'LocationTag.lectern_page' is deprecated in favor of 'LocationTag.page'.");
+
+    // ==================== FUTURE deprecations ====================
+
+    // Added 2023/01/15
+    // Bump once 1.19 is the minimum supported version, as the change happened on that version.
+    public static Warning projectileCollideEvent = new FutureWarning("projectileCollideEvent", "The '<projectile> collides with <entity>' event is deprecated in favor of '<projectile> hits' with the 'entity' switch.");
+
+    // Added 2023/11/16
+    // Safe to remove now.
+    public static Warning takeExperience = new FutureWarning("takeExperience", "Using the 'take' command to take experience is deprecated in favor of the 'experience' command.");
+
+    // Added 2024/10/12
+    // Good candidate for bumping, as this is a niche feature only on 1.19+ that already had some issues
+    public static Warning entityStepHeight = new FutureWarning("entityStepHeight", "'EntityTag.step_height' is deprecated in favor of the step height attribute.");
+
+    // Added 2024/06/17, do not deprecate officially before end-of-year 2025 hitrate commonality review.
+    // Bad candidate for bumping, targets extremely commonly used naming, some of which may be hard to remove (eg stored in flag data).
+    // 2024-year-end commonality: #3
+    public static Warning oldSpigotNames = new FutureWarning("oldSpigotNames", "Several features (particles, entities, etc.) had alternative naming added by Spigot, which are now deprecated in favor of the official Minecraft naming; see relevant feature's meta docs for more information.");
+
+    // Added 2024/11/19
+    public static Warning oldPotionEffectType = new FutureWarning("oldPotionEffectType", "Potion effects now use an 'effect' key for the potion effect's type, see meta docs for more information.");
+
+    // Added 2024/12/27
+    public static Warning entityIsSheared = new FutureWarning("entityIsSheared", "'EntityTag.is_sheared' and 'EntityTag.has_pumpkin_head' properties are deprecated in favor of 'EntityTag.sheared'.");
+
+    // Added 2025/01/12
+    public static Warning splashPotionItem = new FutureWarning("splashPotionItem", "Using 'EntityTag.potion' to get a splash potion's item is deprecated in favor of 'EntityTag.item'.");
+
+    // Added 2025/01/12
+    public static Warning arrowBasePotionType = new FutureWarning("arrowBasePotionType", "Using 'EntityTag.potion' to get an arrow's base potion type is deprecated in favor of 'EntityTag.potion_type'.");
+
+    // Added 2025/01/04
+    public static Warning playEffectSpecialDataListInput = new FutureWarning("playEffectSpecialDataListInput", "List input for the special_data argument in playeffect command is now deprecated. Please use a MapTag instead.");
+
+    // Added 2025/01/23
+    public static Warning projectileLaunchedEntityContext = new FutureWarning("projectileLaunchedEntityContext", "'context.entity' in the 'projectile launched' event is deprecated in favor of 'context.projectile'.");
+
+    // Added 2025/03/29
+    public static Warning areaEffectCloudControls = new FutureWarning("areaEffectCloudControls", "Several tags/mechanisms for controlling area effect clouds have been merged into existing properties, check relevant meta docs for more information.");
+
+    // Added 2025/04/27
+    public static Warning playerChangesWorldSwitches = new FutureWarning("playerChangesWorldSwitches", "The 'from' and 'to' arguments in the 'player changes world' script event have been deprecated in favor of the 'from' and 'to' switches.");
+
+    // Added 2025/05/02
+    public static Warning timeSubTags = new FutureWarning("timeSubTags", pointlessSubtagPrefix + "'time.*' tags are now just 'time_*'.");
+
+    // Added 2025/08/06
+    public static Warning horseArmorEquipCommand = new FutureWarning("horseArmorEquipCommand", "The 'horse_armor' argument in the 'equip' command has been deprecated in favor of 'body'.");
+
+    // Added 2025/08/06
+    public static Warning horseArmorTag = new FutureWarning("horseArmorTag", "The 'EntityTag.horse_armor' tag has been deprecated in favor of 'EntityTag.equipment_map.get[body]'.");
+
+    // Added 2025/08/06
+    public static Warning entityEquipmentListTag = new FutureWarning("entityEquipmentListTag", "The ListTag 'EntityTag.equipment' has been deprecated in favor of the MapTag 'EntityTag.equipment_map'.");
+
+    // Added 2025/07/11
+    public static Warning assignmentOptionalPrefixArgs = new FutureWarning("assignmentOptionalPrefixArgs", "For the 'assignment' command, the args 'script' and 'to' now require a prefix to use.");
+
+    // Added 2025/06/29
+    public static Warning blockExplodesStrengthDetermination = new FutureWarning("blockExplodesStrengthDetermination", "The determination to control strength in the 'block explodes' script event has been changed into the 'STRENGTH:<ElementTag(Decimal)>' format.");
+
+    // Added 2025/06/29
+    public static Warning blockDispensesItemDetermination = new FutureWarning("blockDispensesItemDetermination", "The determination to control the item in the 'block dispenses' script event has been changed into the 'ITEM:<ItemTag>' format.");
+
+    // Added 2025/08/23
+    public static Warning advancementBackgroundFormat = new FutureWarning("advancementBackgroundFormat", "The 'background:' input in the advancement command no longer uses the 'textures/' path or '.png' suffix, so for example 'minecraft:textures/gui/advancements/backgrounds/stone.png' would be 'minecraft:gui/advancements/backgrounds/stone'.");
+
+    // Added 2025/09/07
+    public static Warning brewingStandConsumeDetermination = new FutureWarning("brewingStandConsumeDetermination", "The 'consuming' and 'not_consuming' determinations in the 'brewing stand fueled' event have been deprecated in favor of 'CONSUMING:<ElementTag(Boolean)>'.");
+
+    // Added 2025/09/22
+    public static Warning playerSteerEntityEvent = new FutureWarning("playerSteerEntityEvent", "The 'player steers <entity>' event is deprecated in favor of the 'player input' event in MC 1.21+.");
+
+    // ==================== PAST deprecations of things that are already gone but still have a warning left behind ====================
+
+    // Removed upstream 2023/10/29 without warning.
+    public static Warning npcHologramDirection = new StrongWarning("npcHologramDirection", "NPCTag's 'hologram_direction' is deprecated: it was removed from Citizens. Ask in the Citizens channel on the Discord if you need it.");
+
+    // Added on 2019/10/13
+    public static Warning versionScripts = new StrongWarning("versionScripts", "Version script containers are deprecated due to the old script repo no longer being active.");
+
+    // Added on 2019/03/08, removed 2020/10/24.
+    public static Warning boundWarning = new StrongWarning("boundWarning", "Item script 'bound' functionality has never been reliable and should not be used. Consider replicating the concept with world events.");
+
+    // Deprecated 2019/02/06, removed 2022/03/19.
+    public static Warning globalTagName = new StrongWarning("globalTagName", "Using 'global' as a base tag is a deprecated alternate name. Please use 'server' instead.");
+
+}

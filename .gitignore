@@ -1,0 +1,12 @@
+# Maven
+target/
+dependency-reduced-pom.xml
+
+# IntelliJ
+.idea/
+*.iml
+
+# Temporary/etc.
+*.bak
+*.exe
+.DS_Store

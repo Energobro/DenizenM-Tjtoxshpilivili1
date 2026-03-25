@@ -1,0 +1,82 @@
+package com.denizenscript.denizen.events.entity;
+
+import com.denizenscript.denizen.events.BukkitScriptEvent;
+import com.denizenscript.denizen.objects.EntityTag;
+import com.denizenscript.denizen.utilities.implementation.BukkitScriptEntryData;
+import com.denizenscript.denizencore.objects.ObjectTag;
+import com.denizenscript.denizencore.scripts.ScriptEntryData;
+import org.bukkit.entity.Entity;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityTameEvent;
+
+public class EntityTamesScriptEvent extends BukkitScriptEvent implements Listener {
+
+    // <--[event]
+    // @Events
+    // entity tamed
+    // <entity> tamed
+    // player tames entity
+    // player tames <entity>
+    //
+    // @Group Entity
+    //
+    // @Location true
+    //
+    // @Cancellable true
+    //
+    // @Triggers when an entity is tamed.
+    //
+    // @Context
+    // <context.entity> returns a EntityTag of the tamed entity.
+    // <context.owner> returns a EntityTag of the owner.
+    //
+    // @Player when a player is what tamed the entity.
+    //
+    // -->
+
+    public EntityTamesScriptEvent() {
+        registerCouldMatcher("<entity> tamed");
+        registerCouldMatcher("player tames <entity>");
+    }
+
+    public EntityTag entity;
+    public EntityTag owner;
+    public EntityTameEvent event;
+
+    @Override
+    public boolean matches(ScriptPath path) {
+        String cmd = path.eventArgLowerAt(1);
+        String ownerTest = cmd.equals("tames") ? path.eventArgLowerAt(0) : path.eventArgLowerAt(2);
+        String tamed = cmd.equals("tamed") ? path.eventArgLowerAt(0) : path.eventArgLowerAt(2);
+        if (!owner.tryAdvancedMatcher(ownerTest, path.context) || !entity.tryAdvancedMatcher(tamed, path.context)) {
+            return false;
+        }
+        if (!runInCheck(path, entity.getLocation())) {
+            return false;
+        }
+        return super.matches(path);
+    }
+
+    @Override
+    public ScriptEntryData getScriptEntryData() {
+        return new BukkitScriptEntryData(owner);
+    }
+
+    @Override
+    public ObjectTag getContext(String name) {
+        return switch (name) {
+            case "entity" -> entity;
+            case "owner" -> owner.getDenizenObject();
+            default -> super.getContext(name);
+        };
+    }
+
+    @EventHandler
+    public void onEntityTames(EntityTameEvent event) {
+        entity = new EntityTag(event.getEntity());
+        owner = new EntityTag((Entity) event.getOwner());
+        this.event = event;
+        fire(event);
+    }
+}
