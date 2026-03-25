@@ -18,9 +18,11 @@ import com.denizenscript.denizencore.scripts.queues.ScriptQueue;
 import com.denizenscript.denizencore.tags.TagContext;
 import com.denizenscript.denizencore.tags.TagManager;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
+import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.ai.speech.Talkable;
 import net.citizensnpcs.api.ai.speech.TalkableEntity;
 import net.citizensnpcs.api.ai.speech.event.NPCSpeechEvent;
+import net.citizensnpcs.api.npc.NPC;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 
@@ -137,7 +139,8 @@ public class ChatCommand extends AbstractCommand {
     public static void speak(DenizenSpeechContext speechContext) {
         Entity talker = speechContext.getTalker().getEntity();
         if (EntityTag.isCitizensNPC(talker)) {
-            NPCSpeechEvent event = new NPCSpeechEvent(speechContext);
+            NPC npc = CitizensAPI.getNPCRegistry().getNPC(talker);
+            NPCSpeechEvent event = new NPCSpeechEvent(npc, speechContext);
             Bukkit.getPluginManager().callEvent(event);
             if (event.isCancelled()) {
                 return;
