@@ -3,22 +3,50 @@ The Denizen Scripting Language - Spigot Impl
 
 An implementation of the Denizen Scripting Language for Spigot servers, with strong Citizens interlinks to emphasize the power of using Denizen with NPCs!
 
-**Version 1.3.1**: Compatible with Spigot 1.17.1, 1.18.2, 1.19.4, 1.20.6, and 1.21.11!
+**Version 1.3.1M**: Compatible with Paper only on 1.21.11!
+
+> [!IMPORTANT]
+> Support for versions below **1.21.11** has been officially dropped.
+
+## ✨ New Features & API Improvements
+* **Events:** Added support for the Paper-specific event `on player unchecked sign edits`.
+* **Resource Pack:** Fully overhauled the logic for the `resourcepack` command.
+* **Text & Formatting:**
+    * New tags: `<&sprite>`, `<&shadow_color>`, and `<&player_head>`.
+    * Added `.shadow_color` attribute to `ElementTag`.
+* **Internal Migration:** Fully migrated to **Paper Components** for improved performance and modern API compatibility.
+
+## 🧪 Items & Mechanics
+* **Enhanced Max Durability:** * Major modification to durability handling. 
+    * You can now retrieve the actual durability of the item in hand.
+    * New mechanism to set custom durability for any item:
+      `inventory adjust slot:hand max_durability:4`
+* **Attributes:**
+    * Added new `rarity_color` parameter for items.
+    * Fixed the `.rarity` parameter.
+
+## 🧹 Optimization & Cleanup
+* **Core Optimization:** Implementation of custom optimizations across several internal classes.
+* **Removals:**
+    * The `scriptname` tag has been removed from all objects.
+    * `Denizen asap` has been fully removed.
+
+## 🐛 Bug Fixes
+* **showfake:** Fixed an issue where the command would trigger an error message despite functioning correctly.
+* **fakeinternaldata:** Fixed a critical bug where the command was non-functional and threw an error.
+
+## ⚠️ Known Issues (Official Denizen problem, not mine)
+* `has_potion_effect`: Currently not working.
+* `firework_data`: Functionality is under review/questionable.
 
 **Learn about Denizen from the Beginner's guide:** https://guide.denizenscript.com/guides/background/index.html
 
-#### Download Links:
-
-- **Release builds**: https://ci.citizensnpcs.co/job/Denizen/
-- **Developmental builds**: https://ci.citizensnpcs.co/job/Denizen_Developmental/
-- **SpigotMC - VERY SLOW releases**: https://www.spigotmc.org/resources/denizen.21039/
-
 #### Need help using Denizen? Try one of these places:
 
-- **Discord** - chat room (Modern, strongly recommended): https://discord.gg/Q6pZGSR
+- **Discord** - chat room (Modern, strongly recommended): https://dsc.gg/dsng
 - **Denizen Home Page** - a link directory (Modern): https://denizenscript.com/
 - **Forum and script sharing** (Modern): https://forum.denizenscript.com/
-- **Meta Documentation** - command/tag/event/etc. search (Modern): https://meta.denizenscript.com/
+- **Meta Documentation (!!WITHOUT NEW CHANGES!!)** - command/tag/event/etc. search (Modern): https://meta.denizenscript.com/
 - **Beginner's Guide** - text form (Modern): https://guide.denizenscript.com/
 
 #### Also check out:
@@ -31,8 +59,9 @@ An implementation of the Denizen Scripting Language for Spigot servers, with str
 
 ### Building
 
-- Built against JDK 17, using maven `pom.xml` as project file.
+- Built against JDK 21, using maven `pom.xml` as project file.
 - Requires building all listed versions of Spigot via Spigot BuildTools: https://www.spigotmc.org/wiki/buildtools/
+- Install all Paper dependencies.
 
 ### Maven
 
@@ -64,21 +93,11 @@ This is an open source project, provided entirely freely, for everyone to use an
 
 If you make any changes that could benefit the community as a whole, please contribute upstream.
 
-### The short of the license is:
-
-You can do basically whatever you want, except you may not hold any developer liable for what you do with the software.
-
-### Previous License
-
-Copyright (C) 2012-2013 Aufdemrand, All Rights Reserved.
-
-Copyright (C) 2013-2019 The Denizen Script Team, All Rights Reserved.
-
 ### The long version of the license follows:
 
 The MIT License (MIT)
 
-Copyright (c) 2019-2024 The Denizen Script Team
+Copyright (c) 2026 Tjtoxshpilivili1
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
