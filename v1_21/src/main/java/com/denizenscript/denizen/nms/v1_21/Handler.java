@@ -32,8 +32,6 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.serialization.DynamicOps;
 import net.kyori.adventure.nbt.CompoundBinaryTag;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.chat.BaseComponent;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -60,10 +58,7 @@ import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.boss.BossBar;
 import org.bukkit.craftbukkit.v1_21_R7.CraftRegistry;
@@ -89,6 +84,7 @@ import org.spigotmc.AsyncCatcher;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -154,7 +150,14 @@ public class Handler extends NMSHandler {
 
     @Override
     public double[] getRecentTps() {
-        return ((CraftServer) Bukkit.getServer()).getServer().recentTps;
+        try {
+            Method getTpsMethod = Server.class.getMethod("getTPS");
+            return (double[]) getTpsMethod.invoke(Bukkit.getServer());
+        } catch (Throwable e) {
+            Debug.echoError("Something went wrong when trying to get the TPS method.");
+            Debug.echoError(e);
+            return new double[]{0.0, 0.0, 0.0};
+        }
     }
 
     @Override
