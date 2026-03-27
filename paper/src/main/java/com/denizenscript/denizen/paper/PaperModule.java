@@ -4,6 +4,7 @@ import com.denizenscript.denizen.Denizen;
 import com.denizenscript.denizen.nms.interfaces.packets.PacketOutChat;
 import com.denizenscript.denizen.objects.EntityTag;
 import com.denizenscript.denizen.objects.ItemTag;
+import com.denizenscript.denizen.paper.datacomponents.ComponentAdaptersRegistry;
 import com.denizenscript.denizen.paper.events.*;
 import com.denizenscript.denizen.paper.properties.*;
 import com.denizenscript.denizen.paper.tags.PaperTagBase;
@@ -97,8 +98,9 @@ public class PaperModule {
         PropertyParser.registerProperty(EntitySneaking.class, EntityTag.class);
         PropertyParser.registerProperty(EntityWitherInvulnerable.class, EntityTag.class);
         PropertyParser.registerProperty(ItemArmorStand.class, ItemTag.class);
+        PropertyParser.registerProperty(ItemRemovedComponents.class, ItemTag.class);
 
-        // Paper object extensions
+        ComponentAdaptersRegistry.register();
         PaperElementExtensions.register();
         PaperEntityExtensions.register();
         PaperItemExtensions.register();

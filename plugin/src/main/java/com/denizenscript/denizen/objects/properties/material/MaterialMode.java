@@ -75,14 +75,14 @@ public class MaterialMode extends MaterialProperty<ElementTag> {
         else if (getBlockData() instanceof Tripwire tripwire) {
             return new ElementTag(tripwire.isDisarmed() ? "DISARMED" : "ARMED", true);
         }
-        else if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19) && getBlockData() instanceof SculkCatalyst sculkCatalyst) {
+        else if (getBlockData() instanceof SculkCatalyst sculkCatalyst) {
             return new ElementTag(sculkCatalyst.isBloom() ? "BLOOM" : "NORMAL", true);
         }
-        else if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19) && getBlockData() instanceof SculkShrieker sculkShrieker) {
+        else if (getBlockData() instanceof SculkShrieker sculkShrieker) {
             return new ElementTag(sculkShrieker.isShrieking() ? "SHRIEKING" : "NORMAL", true);
         }
-        else if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_21) && getBlockData() instanceof CreakingHeart creakingHeart) {
-            return new ElementTag(creakingHeart.getCreakingHeartState());
+        else if (getBlockData() instanceof CreakingHeart creakingHeart) {
+            return new ElementTag(creakingHeart.getCreakingHeartState().name(), true); // TODO: once 1.21 is the minimum supported version, use the enum constructor
         }
         return null;
     }

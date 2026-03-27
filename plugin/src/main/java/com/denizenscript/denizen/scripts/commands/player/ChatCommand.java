@@ -139,8 +139,7 @@ public class ChatCommand extends AbstractCommand {
     public static void speak(DenizenSpeechContext speechContext) {
         Entity talker = speechContext.getTalker().getEntity();
         if (EntityTag.isCitizensNPC(talker)) {
-            NPC npc = CitizensAPI.getNPCRegistry().getNPC(talker);
-            NPCSpeechEvent event = new NPCSpeechEvent(npc, speechContext);
+            NPCSpeechEvent event = new NPCSpeechEvent(CitizensAPI.getNPCRegistry().getNPC(talker), speechContext);
             Bukkit.getPluginManager().callEvent(event);
             if (event.isCancelled()) {
                 return;
