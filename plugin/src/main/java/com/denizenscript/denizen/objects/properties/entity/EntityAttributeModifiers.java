@@ -84,15 +84,8 @@ public class EntityAttributeModifiers implements Property {
         result.putObject("name", new ElementTag(modifier.getName()));
         result.putObject("amount", new ElementTag(modifier.getAmount()));
         result.putObject("operation", new ElementTag(modifier.getOperation()));
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20)) {
-            result.putObject("slot", new ElementTag(modifier.getSlotGroup().toString(), true));
-        }
-        else {
-            result.putObject("slot", new ElementTag(modifier.getSlot() == null ? "any" : modifier.getSlot().name()));
-        }
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_21)) {
-            result.putObject("key", new ElementTag(Utilities.namespacedKeyToString(modifier.getKey()), true));
-        }
+        result.putObject("slot", new ElementTag(modifier.getSlotGroup().toString(), true));
+        result.putObject("key", new ElementTag(Utilities.namespacedKeyToString(modifier.getKey()), true));
         // TODO: remove/deprecate the UUID key
         result.putObject("id", new ElementTag(modifier.getUniqueId().toString()));
         return result;
@@ -287,9 +280,17 @@ public class EntityAttributeModifiers implements Property {
             return object.getAttributeModifiers();
         });
 
-        PropertyParser.registerTag(EntityAttributeModifiers.class, ListTag.class, "attributes", (attribute, object) -> {
-            BukkitImplDeprecations.legacyAttributeProperties.warn(attribute.context);
-            return object.getAttributes();
+        PropertyParser.registerTag(EntityAttributeModifiers.class, MapTag.class, "attributes", (attribute, object) -> {
+            MapTag final_map = new MapTag();
+            for (String s : object.getAttributes()) {
+                String[] main_split = s.split("[=/]", 2);
+                if (main_split.length == 2) {
+                    String attr_name = main_split[0];
+                    String base_val = main_split[1].split("/")[0];
+                    final_map.putObject(attr_name, new ElementTag(base_val));
+                }
+            }
+            return final_map;
         });
     }
 
