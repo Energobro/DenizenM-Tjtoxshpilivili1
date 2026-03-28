@@ -258,8 +258,7 @@ public class EntityColor extends EntityProperty<ElementTag> {
             case FOX -> as(Fox.class).getFoxType().name();
             case CAT -> {
                 Cat cat = as(Cat.class);
-                // TODO once 1.21 is the minimum supported version, replace with direct registry-based handling
-                yield cat.getCatType() + "|" + cat.getCollarColor().name();
+                yield Utilities.namespacedKeyToString(cat.getCatType().getKey()) + "|" + cat.getCollarColor().name();
             }
             case PANDA -> {
                 Panda panda = as(Panda.class);
