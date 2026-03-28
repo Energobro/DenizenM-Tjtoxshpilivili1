@@ -16,10 +16,12 @@ An implementation of the Denizen Scripting Language for Spigot servers, with str
       * Sprite usage example: `<&sprite[minecraft:items:item/porkchop]>`
       * Shadow Color usage examples:
          * Simple variant - `<&shadow_color[#51a2ff]>`
-         * With adjustable transparency - `<&shadow_color[<color[#51a2ff].with_alpha[254].hex>]>` **(!! DON'T FORGET ABOUT .hex TAG !!)**
+         * With adjustable transparency - `<&shadow_color[<color[#51a2ff].with_alpha[254].hex>]>` *
+           **(!! DON'T FORGET ABOUT .hex TAG !!)**
      * Player Head usage examples:
          * Full Face Texture `<&player_head[Tjtoxshpilivili1]>`
-         * Only Face Texture (without surface pixels) `<&player_head[!Tjtoxshpilivili1]>` **(!! DON'T FORGET ABOUT «!» !!)**
+         * Only Face Texture (without surface pixels) `<&player_head[!Tjtoxshpilivili1]>`
+           **(!! DON'T FORGET ABOUT «!» !!)**
     * Added `.shadow_color` attribute to `ElementTag`.
 * **Internal Migration:** Fully migrated to **Paper Components** for improved performance and modern API compatibility.
 
