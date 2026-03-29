@@ -1,7 +1,7 @@
-The Denizen Scripting Language - Spigot Impl
+The Denizen Scripting Language - Paper Impl
 --------------------------------------------
 
-An implementation of the Denizen Scripting Language for Spigot servers, with strong Citizens interlinks to emphasize the power of using Denizen with NPCs!
+An implementation of the Denizen Scripting Language for Paper servers, with strong Citizens interlinks to emphasize the power of using Denizen with NPCs!
 
 **Version 1.3.1M**: Compatible with Paper only on 1.21.11!
 
@@ -10,14 +10,26 @@ An implementation of the Denizen Scripting Language for Spigot servers, with str
 
 ## ✨ New Features & API Improvements
 * **Events:** Added support for the Paper-specific event `on player unchecked sign edits`.
-* **Resource Pack:** Fully overhauled the logic for the `resourcepack` command.
+* **Resource Pack:** Fully overhauled the logic for the `resourcepack` command to support adding multiple resource packs.
+    * Added a new `add` argument to the `resourcepack` command to send additional resource packs to a player.
+    * Added `PlayerTag.remove_resource_pack` mechanism to remove a specific resource pack by ID from a player.
+    * Added `PlayerTag.remove_resource_packs` mechanism to remove all resource packs from a player.
 * **Text & Formatting:**
     * New tags: `<&sprite>`, `<&shadow_color>`, and `<&player_head>`.
+      * Sprite usage example: `<&sprite[minecraft:items:item/porkchop]>`
+      * Shadow Color usage examples:
+         * Simple variant - `<&shadow_color[#51a2ff]>`
+         * With adjustable transparency - `<&shadow_color[<color[#51a2ff].with_alpha[254].hex>]>`
+           **(!! DON'T FORGET ABOUT .hex TAG !!)**
+      * Player Head usage examples:
+         * Full Face Texture `<&player_head[Tjtoxshpilivili1]>`
+         * Only Face Texture (without surface pixels) `<&player_head[!Tjtoxshpilivili1]>`
+           **(!! DON'T FORGET ABOUT «!» !!)**
     * Added `.shadow_color` attribute to `ElementTag`.
 * **Internal Migration:** Fully migrated to **Paper Components** for improved performance and modern API compatibility.
 
 ## 🧪 Items & Mechanics
-* **Enhanced Max Durability:** * Major modification to durability handling. 
+* **Enhanced Max Durability:** Major modification to durability handling. 
     * You can now retrieve the actual durability of the item in hand.
     * New mechanism to set custom durability for any item:
       `inventory adjust slot:hand max_durability:4`
@@ -29,7 +41,7 @@ An implementation of the Denizen Scripting Language for Spigot servers, with str
 * **Core Optimization:** Implementation of custom optimizations across several internal classes.
 * **Removals:**
     * The `scriptname` tag has been removed from all objects.
-    * `Denizen asap` has been fully removed.
+    * `Denizen ASAP Strong warning` has been fully removed.
 
 ## 🐛 Bug Fixes
 * **showfake:** Fixed an issue where the command would trigger an error message despite functioning correctly.
@@ -37,7 +49,6 @@ An implementation of the Denizen Scripting Language for Spigot servers, with str
 
 ## ⚠️ Known Issues (Official Denizen problem, not mine)
 * `has_potion_effect`: Currently not working.
-* `firework_data`: Functionality is under review/questionable.
 
 **Learn about Denizen from the Beginner's guide:** https://guide.denizenscript.com/guides/background/index.html
 
@@ -62,30 +73,6 @@ An implementation of the Denizen Scripting Language for Spigot servers, with str
 - Built against JDK 21, using maven `pom.xml` as project file.
 - Requires building all listed versions of Spigot via Spigot BuildTools: https://www.spigotmc.org/wiki/buildtools/
 - Install all Paper dependencies.
-
-### Maven
-
-```xml
-    <repository>
-        <id>citizens-repo</id>
-        <url>https://maven.citizensnpcs.co/repo</url>
-    </repository>
-    <dependencies>
-        <dependency>
-            <groupId>com.denizenscript</groupId>
-            <artifactId>denizen</artifactId>
-            <version>1.3.1-SNAPSHOT</version>
-            <type>jar</type>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>*</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-    </dependencies>
-```
 
 ### Licensing pre-note:
 
