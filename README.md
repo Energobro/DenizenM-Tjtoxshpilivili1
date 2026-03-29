@@ -1,4 +1,4 @@
-The Denizen Scripting Language - Paper Impl
+The Denizen Scripting Language - Paper Impl (Unofficial version!)
 --------------------------------------------
 
 An implementation of the Denizen Scripting Language for Paper servers, with strong Citizens interlinks to emphasize the power of using Denizen with NPCs!
