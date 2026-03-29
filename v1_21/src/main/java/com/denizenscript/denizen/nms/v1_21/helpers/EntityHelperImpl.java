@@ -8,6 +8,7 @@ import com.denizenscript.denizen.nms.v1_21.ReflectionMappingsInfo;
 import com.denizenscript.denizen.nms.v1_21.impl.network.handlers.DenizenNetworkManagerImpl;
 import com.denizenscript.denizen.objects.EntityTag;
 import com.denizenscript.denizen.objects.properties.entity.EntityState;
+import com.denizenscript.denizen.utilities.PaperAPITools;
 import com.denizenscript.denizen.utilities.Utilities;
 import com.denizenscript.denizen.utilities.packets.NetworkInterceptHelper;
 import com.denizenscript.denizencore.objects.ObjectTag;
@@ -23,6 +24,7 @@ import net.kyori.adventure.nbt.CompoundBinaryTag;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerLookAtPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
@@ -77,6 +79,7 @@ import org.bukkit.craftbukkit.v1_21_R7.block.CraftCreatureSpawner;
 import org.bukkit.craftbukkit.v1_21_R7.block.data.CraftBlockData;
 import org.bukkit.craftbukkit.v1_21_R7.entity.*;
 import org.bukkit.craftbukkit.v1_21_R7.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_21_R7.util.CraftChatMessage;
 import org.bukkit.craftbukkit.v1_21_R7.util.CraftLocation;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -801,7 +804,41 @@ public class EntityHelperImpl extends EntityHelper {
                 Debug.echoError("Invalid internal data id '" + id + "': couldn't be matched to any internal data for entity of type '" + entity.getType() + "'.");
                 return;
             }
-            Object converted = ReflectionSetCommand.convertObjectTypeFor(dataItem.getValue().getClass(), entry.getValue());
+
+            Object converted = null;
+            Class<?> expectedType = dataItem.getValue() != null ? dataItem.getValue().getClass() : Object.class;
+            String typeName = expectedType.getName();
+
+            try {
+                if (typeName.equals("io.papermc.paper.adventure.AdventureComponent")) {
+                    Object kyoriComponent = PaperAPITools.instance.parseToKyori(entry.getValue().toString());
+                    if (kyoriComponent != null) {
+                        Class<?> advCompClass = Class.forName("io.papermc.paper.adventure.AdventureComponent");
+                        Class<?> kyoriCompClass = Class.forName("net.kyori.adventure.text.Component");
+                        converted = advCompClass.getConstructor(kyoriCompClass).newInstance(kyoriComponent);
+                    }
+                }
+                else if (Component.class.isAssignableFrom(expectedType)) {
+                    String json = PaperAPITools.instance.parseTextToAdventureJson(entry.getValue().toString());
+                    if (json != null) {
+                        converted = CraftChatMessage.fromJSON(json);
+                    }
+                }
+
+                else if (expectedType == Optional.class && (entry.getKey().low.equals("custom_name") || entry.getKey().low.equals("text"))) {
+                    String json = PaperAPITools.instance.parseTextToAdventureJson(entry.getValue().toString());
+                    if (json != null) {
+                        Component nmsComponent = CraftChatMessage.fromJSON(json);
+                        converted = Optional.ofNullable(nmsComponent);
+                    }
+                }
+                else {
+                    converted = ReflectionSetCommand.convertObjectTypeFor(expectedType, entry.getValue());
+                }
+            } catch (Throwable ex) {
+                Debug.echoError("Failed to parse fakeinternaldata for '" + entry.getKey() + "': " + ex.getMessage());
+            }
+
             if (converted != null) {
                 processConverted.accept(dataItem, converted);
             }

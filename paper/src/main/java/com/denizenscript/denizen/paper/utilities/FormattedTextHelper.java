@@ -152,6 +152,7 @@ public class FormattedTextHelper {
         return input.replace(String.valueOf(LEGACY_SECTION), "&ss");
     }
 
+
     public static String unescape(String input) {
         if (input.indexOf('&') != -1) {
             return input.replace("&sc", ";").replace("&lb", "[").replace("&rb", "]").replace("&nl", "\n").replace("&ss", String.valueOf(LEGACY_SECTION)).replace("&amp", "&");

@@ -323,6 +323,15 @@ public class PaperAPITools {
         return VersionedComponentSerializer.forVersion(ChatVersion.V1_21_5).parse(json);
     }
 
+
+    public Object parseToKyori(String text) {
+        return null;
+    }
+
+    public String parseTextToAdventureJson(String text) {
+        return null;
+    }
+
     public String getCopperGolemState(CopperGolem copperGolem) {
         return copperGolem.getWeatherState().name();
     }

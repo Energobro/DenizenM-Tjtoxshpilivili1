@@ -24,6 +24,7 @@ import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
@@ -384,6 +385,17 @@ public class PaperAPIToolsImpl extends PaperAPITools {
     public String getClientBrand(Player player) {
         String clientBrand = player.getClientBrandName();
         return clientBrand != null ? clientBrand : "unknown";
+    }
+
+    @Override
+    public Object parseToKyori(String text) {
+        return FormattedTextHelper.parse(text, net.kyori.adventure.text.format.NamedTextColor.WHITE);
+    }
+
+    @Override
+    public String parseTextToAdventureJson(String text) {
+        net.kyori.adventure.text.Component parsed = FormattedTextHelper.parse(text, net.kyori.adventure.text.format.NamedTextColor.WHITE);
+        return net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().serialize(parsed);
     }
 
     @Override
