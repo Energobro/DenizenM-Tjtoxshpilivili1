@@ -1,4 +1,4 @@
-The Denizen Scripting Language - Paper Impl
+The Denizen Scripting Language - Paper Impl (Unofficial version!)
 --------------------------------------------
 
 An implementation of the Denizen Scripting Language for Paper servers, with strong Citizens interlinks to emphasize the power of using Denizen with NPCs!
@@ -22,25 +22,26 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
          * With adjustable transparency - `<&shadow_color[<color[#51a2ff].with_alpha[254].hex>]>`
            **(!! DON'T FORGET ABOUT .hex TAG !!)**
       * Player Head usage examples:
-         * Full Face Texture `<&player_head[Tjtoxshpilivili1]>`
-         * Only Face Texture (without surface pixels) `<&player_head[!Tjtoxshpilivili1]>`
+         * Full Face Texture - `<&player_head[Tjtoxshpilivili1]>`
+         * Only Face Texture (without surface pixels) - `<&player_head[!Tjtoxshpilivili1]>`
            **(!! DON'T FORGET ABOUT «!» !!)**
-    * Added `.shadow_color` attribute to `ElementTag`.
+    * Added `.shadow_color` tag to `ElementTag`.
 * **Internal Migration:** Fully migrated to **Paper Components** for improved performance and modern API compatibility.
 
 ## 🧪 Items & Mechanics
 * **Enhanced Max Durability:** Major modification to durability handling. 
     * You can now retrieve the actual durability of the item in hand.
-    * New mechanism to set custom durability for any item:
-      `inventory adjust slot:hand max_durability:4`
+       * Usage example - `<player.item_in_hand.max_durability>`
+    * New mechanism `max_durability` to set custom durability for any item.
+       * Usage example - `inventory adjust slot:hand max_durability:4`
 * **Attributes:**
-    * Added new `rarity_color` parameter for items.
-    * Fixed the `.rarity` parameter.
+    * Added new `.rarity_color` tag for items.
+    * Fixed the `.rarity` tag for items.
 
 ## 🧹 Optimization & Cleanup
 * **Core Optimization:** Implementation of custom optimizations across several internal classes.
 * **Removals:**
-    * The `scriptname` tag has been removed from all objects.
+    * The `.scriptname` tag has been removed from all objects.
     * `Denizen ASAP Strong warning` has been fully removed.
 
 ## 🐛 Bug Fixes
@@ -48,16 +49,16 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
 * **fakeinternaldata:** Fixed a critical bug where the command was non-functional and threw an error.
 
 ## ⚠️ Known Issues (Official Denizen problem, not mine)
-* `has_potion_effect`: Currently not working.
+* `.has_potion_effect`: Currently not working.
 
 **Learn about Denizen from the Beginner's guide:** https://guide.denizenscript.com/guides/background/index.html
 
 #### Need help using Denizen? Try one of these places:
 
 - **Discord** - chat room (Modern, strongly recommended): https://dsc.gg/dsng
+- **My Telegram Channel** - spoilers, works with Denizen, new features: https://t.me/energ0bro
 - **Denizen Home Page** - a link directory (Modern): https://denizenscript.com/
-- **Forum and script sharing** (Modern): https://forum.denizenscript.com/
-- **Meta Documentation (!!WITHOUT NEW CHANGES!!)** - command/tag/event/etc. search (Modern): https://meta.denizenscript.com/
+- **Meta Documentation (!! WITHOUT NEW CHANGES !!)** - command/tag/event/etc. search (Modern): https://meta.denizenscript.com/
 - **Beginner's Guide** - text form (Modern): https://guide.denizenscript.com/
 
 #### Also check out:
