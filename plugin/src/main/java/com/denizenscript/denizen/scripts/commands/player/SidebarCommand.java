@@ -164,7 +164,7 @@ public class SidebarCommand extends AbstractCommand {
                     List<Integer> scores = parser.getScores(context);
                     for (int i = 0; i < values.size(); i++, index += incr) {
                         int score = (scores != null && i < scores.size()) ? scores.get(i) : index;
-                          while (hasScoreAlready(current, score)) {
+                        while (hasScoreAlready(current, score)) {
                             score += (incr == 0 ? 1 : incr);
                         }
                         current.add(new Sidebar.SidebarLine(values.get(i), score));
