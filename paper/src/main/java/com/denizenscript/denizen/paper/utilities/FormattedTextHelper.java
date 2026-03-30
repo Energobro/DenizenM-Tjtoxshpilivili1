@@ -236,8 +236,13 @@ public class FormattedTextHelper {
         }
         ShadowColor shadow = component.shadowColor();
         if (shadow != null) {
-            String hexARGB = Integer.toHexString(shadow.value());
-            builder.append(LEGACY_SECTION).append("[shadow=#").append(hexARGB).append("]");
+            int argb = shadow.value();
+            int a = (argb >> 24) & 0xFF;
+            int r = (argb >> 16) & 0xFF;
+            int g = (argb >> 8) & 0xFF;
+            int b = argb & 0xFF;
+            String hexRGBA = String.format("%02x%02x%02x%02x", r, g, b, a);
+            builder.append(LEGACY_SECTION).append("[shadow=#").append(hexRGBA).append("]");
         }
         if (component.hasDecoration(TextDecoration.BOLD)) {
             builder.append(LegacyFormatting.BOLD);
