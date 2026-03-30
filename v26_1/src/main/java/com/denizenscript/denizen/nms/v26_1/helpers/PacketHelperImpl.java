@@ -3,7 +3,6 @@ package com.denizenscript.denizen.nms.v26_1.helpers;
 import com.denizenscript.denizen.nms.NMSHandler;
 import com.denizenscript.denizen.nms.interfaces.PacketHelper;
 import com.denizenscript.denizen.nms.v26_1.Handler;
-import com.denizenscript.denizen.nms.v26_1.ReflectionMappingsInfo;
 import com.denizenscript.denizen.nms.v26_1.impl.SidebarImpl;
 import com.denizenscript.denizen.nms.v26_1.impl.network.handlers.DenizenNetworkManagerImpl;
 import com.denizenscript.denizen.objects.LocationTag;
@@ -70,19 +69,19 @@ import java.util.*;
 
 public class PacketHelperImpl implements PacketHelper {
 
-    public static final EntityDataAccessor<Float> PLAYER_DATA_ACCESSOR_ABSORPTION = ReflectionHelper.getFieldValue(net.minecraft.world.entity.player.Player.class, ReflectionMappingsInfo.Player_DATA_PLAYER_ABSORPTION_ID, null);
+    public static final EntityDataAccessor<Float> PLAYER_DATA_ACCESSOR_ABSORPTION = ReflectionHelper.getFieldValue(net.minecraft.world.entity.player.Player.class, "DATA_PLAYER_ABSORPTION_ID", null);
 
-    public static final EntityDataAccessor<Byte> ENTITY_DATA_ACCESSOR_FLAGS = ReflectionHelper.getFieldValue(net.minecraft.world.entity.Entity.class, ReflectionMappingsInfo.Entity_DATA_SHARED_FLAGS_ID, null);
+    public static final EntityDataAccessor<Byte> ENTITY_DATA_ACCESSOR_FLAGS = ReflectionHelper.getFieldValue(net.minecraft.world.entity.Entity.class, "DATA_SHARED_FLAGS_ID", null);
 
-    public static final MethodHandle ABILITIES_PACKET_FOV_SETTER = ReflectionHelper.getFinalSetter(ClientboundPlayerAbilitiesPacket.class, ReflectionMappingsInfo.ClientboundPlayerAbilitiesPacket_walkingSpeed);
+    public static final MethodHandle ABILITIES_PACKET_FOV_SETTER = ReflectionHelper.getFinalSetter(ClientboundPlayerAbilitiesPacket.class, "walkingSpeed");
 
     public static final Field ENTITY_TRACKER_ENTRY_GETTER = ReflectionHelper.getFields(ChunkMap.TrackedEntity.class).getFirstOfType(ServerEntity.class);
 
     public static final MethodHandle CANVAS_GET_BUFFER = ReflectionHelper.getMethodHandle(CraftMapCanvas.class, "getBuffer");
     public static final Field MAPVIEW_WORLDMAP = ReflectionHelper.getFields(CraftMapView.class).get("worldMap");
 
-    public static final EntityDataAccessor<Optional<Component>> ENTITY_DATA_ACCESSOR_CUSTOM_NAME = ReflectionHelper.getFieldValue(net.minecraft.world.entity.Entity.class, ReflectionMappingsInfo.Entity_DATA_CUSTOM_NAME, null);
-    public static final EntityDataAccessor<Boolean> ENTITY_DATA_ACCESSOR_CUSTOM_NAME_VISIBLE = ReflectionHelper.getFieldValue(net.minecraft.world.entity.Entity.class, ReflectionMappingsInfo.Entity_DATA_CUSTOM_NAME_VISIBLE, null);
+    public static final EntityDataAccessor<Optional<Component>> ENTITY_DATA_ACCESSOR_CUSTOM_NAME = ReflectionHelper.getFieldValue(net.minecraft.world.entity.Entity.class, "DATA_CUSTOM_NAME", null);
+    public static final EntityDataAccessor<Boolean> ENTITY_DATA_ACCESSOR_CUSTOM_NAME_VISIBLE = ReflectionHelper.getFieldValue(net.minecraft.world.entity.Entity.class, "DATA_CUSTOM_NAME_VISIBLE", null);
 
     @Override
     public void setFakeAbsorption(Player player, float value) {
