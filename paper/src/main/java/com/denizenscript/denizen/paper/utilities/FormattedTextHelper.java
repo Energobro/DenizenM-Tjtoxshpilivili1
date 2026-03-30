@@ -348,6 +348,7 @@ public class FormattedTextHelper {
         copyDecoration(TextDecoration.UNDERLINED, lastBuilt, toRet, minimize);
         copyDecoration(TextDecoration.ITALIC, lastBuilt, toRet, minimize);
         toRet.color(lastBuilt.color());
+        toRet.shadowColor(lastBuilt.shadowColor());
         return toRet;
     }
 
