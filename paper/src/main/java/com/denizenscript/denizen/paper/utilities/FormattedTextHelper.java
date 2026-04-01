@@ -749,7 +749,7 @@ public class FormattedTextHelper {
                             }
                         }
                         else if (innardType.equals("mm_head")) {
-                            String mmString = innardBase.get(1); // Получаем "<head:uuid:outer_layer>"
+                            String mmString = innardBase.get(1);
 
                             try {
                                 Component headComp = MiniMessage.miniMessage().deserialize(mmString);

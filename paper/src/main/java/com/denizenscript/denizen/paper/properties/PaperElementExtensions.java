@@ -598,6 +598,47 @@ public class PaperElementExtensions {
             return new ElementTag(res, true);
         });
 
+        ElementTag.tagProcessor.registerStaticTag(ElementTag.class, MapTag.class, "shadow_gradient", (attribute, object, inputMap) -> {
+            ColorTag fromColor = inputMap.getRequiredObjectAs("from", ColorTag.class, attribute);
+            ColorTag toColor = inputMap.getRequiredObjectAs("to", ColorTag.class, attribute);
+            ElementTag style = inputMap.getElement("style", "RGB");
+
+            if (fromColor == null || toColor == null) {
+                return null;
+            }
+            if (!style.matchesEnum(GradientStyle.class)) {
+                attribute.echoError("Invalid gradient style '" + style + "'");
+                return null;
+            }
+
+            String res = FormattedTextHelper.doSdwGradient(object.asString(), fromColor, toColor, style.asEnum(GradientStyle.class));
+            if (res == null) {
+                return null;
+            }
+            return new ElementTag(res, true);
+        });
+
+        ElementTag.tagProcessor.registerStaticTag(ElementTag.class, MapTag.class, "dual_gradient", (attribute, object, inputMap) -> {
+            ColorTag fromColor = inputMap.getRequiredObjectAs("from", ColorTag.class, attribute);
+            ColorTag toColor = inputMap.getRequiredObjectAs("to", ColorTag.class, attribute);
+            ColorTag sFrom = inputMap.getRequiredObjectAs("s_from", ColorTag.class, attribute);
+            ColorTag sTo = inputMap.getRequiredObjectAs("s_to", ColorTag.class, attribute);
+            ElementTag style = inputMap.getElement("style", "RGB");
+            if (fromColor == null || toColor == null || sFrom == null || sTo == null) {
+                return null;
+            }
+            if (!style.matchesEnum(GradientStyle.class)) {
+                attribute.echoError("Invalid gradient style '" + style + "'");
+                return null;
+            }
+
+            String res = FormattedTextHelper.doDualGradient(object.asString(), fromColor, toColor, sFrom, sTo, style.asEnum(GradientStyle.class));
+            if (res == null) {
+                return null;
+            }
+            return new ElementTag(res, true);
+        });
+
         // <--[tag]
         // @attribute <ElementTag.hsb_color_gradient[from=<color>;to=<color>]>
         // @returns ElementTag
