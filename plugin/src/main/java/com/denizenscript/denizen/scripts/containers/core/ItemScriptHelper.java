@@ -60,14 +60,12 @@ public class ItemScriptHelper implements Listener {
         Iterator<Recipe> recipeIterator = Bukkit.recipeIterator();
         ArrayList<NamespacedKey> keys = new ArrayList<>();
         while (recipeIterator.hasNext()) {
-            if (recipeIterator.next() instanceof Keyed keyed && keyed.getKey().getNamespace().equals("denizen")) {
-                if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_21)) {
+            try {
+                if (recipeIterator.next() instanceof Keyed keyed && keyed.getKey().getNamespace().equals("denizen")) {
                     keys.add(keyed.getKey());
                 }
-                else {
-                    recipeIterator.remove();
-                }
             }
+            catch (AbstractMethodError ignored) {}
         }
         if (!keys.isEmpty()) {
             NMSHandler.itemHelper.removeRecipes(keys);

@@ -173,7 +173,7 @@ public class AdvancementHelperImpl extends AdvancementHelper {
         AdvancementHolder parent = advancement.parent != null
                 ? getNMSAdvancementManager().advancements.get(CraftNamespacedKey.toMinecraft(advancement.parent))
                 : null;
-        DisplayInfo display = new DisplayInfo(CraftItemStack.asNMSCopy(advancement.icon),
+        DisplayInfo display = new DisplayInfo(CraftItemStack.asNMSTemplate(advancement.icon),
                 Handler.parseNMSComponent(advancement.title, PaperAPITools.BaseColor.WHITE), Handler.parseNMSComponent(advancement.description, PaperAPITools.BaseColor.WHITE),
                 Optional.ofNullable(advancement.background).map(CraftNamespacedKey::toMinecraft).map(ClientAsset.ResourceTexture::new), AdvancementType.valueOf(advancement.frame.name()),
                 advancement.toast, advancement.announceToChat, advancement.hidden);
