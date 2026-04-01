@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.denizenscript</groupId>
         <artifactId>denizen-parent</artifactId>
-        <version>1.3.1-SNAPSHOT</version>
+        <version>1.3.2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -13,7 +13,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <BUILD_NUMBER>7269M</BUILD_NUMBER>
+        <BUILD_NUMBER>7271M</BUILD_NUMBER>
         <BUILD_CLASS>DEV</BUILD_CLASS>
     </properties>
 
