@@ -326,6 +326,37 @@ public class TextFormattingTags {
             return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[gradient=" + fromColor + ";" + toColor + ";" + style + "]", true);
         });
 
+        TagManager.registerStaticTagBaseHandler(ElementTag.class, MapTag.class, "&shadow_gradient", (attribute, inputMap) -> {
+            ColorTag fromColor = inputMap.getRequiredObjectAs("from", ColorTag.class, attribute);
+            ColorTag toColor = inputMap.getRequiredObjectAs("to", ColorTag.class, attribute);
+            ElementTag style = inputMap.getElement("style", "RGB");
+            if (fromColor == null || toColor == null) {
+                return null;
+            }
+            if (!style.matchesEnum(PaperElementExtensions.GradientStyle.class)) {
+                attribute.echoError("Invalid gradient style '" + style + "'");
+                return null;
+            }
+            return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[sdw_gradient=" + fromColor + ";" + toColor + ";" + style + "]", true);
+        });
+
+        TagManager.registerStaticTagBaseHandler(ElementTag.class, MapTag.class, "&dual_gradient", (attribute, inputMap) -> {
+            ColorTag fromColor = inputMap.getRequiredObjectAs("from", ColorTag.class, attribute);
+            ColorTag toColor = inputMap.getRequiredObjectAs("to", ColorTag.class, attribute);
+            ColorTag sFrom = inputMap.getRequiredObjectAs("s_from", ColorTag.class, attribute);
+            ColorTag sTo = inputMap.getRequiredObjectAs("s_to", ColorTag.class, attribute);
+            ElementTag style = inputMap.getElement("style", "RGB");
+
+            if (fromColor == null || toColor == null || sFrom == null || sTo == null) {
+                return null;
+            }
+            if (!style.matchesEnum(PaperElementExtensions.GradientStyle.class)) {
+                attribute.echoError("Invalid gradient style '" + style + "'");
+                return null;
+            }
+            return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[dual_gradient=" + fromColor + ";" + toColor + ";" + sFrom + ";" + sTo + ";" + style + "]", true);
+        });
+
         // <--[tag]
         // @attribute <&font[<font>]>
         // @returns ElementTag

@@ -688,15 +688,11 @@ public class FormattedTextHelper {
                                 int finalColor;
 
                                 if (hex.length() == 8) {
-                                    // Пользователь сам указал прозрачность (RGBA -> ARGB)
                                     int alpha = (int) (rawVal & 0xFF);
                                     int rgb = (int) (rawVal >> 8);
                                     finalColor = (alpha << 24) | (rgb & 0xFFFFFF);
                                 }
                                 else {
-                                    // Если ввели 6 знаков (#RRGGBB):
-                                    // Оставляем цвет ярким, но ставим прозрачность ~25% (0x3F) или ~40% (0x64)
-                                    // MiniMessage по умолчанию для теней часто использует именно прозрачность.
                                     finalColor = 0x64000000 | ((int) rawVal & 0xFFFFFF);
                                 }
 
@@ -704,6 +700,52 @@ public class FormattedTextHelper {
                             }
                             catch (NumberFormatException ex) {
                                 Debug.echoError("Invalid shadow color hex: " + hex);
+                            }
+                        }
+                        else if (innardType.equals("sdw_gradient") && innardParts.size() == 2) {
+                            String from = innardBase.get(1), to = innardParts.get(0), style = innardParts.get(1);
+                            ColorTag fromColor = ColorTag.valueOf(from, CoreUtilities.noDebugContext);
+                            ColorTag toColor = ColorTag.valueOf(to, CoreUtilities.noDebugContext);
+                            PaperElementExtensions.GradientStyle styleEnum = new ElementTag(style).asEnum(PaperElementExtensions.GradientStyle.class);
+
+                            if (fromColor == null || toColor == null || styleEnum == null) {
+                                if (CoreConfiguration.debugVerbose) {
+                                    Debug.echoError("Text parse issue: cannot interpret sdw_gradient input '" + innards + "'.");
+                                }
+                            }
+                            else {
+                                int endIndex = findNextNormalColorSymbol(str, i + 1);
+                                if (endIndex == -1) {
+                                    endIndex = str.length();
+                                }
+
+                                String gradientText = doSdwGradient(str.substring(endBracket + 1, endIndex), fromColor, toColor, styleEnum);
+                                lastText.append(parseInternal(gradientText, baseColor, false, optimize));
+                                endBracket = endIndex - 1;
+                            }
+                        }
+                        else if (innardType.equals("dual_gradient") && innardParts.size() == 4) {
+                            String from = innardBase.get(1), to = innardParts.get(0), sFrom = innardParts.get(1), sTo = innardParts.get(2), style = innardParts.get(3);
+                            ColorTag fromColor = ColorTag.valueOf(from, CoreUtilities.noDebugContext);
+                            ColorTag toColor = ColorTag.valueOf(to, CoreUtilities.noDebugContext);
+                            ColorTag shadowFrom = ColorTag.valueOf(sFrom, CoreUtilities.noDebugContext);
+                            ColorTag shadowTo = ColorTag.valueOf(sTo, CoreUtilities.noDebugContext);
+                            PaperElementExtensions.GradientStyle styleEnum = new ElementTag(style).asEnum(PaperElementExtensions.GradientStyle.class);
+                            if (fromColor == null || toColor == null || shadowFrom == null || shadowTo == null || styleEnum == null) {
+                                if (CoreConfiguration.debugVerbose) {
+                                    Debug.echoError("Text parse issue: cannot interpret dual_gradient input.");
+                                }
+                            }
+                            else {
+                                int endIndex = findNextNormalColorSymbol(str, i + 1);
+                                if (endIndex == -1) {
+                                    endIndex = str.length();
+                                }
+
+                                String gradientText = doDualGradient(str.substring(endBracket + 1, endIndex), fromColor, toColor, shadowFrom, shadowTo, styleEnum);
+
+                                lastText.append(parseInternal(gradientText, baseColor, false, optimize));
+                                endBracket = endIndex - 1;
                             }
                         }
                         else if (innardType.equals("mm_head")) {
@@ -977,6 +1019,59 @@ public class FormattedTextHelper {
             return -1;
         }
         return result;
+    }
+
+    public static String doDualGradient(String text, ColorTag fromC, ColorTag toC, ColorTag fromS, ColorTag toS, PaperElementExtensions.GradientStyle style) {
+        StringBuilder result = new StringBuilder();
+        int length = text.length();
+        if (length == 0) return "";
+
+        for (int i = 0; i < length; i++) {
+            char c = text.charAt(i);
+            float ratio = length == 1 ? 0 : (float) i / (length - 1);
+            int rC = (int) (fromC.red + ratio * (toC.red - fromC.red));
+            int gC = (int) (fromC.green + ratio * (toC.green - fromC.green));
+            int bC = (int) (fromC.blue + ratio * (toC.blue - fromC.blue));
+            String hexColor = String.format("#%02x%02x%02x", rC, gC, bC);
+            int rS = (int) (fromS.red + ratio * (toS.red - fromS.red));
+            int gS = (int) (fromS.green + ratio * (toS.green - fromS.green));
+            int bS = (int) (fromS.blue + ratio * (toS.blue - fromS.blue));
+            int aS = (int) (fromS.alpha + ratio * (toS.alpha - fromS.alpha));
+            String hexShadow = String.format("#%02x%02x%02x%02x", rS, gS, bS, aS);
+            result.append(FormattedTextHelper.LEGACY_SECTION).append("[color=").append(hexColor).append("]")
+                    .append(FormattedTextHelper.LEGACY_SECTION).append("[shadow=").append(hexShadow).append("]")
+                    .append(c);
+        }
+        return result.toString();
+    }
+
+    public static String doSdwGradient(String text, ColorTag from, ColorTag to, PaperElementExtensions.GradientStyle style) {
+        StringBuilder result = new StringBuilder();
+        int length = text.length();
+        if (length == 0) return "";
+        int fromA = from.alpha;
+        int fromR = from.red;
+        int fromG = from.green;
+        int fromB = from.blue;
+        int toA = to.alpha;
+        int toR = to.red;
+        int toG = to.green;
+        int toB = to.blue;
+        for (int i = 0; i < length; i++) {
+            char c = text.charAt(i);
+            float ratio = length == 1 ? 0 : (float) i / (length - 1);
+            int r = (int) (fromR + ratio * (toR - fromR));
+            int g = (int) (fromG + ratio * (toG - fromG));
+            int b = (int) (fromB + ratio * (toB - fromB));
+            int a = (int) (fromA + ratio * (toA - fromA));
+            String hexRgba = String.format("#%02x%02x%02x%02x", r, g, b, a);
+            result.append(FormattedTextHelper.LEGACY_SECTION)
+                    .append("[shadow=")
+                    .append(hexRgba)
+                    .append("]")
+                    .append(c);
+        }
+        return result.toString();
     }
 
     /**
