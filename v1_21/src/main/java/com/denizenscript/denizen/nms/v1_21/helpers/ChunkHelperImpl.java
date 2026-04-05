@@ -23,6 +23,8 @@ import org.bukkit.World;
 import org.bukkit.craftbukkit.v1_21_R7.CraftChunk;
 import org.bukkit.craftbukkit.v1_21_R7.CraftWorld;
 
+import java.io.File;
+import java.io.RandomAccessFile;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
 
