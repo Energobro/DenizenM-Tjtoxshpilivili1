@@ -132,14 +132,6 @@ public class Denizen extends JavaPlugin {
         }
         String javaVersion = System.getProperty("java.version");
         Debug.log("Running on java version: " + javaVersion);
-        if (!NMSHandler.initialize(this)) {
-            getLogger().warning("-------------------------------------");
-            getLogger().warning("This build of Denizen is not compatible with this Spigot version! Deactivating Denizen!");
-            getLogger().warning("-------------------------------------");
-            getServer().getPluginManager().disablePlugin(this);
-            startedSuccessful = false;
-            return;
-        }
         try {
             if (Class.forName("com.destroystokyo.paper.PaperConfig") != null) {
                 supportsPaper = true;
@@ -150,6 +142,14 @@ public class Denizen extends JavaPlugin {
         }
         catch (Throwable ex) {
             Debug.echoError(ex);
+        }
+        if (!NMSHandler.initialize(this)) {
+            getLogger().warning("-------------------------------------");
+            getLogger().warning("This build of Denizen is not compatible with this Spigot version! Deactivating Denizen!");
+            getLogger().warning("-------------------------------------");
+            getServer().getPluginManager().disablePlugin(this);
+            startedSuccessful = false;
+            return;
         }
         if (!NMSHandler.instance.isExactServerVersionMatch()) {
             String serverSoftware = supportsPaper ? "Paper" : "Spigot";
