@@ -15,7 +15,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
     * Added `PlayerTag.remove_resource_pack` mechanism to remove a specific resource pack by ID from a player.
     * Added `PlayerTag.remove_resource_packs` mechanism to remove all resource packs from a player.
 * **Text & Formatting:**
-    * New tags: `<&sprite>`, `<&shadow_color>`, `<&shadow_gradient>`, `<&dual_gradient>`, and `<&player_head>`.
+    * New tags: `<&sprite>`, `<&shadow_color>`, `<&shadow_gradient>`, `<&dual_gradient>` and `<&player_head>`.
       * Sprite usage example: `<&sprite[minecraft:items:item/porkchop]>`
       * Shadow Color usage examples **(!! DON'T FORGET ABOUT .hex TAG !!)**:
          * Simple variant - `<&shadow_color[#51a2ff]>`
@@ -30,7 +30,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
       * Player Head usage examples **(!! DON'T FORGET ABOUT «!» IF YOU'RE USING THE SECOND OPT. !!)**:
          * Full Face Texture - `<&player_head[Tjtoxshpilivili1]>`
          * Only Face Texture (without surface pixels) - `<&player_head[!Tjtoxshpilivili1]>`
-    * Added `.shadow_color` tag to `ElementTag`.
+    * Added `.shadow_color`, `.shadow_gradient` and `.dual_gradient` tags to `ElementTag`.
 * **Internal Migration:** Fully migrated to **Paper Components** for improved performance and modern API compatibility.
 
 ## 🧪 Items & Mechanics
