@@ -12,7 +12,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <BUILD_NUMBER>b7275M</BUILD_NUMBER>
+        <BUILD_NUMBER>b7276M</BUILD_NUMBER>
         <BUILD_CLASS>DEV</BUILD_CLASS>
     </properties>
 
