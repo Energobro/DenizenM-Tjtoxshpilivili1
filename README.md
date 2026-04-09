@@ -15,16 +15,21 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
     * Added `PlayerTag.remove_resource_pack` mechanism to remove a specific resource pack by ID from a player.
     * Added `PlayerTag.remove_resource_packs` mechanism to remove all resource packs from a player.
 * **Text & Formatting:**
-    * New tags: `<&sprite>`, `<&shadow_color>`, and `<&player_head>`.
+    * New tags: `<&sprite>`, `<&shadow_color>`, `<&shadow_gradient>`, `<&dual_gradient>`, and `<&player_head>`.
       * Sprite usage example: `<&sprite[minecraft:items:item/porkchop]>`
-      * Shadow Color usage examples:
+      * Shadow Color usage examples **(!! DON'T FORGET ABOUT .hex TAG !!)**:
          * Simple variant - `<&shadow_color[#51a2ff]>`
          * With adjustable transparency - `<&shadow_color[<color[#51a2ff].with_alpha[254].hex>]>`
-           **(!! DON'T FORGET ABOUT .hex TAG !!)**
-      * Player Head usage examples:
+      * Shadow gradient usage examples:
+         * Simple variant - `<&shadow_gradient[from=#51a2ff;to=#FFF085]>`
+         * With adjustable transparency - `<&shadow_gradient[from=<color[#51a2ff].with_alpha[0].hex>;to=<color[#FFF085].with_alpha[254].hex>]>`
+      * Dual gradient including Shadow color and Simple color gradients, usage examples:
+         * Simple variant - `<&dual_gradient[from=#51a2ff;to=#FFF085;s_from=#FFF085;s_to=#51a2ff]>`
+         * Tags `from` and `to` for simple color gradient adjusting.
+         * Tags `s_from` and `s_to` for shadow color gradient adjusting.
+      * Player Head usage examples **(!! DON'T FORGET ABOUT «!» IF YOU'RE USING THE SECOND OPT. !!)**:
          * Full Face Texture - `<&player_head[Tjtoxshpilivili1]>`
          * Only Face Texture (without surface pixels) - `<&player_head[!Tjtoxshpilivili1]>`
-           **(!! DON'T FORGET ABOUT «!» !!)**
     * Added `.shadow_color` tag to `ElementTag`.
 * **Internal Migration:** Fully migrated to **Paper Components** for improved performance and modern API compatibility.
 
