@@ -29,14 +29,9 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
 * **Internal Migration:** Fully migrated to **Paper Components** for improved performance and modern API compatibility.
 
 ## 🧪 Items & Mechanics
-* **Enhanced Max Durability:** Major modification to durability handling. 
-    * You can now retrieve the actual durability of the item in hand.
-       * Usage example - `<player.item_in_hand.max_durability>`
-    * New mechanism `max_durability` to set custom durability for any item.
-       * Usage example - `inventory adjust slot:hand max_durability:4`
 * **Attributes:**
-    * Added new `.rarity_color` tag for items.
-    * Fixed the `.rarity` tag for items.
+    * Added new `.rarity_color` tag for items, returns ColorTag.
+       * Usage example - `<player.item_in_hand.rarity_color>`
 
 ## 🧹 Optimization & Cleanup
 * **Core Optimization:** Implementation of custom optimizations across several internal classes.

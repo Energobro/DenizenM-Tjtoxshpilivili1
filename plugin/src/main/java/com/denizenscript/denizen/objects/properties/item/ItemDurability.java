@@ -31,7 +31,7 @@ public class ItemDurability implements Property {
     };
 
     public static final String[] handledMechs = new String[] {
-            "durability", "max_durability"
+            "durability"
     };
 
     public ItemDurability(ItemTag _item) {
@@ -69,17 +69,7 @@ public class ItemDurability implements Property {
         // For use with <@link tag ItemTag.durability> and <@link mechanism ItemTag.durability>.
         // -->
         if (attribute.startsWith("max_durability")) {
-            int maxDurability;
-            ItemStack bukkitItem = item.getItemStack();
-            ItemMeta meta = bukkitItem.getItemMeta();
-            if (meta instanceof Damageable damageable && damageable.hasMaxDamage()) {
-                maxDurability = damageable.getMaxDamage();
-            }
-            else {
-                maxDurability = bukkitItem.getType().getMaxDurability();
-            }
-
-            return new ElementTag(maxDurability)
+            return new ElementTag(item.getMaterial().getMaterial().getMaxDurability())
                     .getObjectAttribute(attribute.fulfill(1));
         }
 
@@ -118,16 +108,6 @@ public class ItemDurability implements Property {
         // -->
         if (mechanism.matches("durability") && mechanism.requireInteger()) {
             item.setDurability((short) mechanism.getValue().asInt());
-        }
-        if (mechanism.matches("max_durability") && mechanism.requireInteger()) {
-            int newMax = mechanism.getValue().asInt();
-            ItemStack bitem = item.getItemStack();
-            ItemMeta meta = bitem.getItemMeta();
-
-            if (meta instanceof Damageable damageable) {
-                damageable.setMaxDamage(newMax > 0 ? newMax : null);
-                bitem.setItemMeta(damageable);
-            }
         }
     }
 }

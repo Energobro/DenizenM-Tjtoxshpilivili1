@@ -14,31 +14,10 @@ public class PaperItemExtensions {
 
     public static void register() {
 
-        // <--[tag]
-        // @attribute <ItemTag.rarity>
-        // @returns ElementTag
-        // @group paper
-        // @Plugin Paper
-        // @description
-        // Returns the rarity of an item, as "common", "uncommon", "rare", or "epic".
-        // -->
-        ItemTag.tagProcessor.registerTag(ElementTag.class, "rarity", (attribute, item) -> {
-            if (item == null) {
-                return new ElementTag("COMMON");
-            }
-
-            ItemStack stack = item.getItemStack();
-            if (stack == null || stack.isEmpty()) {
-                return new ElementTag("COMMON");
-            }
-            ItemRarity rarity = stack.getData(DataComponentTypes.RARITY);
-            return new ElementTag(rarity != null ? rarity.name() : "COMMON");
-        });
-
         ItemTag.tagProcessor.registerTag(ColorTag.class, "rarity_color", (attribute, item) -> {
             try {
                 if (item == null) {
-                    return new ColorTag(255, 255, 255); // COMMON = белый
+                    return new ColorTag(255, 255, 255);
                 }
                 ItemStack stack = item.getItemStack();
                 if (stack == null || stack.isEmpty()) {
