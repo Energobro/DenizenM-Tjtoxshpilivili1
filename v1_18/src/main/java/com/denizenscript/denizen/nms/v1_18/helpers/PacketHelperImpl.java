@@ -110,6 +110,11 @@ public class PacketHelperImpl implements PacketHelper {
     }
 
     @Override
+    public void showFakeSignEditor(Player player, Location location, String[] text) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void setSlot(Player player, int slot, ItemStack itemStack, boolean playerOnly) {
         AbstractContainerMenu menu = ((CraftPlayer) player).getHandle().containerMenu;
         int windowId = playerOnly ? 0 : menu.containerId;

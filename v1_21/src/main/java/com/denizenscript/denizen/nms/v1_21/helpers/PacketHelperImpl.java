@@ -27,6 +27,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -37,6 +38,10 @@ import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.monster.spider.Spider;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.SignBlockEntity;
+import net.minecraft.world.level.block.entity.SignText;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
@@ -171,6 +176,48 @@ public class PacketHelperImpl implements PacketHelper {
         attr.setBaseValue(maxHealth);
         send(player, new ClientboundUpdateAttributesPacket(mob.getEntityId(), List.of(attr)));
         send(player, new ClientboundSetEntityDataPacket(mob.getEntityId(), List.of(createEntityData(net.minecraft.world.entity.LivingEntity.DATA_HEALTH_ID, (float) health))));
+    }
+
+    @Override
+    public void showFakeSignEditor(Player player, Location location, String[] text) {
+        NetworkInterceptHelper.enable();
+        Sign sign = null;
+        BlockPos toOpen = null;
+        Location foundLoc = null;
+        for (int i = 0; i < 8; i++) {
+            Location toCheck = player.getLocation();
+            toCheck.setY(toCheck.getY() - i);
+            if (toCheck.getBlock().getState() instanceof Sign foundSign) {
+                sign = foundSign;
+                foundLoc = toCheck;
+            }
+            else {
+                sign = null;
+                toOpen = CraftLocation.toBlockPosition(toCheck);
+                foundLoc = toCheck;
+                break;
+            }
+        }
+
+        if (sign != null) {
+            toOpen = CraftLocation.toBlockPosition(sign.getLocation());
+            SignSide front = sign.getSide(Side.FRONT);
+            for (int line = 0; line < 4; line++) {
+                String lineText = (text != null && text.length > line && text[line] != null) ? text[line] : "";
+                front.setLine(line, lineText);
+            }
+            player.sendBlockUpdate(sign.getLocation(), sign);
+        } else {
+            Location fakeSignLoc = new Location(player.getWorld(), toOpen.getX(), toOpen.getY(), toOpen.getZ());
+            player.sendBlockChange(fakeSignLoc, Material.OAK_WALL_SIGN.createBlockData());
+            if (text != null) {
+                player.sendSignChange(fakeSignLoc, text);
+            }
+        }
+
+        DenizenNetworkManagerImpl.getNetworkManager(player).packetListener.fakeSignExpected = toOpen;
+        ServerPlayer pl = ((CraftPlayer) player).getHandle();
+        pl.connection.send(new ClientboundOpenSignEditorPacket(toOpen, true));
     }
 
     @Override

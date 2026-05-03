@@ -104,6 +104,11 @@ public class PacketHelperImpl implements PacketHelper {
     }
 
     @Override
+    public void showFakeSignEditor(Player player, Location location, String[] text) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void setFieldOfView(Player player, float fov) {
         ClientboundPlayerAbilitiesPacket packet = new ClientboundPlayerAbilitiesPacket(((CraftPlayer) player).getHandle().getAbilities());
         if (!Float.isNaN(fov)) {

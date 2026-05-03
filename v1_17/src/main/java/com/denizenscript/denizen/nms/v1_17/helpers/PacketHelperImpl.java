@@ -116,6 +116,11 @@ public class PacketHelperImpl implements PacketHelper {
     }
 
     @Override
+    public void showFakeSignEditor(Player player, Location location, String[] text) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void setWorldBorder(Player player, Location center, double size, double currSize, long time, int warningDistance, int warningTime) {
         WorldBorder wb = new WorldBorder();
         wb.world = ((CraftWorld) player.getWorld()).getHandle();

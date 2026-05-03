@@ -113,6 +113,8 @@ public interface PacketHelper {
 
     void showSignEditor(Player player, Location location); // TODO: once minimum version is 1.18 or higher, change to "showFakeSignEditor" and remove location param
 
+    void showFakeSignEditor(Player player, Location location, String[] text);
+
     void forceSpectate(Player player, Entity entity);
 
     void setNetworkManagerFor(Player player);

@@ -3861,7 +3861,7 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // Give no input to make a fake edit interface.
         // -->
         if (mechanism.matches("edit_sign")) {
-            if (mechanism.hasValue() && mechanism.requireObject(LocationTag.class)) {
+            if (mechanism.hasValue() && LocationTag.matches(mechanism.getValue().asString())) {
                 BlockState state = mechanism.valueAsType(LocationTag.class).getBlockState();
                 if (!(state instanceof Sign)) {
                     mechanism.echoError("Invalid location specified: must be a sign.");
@@ -3872,9 +3872,19 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
                     return;
                 }
                 getPlayerEntity().openSign((Sign) state);
-            }
-            else {
-                NMSHandler.packetHelper.showSignEditor(getPlayerEntity(), null);
+            } else {
+                Player player = getPlayerEntity();
+                String[] lines = new String[] {"", "", "", ""};
+                if (mechanism.hasValue()) {
+                    ListTag inputLines = ListTag.getListFor(mechanism.getValue(), mechanism.context);
+                    if (inputLines != null) {
+                        for (int i = 0; i < Math.min(4, inputLines.size()); i++) {
+                            lines[i] = inputLines.get(i);
+                        }
+                    }
+                }
+
+                NMSHandler.packetHelper.showFakeSignEditor(player, player.getLocation(), lines);
             }
         }
 

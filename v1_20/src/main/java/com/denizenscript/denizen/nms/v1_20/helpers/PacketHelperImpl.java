@@ -113,6 +113,11 @@ public class PacketHelperImpl implements PacketHelper {
     }
 
     @Override
+    public void showFakeSignEditor(Player player, Location location, String[] text) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void setVision(Player player, EntityType entityType) {
         final net.minecraft.world.entity.LivingEntity entity;
         if (entityType == EntityType.CREEPER) {
