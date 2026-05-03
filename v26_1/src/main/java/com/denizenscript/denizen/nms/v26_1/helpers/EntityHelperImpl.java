@@ -172,7 +172,7 @@ public class EntityHelperImpl extends EntityHelper {
     @Override
     public void forceInteraction(Player player, Location location) {
         ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
-        ((CraftBlock) location.getBlock()).getNMS().useItemOn(nmsPlayer.getMainHandItem(), ((CraftWorld) location.getWorld()).getHandle(),
+        BlockHelperImpl.getNMSState(location.getBlock()).useItemOn(nmsPlayer.getMainHandItem(), ((CraftWorld) location.getWorld()).getHandle(),
                 nmsPlayer, InteractionHand.MAIN_HAND,
                 new BlockHitResult(new Vec3(0, 0, 0), null, Handler.toBlockPos(location), false));
     }
