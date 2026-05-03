@@ -98,7 +98,7 @@ public class ScriptEventRegistry {
         ScriptEvent.registerScriptEvent(BrewingStartsScriptEvent.class);
         ScriptEvent.registerScriptEvent(TNTPrimesScriptEvent.class);
         ScriptEvent.registerScriptEvent(CrafterCraftsScriptEvent.class);
-        ScriptEvent.registerScriptEvent(VaultDisplayItemScriptEvent.class);
+        ScriptEvent.registerScriptEvent(VaultDisplaysItemScriptEvent.class);
 
         // Entity events
         ScriptEvent.registerScriptEvent(AreaEffectCloudApplyScriptEvent.class);

@@ -58,7 +58,7 @@ public class PaperModule {
         ScriptEvent.registerScriptEvent(PlayerJumpsScriptEventPaperImpl.class);
         ScriptEvent.registerScriptEvent(PlayerLecternPageChangeScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerLoomPatternSelectScriptEvent.class);
-        ScriptEvent.registerScriptEvent(PlayerNameEntityScriptEvent.class);
+        ScriptEvent.registerScriptEvent(PlayerNamesEntityScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerOpenSignScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerChangesUnchekedSignScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerPreparesGrindstoneCraftScriptEvent.class);
