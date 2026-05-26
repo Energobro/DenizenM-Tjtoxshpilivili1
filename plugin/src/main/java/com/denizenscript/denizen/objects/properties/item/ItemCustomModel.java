@@ -47,7 +47,6 @@ public class ItemCustomModel extends ItemProperty<ElementTag> {
     }
 
     public static void register() {
-        autoRegisterNullable("custom_model_data", ItemCustomModel.class, ElementTag.class, false);
 
         // <--[tag]
         // @attribute <ItemTag.has_custom_model_data>

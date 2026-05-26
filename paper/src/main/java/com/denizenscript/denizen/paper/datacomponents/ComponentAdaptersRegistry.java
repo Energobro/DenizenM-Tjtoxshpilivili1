@@ -10,5 +10,6 @@ public class ComponentAdaptersRegistry {
         DataComponentAdapter.register(new MaxStackSizeAdapter());
         DataComponentAdapter.register(new RarityAdapter());
         DataComponentAdapter.register(new RarityColorAdapter());
+        DataComponentAdapter.register(new CustomModelDataAdapter());
     }
 }
