@@ -37,6 +37,13 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
 * **Attributes:**
     * Added new `.rarity_color` tag for items, returns ColorTag.
        * Usage example - `<player.item_in_hand.rarity_color>`
+* **Custom Model Data:**
+  * Updated `custom_model_data` mechanism and property, returns a MapTag of `floats`, `strings`, `flags (booleans)`, and `colors`.
+  * Now accepts a `MapTag` containing `Lists` of `floats`, `strings`, `flags (booleans)`, and `colors` (RGB) for advanced item model selection, while fully retaining backward compatibility for single-number inputs.
+  * Usage examples:
+    * Backward compatibility - `inventory adjust slot:hand custom_model_data:1000`
+    * New format - `inventory adjust slot:hand custom_model_data:<map[floats=<list[1000]>;flags=<list[...]>;strings=<list[foo:bar]>;colors=<list[<color[127,0,0]>]>]>`
+      * Simple usage - `custom_model_data:[floats=1000;flags=...;strings=foo:bar;colors=<color[127,0,0]>]`
 
 ## 🧹 Optimization & Cleanup
 * **Core Optimization:** Implementation of custom optimizations across several internal classes.
