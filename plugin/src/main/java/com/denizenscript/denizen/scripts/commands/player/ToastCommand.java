@@ -113,7 +113,7 @@ public class ToastCommand extends AbstractCommand {
         if (scriptEntry.dbCallShouldDebug()) {
             Debug.report(scriptEntry, name, text, frame, icon, db("targets", targets));
         }
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20) && icon.getBukkitMaterial().isAir()) {
+        if (icon.getBukkitMaterial().isAir()) {
             icon = new ItemTag(Material.DIRT);
         }
         final Advancement advancement = new Advancement(true,

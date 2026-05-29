@@ -135,10 +135,6 @@ public class TablistCommand extends AbstractCommand {
                     Debug.echoError("Cannot use 'tablist add' to add a non-empty display-named entry: 'Allow restricted actions' is disabled in Denizen config.yml.");
                     return;
                 }
-                if (NMSHandler.getVersion().isAtMost(NMSVersion.v1_18)) {
-                    NMSHandler.playerHelper.sendPlayerInfoAddPacket(player, EnumSet.of(PlayerHelper.ProfileEditMode.ADD), name, display, id, texture, signature, latencyNum, gamemode == null ? GameMode.CREATIVE : gamemode, false);
-                    return;
-                }
                 EnumSet<PlayerHelper.ProfileEditMode> editModes = EnumSet.of(PlayerHelper.ProfileEditMode.ADD);
                 boolean listedBool = listed == null || listed.asBoolean();
                 if (listedBool) {
@@ -167,15 +163,6 @@ public class TablistCommand extends AbstractCommand {
                 }
                 if ((display == null || display.length() > 0) && !CoreConfiguration.allowRestrictedActions) {
                     Debug.echoError("Cannot use 'tablist update' to create a non-empty named entry: 'Allow restricted actions' is disabled in Denizen config.yml.");
-                    return;
-                }
-                if (NMSHandler.getVersion().isAtMost(NMSVersion.v1_18)) {
-                    if (display != null) {
-                        NMSHandler.playerHelper.sendPlayerInfoAddPacket(player, EnumSet.of(PlayerHelper.ProfileEditMode.UPDATE_DISPLAY), name, display, id, texture, signature, latencyNum, gamemode, false);
-                    }
-                    if (latency != null) {
-                        NMSHandler.playerHelper.sendPlayerInfoAddPacket(player, EnumSet.of(PlayerHelper.ProfileEditMode.UPDATE_LATENCY), name, display, id, texture, signature, latencyNum, gamemode, false);
-                    }
                     return;
                 }
                 EnumSet<PlayerHelper.ProfileEditMode> editModes = EnumSet.noneOf(PlayerHelper.ProfileEditMode.class);

@@ -160,7 +160,7 @@ public class PlayEffectCommand extends AbstractCommand {
                     scriptEntry.addObject("particleeffect", particle);
                     continue;
                 }
-                if (arg.matches("barrier") && NMSHandler.getVersion().isAtLeast(NMSVersion.v1_18)) {
+                if (arg.matches("barrier")) {
                     scriptEntry.addObject("particleeffect", Particle.BLOCK_MARKER);
                     scriptEntry.addObject("special_data", new ElementTag("barrier"));
                     continue;
