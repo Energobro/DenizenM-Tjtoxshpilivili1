@@ -15,6 +15,7 @@ import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.objects.core.ListTag;
 import com.denizenscript.denizencore.scripts.ScriptEntry;
 import com.denizenscript.denizencore.scripts.commands.AbstractCommand;
+import com.denizenscript.denizencore.scripts.commands.Holdable;
 import com.denizenscript.denizencore.scripts.commands.generator.*;
 import com.denizenscript.denizencore.utilities.Deprecations;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
@@ -26,7 +27,7 @@ import org.bukkit.util.Vector;
 import java.util.Arrays;
 import java.util.List;
 
-public class TeleportCommand extends AbstractCommand {
+public class TeleportCommand extends AbstractCommand implements Holdable {
 
     public TeleportCommand() {
         setName("teleport");
@@ -38,7 +39,7 @@ public class TeleportCommand extends AbstractCommand {
 
     // <--[command]
     // @Name Teleport
-    // @Syntax teleport (<entity>|...) [<location>] (cause:<cause>) (entity_options:<option>|...) (relative) (relative_axes:<axis>|...) (offthread_repeat:<#>) (offthread_yaw) (offthread_pitch)
+    // @Syntax teleport (<entity>|...) [<location>] (cause:<cause>) (entity_options:<option>|...) (relative) (relative_axes:<axis>|...) (offthread_repeat:<#>) (offthread_yaw) (offthread_pitch) (async)
     // @Required 1
     // @Maximum 9
     // @Short Teleports the entity(s) to a new location.
@@ -57,6 +58,9 @@ public class TeleportCommand extends AbstractCommand {
     // Optionally, you may use "relative_axes:" to specify a set of axes to move relative on (and other axes will be treated as absolute), as any of "X", "Y", "Z", "YAW", "PITCH".
     // Optionally, you may use "offthread_repeat:" with the relative arg when teleporting a player to smooth out the teleport with a specified number of extra async packets sent within a single tick.
     // Optionally, specify "offthread_yaw" or "offthread_pitch" while using offthread_repeat to smooth the player's yaw/pitch to the new location's yaw/pitch.
+    //
+    // Optionally, specify "async" to use asynchronous teleportation (Paper only). This is useful for cross-world teleports to avoid blocking the main thread.
+    // The 'async' argument is ~waitable. Refer to <@link language ~waitable>.
     //
     // Optionally, specify additional teleport options using the 'entity_options:' arguments (Paper only).
     // This allows things like retaining an open inventory when teleporting - see the links below for more information.
@@ -134,6 +138,7 @@ public class TeleportCommand extends AbstractCommand {
         if (location == null || entities == null) {
             throw new InvalidArgumentsRuntimeException("Location or entity list missing or invalid for Teleport command");
         }
+        int[] asyncCounter = new int[1];
         for (ObjectTag entityObj : entities.objectForms) {
             if (entityObj.shouldBeType(PlayerTag.class)) {
                 PlayerTag player = entityObj.asType(PlayerTag.class, scriptEntry.context);
@@ -202,7 +207,18 @@ public class TeleportCommand extends AbstractCommand {
                 continue;
             }
             if (async) {
-                PaperAPITools.instance.teleportAsync(entity.getBukkitEntity(), location, cause, entityOptions, relativeAxes);
+                if (scriptEntry.shouldWaitFor()) {
+                    asyncCounter[0]++;
+                    PaperAPITools.instance.teleportAsync(entity.getBukkitEntity(), location, cause, entityOptions, relativeAxes, success -> {
+                        asyncCounter[0]--;
+                        if (asyncCounter[0] <= 0) {
+                            scriptEntry.setFinished(true);
+                        }
+                    });
+                }
+                else {
+                    PaperAPITools.instance.teleportAsync(entity.getBukkitEntity(), location, cause, entityOptions, relativeAxes);
+                }
                 continue;
             }
             if (entityOptions != null || relativeAxes != null) {

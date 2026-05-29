@@ -178,6 +178,11 @@ public class PaperAPIToolsImpl extends PaperAPITools {
 
     @Override
     public void teleportAsync(Entity entity, Location loc, PlayerTeleportEvent.TeleportCause cause, List<TeleportCommand.EntityState> entityTeleportFlags, List<TeleportCommand.Relative> relativeTeleportFlags) {
+        teleportAsync(entity, loc, cause, entityTeleportFlags, relativeTeleportFlags, null);
+    }
+
+    @Override
+    public void teleportAsync(Entity entity, Location loc, PlayerTeleportEvent.TeleportCause cause, List<TeleportCommand.EntityState> entityTeleportFlags, List<TeleportCommand.Relative> relativeTeleportFlags, Consumer<Boolean> callback) {
         List<TeleportFlag> teleportFlags = new ArrayList<>();
         if (entityTeleportFlags != null) {
             for (TeleportCommand.EntityState entityTeleportFlag : entityTeleportFlags) {
@@ -192,6 +197,9 @@ public class PaperAPIToolsImpl extends PaperAPITools {
         entity.teleportAsync(loc, cause, teleportFlags.toArray(new TeleportFlag[0])).thenAccept(success -> {
             if (!success) {
                 Debug.echoError("Async teleport failed for entity '" + entity.getUniqueId() + "' to location " + loc + ".");
+            }
+            if (callback != null) {
+                DenizenCore.runOnMainThread(() -> callback.accept(success));
             }
         });
     }
