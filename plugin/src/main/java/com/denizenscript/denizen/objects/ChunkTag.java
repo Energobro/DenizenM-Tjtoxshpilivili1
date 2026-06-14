@@ -889,6 +889,7 @@ public class ChunkTag implements ObjectTag, Adjustable, FlaggableObject {
         // <--[mechanism]
         // @object ChunkTag
         // @name regenerate
+        // @deprecated functionality was removed from Spigot and Paper as of MC 1.21.
         // @input None
         // @description
         // Causes the chunk to be entirely deleted and reformed from the world's seed.
