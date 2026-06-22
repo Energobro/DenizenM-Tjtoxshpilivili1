@@ -9,6 +9,7 @@ import com.denizenscript.denizen.nms.abstracts.Sidebar;
 import com.denizenscript.denizen.nms.util.PlayerProfile;
 import com.denizenscript.denizen.nms.v26_1.helpers.*;
 import com.denizenscript.denizen.nms.v26_1.impl.BiomeNMSImpl;
+import com.denizenscript.denizen.nms.v26_1.impl.ClickEventHelperImpl;
 import com.denizenscript.denizen.nms.v26_1.impl.ProfileEditorImpl;
 import com.denizenscript.denizen.nms.v26_1.impl.SidebarImpl;
 import com.denizenscript.denizen.nms.v26_1.impl.blocks.BlockLightImpl;
@@ -16,6 +17,7 @@ import com.denizenscript.denizen.objects.ItemTag;
 import com.denizenscript.denizen.objects.LocationTag;
 import com.denizenscript.denizen.objects.MaterialTag;
 import com.denizenscript.denizen.objects.properties.item.ItemRawNBT;
+import com.denizenscript.denizen.paper.utilities.ClickEventHelper;
 import com.denizenscript.denizen.utilities.PaperAPITools;
 import com.denizenscript.denizencore.objects.ObjectTag;
 import com.denizenscript.denizencore.objects.core.ElementTag;
@@ -119,6 +121,7 @@ public class Handler extends NMSHandler {
         playerHelper = new PlayerHelperImpl();
         worldHelper = new WorldHelperImpl();
         enchantmentHelper = new EnchantmentHelperImpl();
+        ClickEventHelper.instance = new ClickEventHelperImpl();
 
         registerConversion(ItemTag.class, ItemStack.class, item -> CraftItemStack.asNMSCopy(item.getItemStack()));
         registerConversion(ElementTag.class, Component.class, element -> parseNMSComponent(element.asString(), PaperAPITools.BaseColor.WHITE));

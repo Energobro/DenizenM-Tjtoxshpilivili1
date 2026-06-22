@@ -278,7 +278,7 @@ public class FormattedTextHelper {
         if (hasClick) {
             ClickEvent click = component.clickEvent();
             // TODO modern click events
-            builder.append(LEGACY_SECTION).append("[click=").append(click.action().name()).append(";").append(escape(click.value())).append("]");
+            builder.append(LEGACY_SECTION).append("[click=").append(click.action().name()).append(";").append(escape(ClickEventHelper.instance.getValue(click))).append("]");
         }
         if (component instanceof TextComponent textComponent) {
             builder.append(textComponent.content());
@@ -788,7 +788,9 @@ public class FormattedTextHelper {
                             TextComponent.Builder clickableText = Component.text();
                             ClickEvent.Action action = ElementTag.asEnum(ClickEvent.Action.class, innardBase.get(1));
                             // TODO click event types
-                            clickableText.clickEvent(ClickEvent.clickEvent(action == null ? ClickEvent.Action.SUGGEST_COMMAND : action, unescape(innardParts.get(0))));
+                            clickableText.clickEvent(action == null
+                                    ? ClickEventHelper.instance.createSuggestCommand(unescape(innardParts.get(0)))
+                                    : ClickEventHelper.instance.createClickEvent(action, unescape(innardParts.get(0))));
                             clickableText.append(parseInternal(str.substring(endBracket + 1, endIndex), baseColor, false, optimize));
                             lastText.append(clickableText);
                             endBracket = endIndex + "&[/click".length();

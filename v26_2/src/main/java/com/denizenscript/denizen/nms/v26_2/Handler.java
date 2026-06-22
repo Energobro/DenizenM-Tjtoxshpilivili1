@@ -1,4 +1,4 @@
-package com.denizenscript.denizen.nms.v1_21;
+package com.denizenscript.denizen.nms.v26_2;
 
 import com.denizenscript.denizen.Denizen;
 import com.denizenscript.denizen.nms.NMSHandler;
@@ -7,12 +7,12 @@ import com.denizenscript.denizen.nms.abstracts.BlockLight;
 import com.denizenscript.denizen.nms.abstracts.ProfileEditor;
 import com.denizenscript.denizen.nms.abstracts.Sidebar;
 import com.denizenscript.denizen.nms.util.PlayerProfile;
-import com.denizenscript.denizen.nms.v1_21.helpers.*;
-import com.denizenscript.denizen.nms.v1_21.impl.BiomeNMSImpl;
-import com.denizenscript.denizen.nms.v1_21.impl.ClickEventHelperImpl;
-import com.denizenscript.denizen.nms.v1_21.impl.ProfileEditorImpl;
-import com.denizenscript.denizen.nms.v1_21.impl.SidebarImpl;
-import com.denizenscript.denizen.nms.v1_21.impl.blocks.BlockLightImpl;
+import com.denizenscript.denizen.nms.v26_2.helpers.*;
+import com.denizenscript.denizen.nms.v26_2.impl.BiomeNMSImpl;
+import com.denizenscript.denizen.nms.v26_2.impl.ClickEventHelperImpl;
+import com.denizenscript.denizen.nms.v26_2.impl.ProfileEditorImpl;
+import com.denizenscript.denizen.nms.v26_2.impl.SidebarImpl;
+import com.denizenscript.denizen.nms.v26_2.impl.blocks.BlockLightImpl;
 import com.denizenscript.denizen.objects.ItemTag;
 import com.denizenscript.denizen.objects.LocationTag;
 import com.denizenscript.denizen.objects.MaterialTag;
@@ -63,19 +63,22 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.boss.BossBar;
-import org.bukkit.craftbukkit.v1_21_R7.CraftRegistry;
-import org.bukkit.craftbukkit.v1_21_R7.CraftServer;
-import org.bukkit.craftbukkit.v1_21_R7.CraftWorld;
-import org.bukkit.craftbukkit.v1_21_R7.block.data.CraftBlockData;
-import org.bukkit.craftbukkit.v1_21_R7.boss.CraftBossBar;
-import org.bukkit.craftbukkit.v1_21_R7.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_21_R7.inventory.CraftInventory;
-import org.bukkit.craftbukkit.v1_21_R7.inventory.CraftInventoryCustom;
-import org.bukkit.craftbukkit.v1_21_R7.inventory.CraftInventoryView;
-import org.bukkit.craftbukkit.v1_21_R7.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_21_R7.legacy.FieldRename;
-import org.bukkit.craftbukkit.v1_21_R7.persistence.CraftPersistentDataContainer;
-import org.bukkit.craftbukkit.v1_21_R7.util.*;
+import org.bukkit.craftbukkit.CraftRegistry;
+import org.bukkit.craftbukkit.CraftServer;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.boss.CraftBossBar;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.inventory.CraftInventory;
+import org.bukkit.craftbukkit.inventory.CraftInventoryCustom;
+import org.bukkit.craftbukkit.inventory.CraftInventoryView;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.legacy.FieldRename;
+import org.bukkit.craftbukkit.persistence.CraftPersistentDataContainer;
+import org.bukkit.craftbukkit.util.ApiVersion;
+import org.bukkit.craftbukkit.util.CraftChatMessage;
+import org.bukkit.craftbukkit.util.CraftMagicNumbers;
+import org.bukkit.craftbukkit.util.CraftNamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
@@ -96,6 +99,15 @@ import java.util.function.Function;
 
 public class Handler extends NMSHandler {
 
+    public static BlockPos toBlockPos(Location location) { // TODO: Paper renamed 'CraftLocation#toBlockPosition', switch back once on Paper NMS
+        return new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+    }
+
+    // TODO: Paper renamed some NMS methods, switch back to direct calls once on Paper NMS
+    public static MethodHandle reflectPaperRenamed(Class<?> clazz, String spigot, String paper, Class<?>... params) {
+        return ReflectionHelper.getMethodHandle(clazz, Denizen.supportsPaper ? paper : spigot, params);
+    }
+
     public Handler() {
         advancementHelper = new AdvancementHelperImpl();
         animationHelper = new AnimationHelperImpl();
@@ -115,7 +127,7 @@ public class Handler extends NMSHandler {
         registerConversion(ElementTag.class, Component.class, element -> parseNMSComponent(element.asString(), PaperAPITools.BaseColor.WHITE));
         registerConversion(MaterialTag.class, BlockState.class, material -> ((CraftBlockData) material.getModernData()).getState());
         registerConversion(LocationTag.class, Rotations.class, location -> new Rotations((float) location.getX(), (float) location.getY(), (float) location.getZ()));
-        registerConversion(LocationTag.class, BlockPos.class, CraftLocation::toBlockPosition);
+        registerConversion(LocationTag.class, BlockPos.class, Handler::toBlockPos);
         registerConversion(MapTag.class, CompoundTag.class, map -> {
             CompoundBinaryTag compoundTag = (CompoundBinaryTag) ItemRawNBT.convertObjectToNbt(map, CoreUtilities.noDebugContext, "(item).");
             return compoundTag != null ? NBTAdapter.toNMS(compoundTag) : null;
@@ -148,7 +160,7 @@ public class Handler extends NMSHandler {
 
     @Override
     public boolean isExactServerVersionMatch() {
-        return Denizen.supportsPaper ? SharedConstants.getCurrentVersion().id().equals("1.21.11") : CraftMagicNumbers.INSTANCE.getMappingsVersion().equals("e3cd927e07e6ff434793a0474c51b2b9");
+        return Denizen.supportsPaper ? SharedConstants.getCurrentVersion().id().equals("26.2") : CraftMagicNumbers.INSTANCE.getMappingsVersion().equals("e8ece90188c951d866bd2fffc52c803e");
     }
 
     @Override
@@ -157,9 +169,8 @@ public class Handler extends NMSHandler {
             Method getTpsMethod = Server.class.getMethod("getTPS");
             return (double[]) getTpsMethod.invoke(Bukkit.getServer());
         } catch (Throwable e) {
-            Debug.echoError("Something went wrong when trying to get the TPS method.");
             Debug.echoError(e);
-            return new double[]{0.0, 0.0, 0.0};
+            return null;
         }
     }
 

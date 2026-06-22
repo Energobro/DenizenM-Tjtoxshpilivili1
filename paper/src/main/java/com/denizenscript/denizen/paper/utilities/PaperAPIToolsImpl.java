@@ -2,7 +2,6 @@ package com.denizenscript.denizen.paper.utilities;
 
 import com.denizenscript.denizen.Denizen;
 import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.objects.ItemTag;
 import com.denizenscript.denizen.paper.PaperModule;
 import com.denizenscript.denizen.scripts.commands.entity.TeleportCommand;
@@ -14,13 +13,11 @@ import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.objects.core.ListTag;
 import com.denizenscript.denizencore.tags.TagContext;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
-import com.denizenscript.denizencore.utilities.ReflectionHelper;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import io.papermc.paper.entity.TeleportFlag;
 import io.papermc.paper.potion.PotionMix;
-import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -458,7 +455,7 @@ public class PaperAPIToolsImpl extends PaperAPITools {
 
     @Override
     public void sendMessage(CommandSender sender, String text, UUID senderId) {
-        sender.sendMessage(Identity.identity(senderId), FormattedTextHelper.parse(text, NamedTextColor.WHITE));
+        sender.sendMessage(FormattedTextHelper.parse(text, NamedTextColor.WHITE));
     }
 
     @Override
