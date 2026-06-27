@@ -89,6 +89,7 @@ public abstract class NMSHandler {
     public static PlayerHelper playerHelper;
     public static WorldHelper worldHelper;
     public static EnchantmentHelper enchantmentHelper;
+    public static ClickEventHelper clickEventHelper;
 
     public boolean isExactServerVersionMatch() {
         return true;
