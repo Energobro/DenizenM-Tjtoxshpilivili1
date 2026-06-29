@@ -2,11 +2,9 @@ package com.denizenscript.denizen.scripts.commands.entity;
 
 import com.denizenscript.denizen.Denizen;
 import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.objects.EntityTag;
 import com.denizenscript.denizen.objects.LocationTag;
 import com.denizenscript.denizen.utilities.BukkitImplDeprecations;
-import com.denizenscript.denizen.utilities.PaperAPITools;
 import com.denizenscript.denizen.utilities.Utilities;
 import com.denizenscript.denizen.utilities.packets.NetworkInterceptHelper;
 import com.denizenscript.denizencore.DenizenCore;
@@ -25,11 +23,9 @@ import com.denizenscript.denizencore.utilities.Deprecations;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -140,13 +136,8 @@ public class LookCommand extends AbstractCommand {
                         playerTeleDest.setYaw(yawRaw);
                         playerTeleDest.setPitch(pitchRaw);
                         Player player = entity.getPlayer();
-                        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
-                            NetworkInterceptHelper.enable();
-                            NMSHandler.packetHelper.sendRelativeLookPacket(player, actualRelYaw, relPitch);
-                        }
-                        else {
-                            PaperAPITools.instance.teleport(player, playerTeleDest, PlayerTeleportEvent.TeleportCause.PLUGIN, null, Arrays.asList(TeleportCommand.Relative.values()));
-                        }
+                        NetworkInterceptHelper.enable();
+                        NMSHandler.packetHelper.sendRelativeLookPacket(player, actualRelYaw, relPitch);
                         if (offthreadRepeats != null) {
                             NetworkInterceptHelper.enable();
                             int times = offthreadRepeats.asInt();

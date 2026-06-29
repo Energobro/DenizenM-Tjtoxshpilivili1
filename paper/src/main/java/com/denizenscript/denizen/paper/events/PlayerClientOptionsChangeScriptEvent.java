@@ -1,8 +1,6 @@
 package com.denizenscript.denizen.paper.events;
 
 import com.denizenscript.denizen.events.BukkitScriptEvent;
-import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.utilities.implementation.BukkitScriptEntryData;
 import com.denizenscript.denizencore.objects.ObjectTag;
 import com.denizenscript.denizencore.objects.core.ElementTag;
@@ -63,7 +61,7 @@ public class PlayerClientOptionsChangeScriptEvent extends BukkitScriptEvent impl
     @Override
     public ObjectTag getContext(String name) {
         return switch (name) {
-            case "server_listings_enabled" -> NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19) ? new ElementTag(event.allowsServerListings()) : null;
+            case "server_listings_enabled" -> new ElementTag(event.allowsServerListings());
             case "chat_visibility" -> new ElementTag(event.getChatVisibility());
             case "locale" -> new ElementTag(event.getLocale());
             case "main_hand" -> new ElementTag(event.getMainHand());
@@ -80,15 +78,15 @@ public class PlayerClientOptionsChangeScriptEvent extends BukkitScriptEvent impl
                 yield map;
             }
             case "view_distance" -> new ElementTag(event.getViewDistance());
-            case "server_listings_changed" -> NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19) ? new ElementTag(event.hasAllowServerListingsChanged()) : null;
+            case "server_listings_changed" -> new ElementTag(event.hasAllowServerListingsChanged());
             case "chat_colors_enabled" -> new ElementTag(event.hasChatColorsEnabled());
             case "chat_colors_changed" -> new ElementTag(event.hasChatColorsEnabledChanged());
-            case "chat_visibility_changed" -> NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19) ? new ElementTag(event.hasChatVisibilityChanged()) : null;
+            case "chat_visibility_changed" -> new ElementTag(event.hasChatVisibilityChanged());
             case "locale_changed" -> new ElementTag(event.hasLocaleChanged());
             case "main_hand_changed" -> new ElementTag(event.hasMainHandChanged());
             case "skin_parts_changed" -> new ElementTag(event.hasSkinPartsChanged());
-            case "text_filtering_changed" -> NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19) ? new ElementTag(event.hasTextFilteringChanged()) : null;
-            case "text_filtering_enabled" -> NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19) ? new ElementTag(event.hasTextFilteringEnabled()) : null;
+            case "text_filtering_changed" -> new ElementTag(event.hasTextFilteringChanged());
+            case "text_filtering_enabled" -> new ElementTag(event.hasTextFilteringEnabled());
             case "view_distance_changed" -> new ElementTag(event.hasViewDistanceChanged());
             default -> super.getContext(name);
         };

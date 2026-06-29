@@ -24,7 +24,7 @@ public class EntityShouldBurn extends EntityProperty<ElementTag> {
                 || entity.getBukkitEntity() instanceof Phantom
                 || entity.getBukkitEntity() instanceof Skeleton
                 || entity.getBukkitEntity() instanceof Stray
-                || (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20) && entity.getBukkitEntity() instanceof Bogged);
+                || entity.getBukkitEntity() instanceof Bogged;
     }
 
     @Override
@@ -38,7 +38,7 @@ public class EntityShouldBurn extends EntityProperty<ElementTag> {
         else if (getEntity() instanceof Skeleton skeleton) {
             return new ElementTag(skeleton.shouldBurnInDay());
         }
-        else if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20) && getEntity() instanceof Bogged bogged) {
+        else if (getEntity() instanceof Bogged bogged) {
             return new ElementTag(bogged.shouldBurnInDay());
         }
         else { // stray
@@ -63,7 +63,7 @@ public class EntityShouldBurn extends EntityProperty<ElementTag> {
             else if (getEntity() instanceof Skeleton skeleton) {
                 skeleton.setShouldBurnInDay(param.asBoolean());
             }
-            else if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20) && getEntity() instanceof Bogged bogged) {
+            else if (getEntity() instanceof Bogged bogged) {
                 bogged.setShouldBurnInDay(param.asBoolean());
             }
             else { // stray

@@ -39,7 +39,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
          * Simple variant - `<&dual_gradient[from=#51a2ff;to=#FFF085;s_from=#FFF085;s_to=#51a2ff]>`
          * Tags `from` and `to` for simple color gradient adjusting.
          * Tags `s_from` and `s_to` for shadow color gradient adjusting.
-      * Player Head usage examples:
+      * Head usage examples:
          * Full Face Texture - `<&head[Tjtoxshpilivili1]>`
          * Only Face Texture (without surface pixels) - `<&head[!Tjtoxshpilivili1]>`
     * Added `.shadow_color`, `.shadow_gradient` and `.dual_gradient` tags to `ElementTag`.
@@ -104,7 +104,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
 
 ### Building
 
-- Built against JDK 21, using maven `pom.xml` as project file.
+- Built against JDK 25, using maven `pom.xml` as project file.
 - Requires building all listed versions of Spigot via Spigot BuildTools: https://www.spigotmc.org/wiki/buildtools/
 - Install all Paper dependencies.
 

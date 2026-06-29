@@ -2,7 +2,6 @@ package com.denizenscript.denizen.scripts.commands.item;
 
 import com.denizenscript.denizen.Denizen;
 import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.objects.EntityTag;
 import com.denizenscript.denizen.objects.InventoryTag;
 import com.denizenscript.denizen.objects.ItemTag;
@@ -223,7 +222,7 @@ public class InventoryCommand extends AbstractCommand implements Listener {
         if (!event.getPlayer().getUniqueId().equals(currentAltPlayer.getUniqueId())) {
             return;
         }
-        if (currentAltTitle != null && NMSHandler.getVersion().isAtLeast(NMSVersion.v1_18)) {
+        if (currentAltTitle != null) {
             NMSHandler.getInstance().setInventoryTitle(event.getView(), currentAltTitle);
         }
         InventoryTag newTag = new InventoryTag(event.getInventory(), currentAltType, currentAltHolder);

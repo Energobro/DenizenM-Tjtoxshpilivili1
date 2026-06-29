@@ -291,13 +291,57 @@ public class PaperElementExtensions {
             return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[sprite=" + atlas + "|" + sprite + "]");
         });
 
+        // <--[tag]
+        // @attribute <ElementTag.shadow_color[<color>]>
+        // @returns ElementTag
+        // @Plugin Paper
+        // @group text manipulation
+        // @description
+        // Applies a shadow color to the text.
+        // Color can be a hex code (with optional alpha), or ColorTag... that is: ".shadow_color[#AABB00]", ".shadow_color[#AABB00FF]", and ".shadow_color[co@255,128,0,100]" are all valid.
+        // When alpha is not specified, defaults to 0x64 (~39% opacity).
+        // The ColorTag input option can be used for dynamic shadow color effects with full RGBA support.
+        // @example
+        // - narrate <element[test].shadow_color[#FF0000]>
+        // @example
+        // - narrate <element[text].shadow_color[co@255,0,0,100]>
+        // -->
         ElementTag.tagProcessor.registerStaticTag(ElementTag.class, ElementTag.class, "shadow_color", (attribute, object, shadowElement) -> {
-            if (!attribute.hasContext(1)) {
-                attribute.echoError("The tag <&shadow_color[...] > must have a hex color context!");
+            if (!attribute.hasParam()) {
+                attribute.echoError("The tag '.shadow_color' requires a color parameter.");
                 return null;
             }
-            String color = attribute.getContext(1);
-            return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[shadow=" + color + "]" + object.asString() + FormattedTextHelper.LEGACY_SECTION + "[reset=color]");
+
+            String colorInput = attribute.getParam();
+            if (colorInput.startsWith("co@") || colorInput.lastIndexOf(',') > colorInput.indexOf(',')) {
+                ColorTag color = ColorTag.valueOf(colorInput, attribute.context);
+                if (color == null) {
+                    return null;
+                }
+
+                int argb = color.asARGB();
+                int a = (argb >> 24) & 0xFF;
+                int r = (argb >> 16) & 0xFF;
+                int g = (argb >> 8) & 0xFF;
+                int b = argb & 0xFF;
+                if (a == 255) {
+                    a = 0x64;
+                }
+
+                String hexRGBA = String.format("#%02x%02x%02x%02x", r, g, b, a);
+                return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[shadow=" + hexRGBA + "]" + object.asString() + FormattedTextHelper.LEGACY_SECTION + "[reset=color]", true);
+            }
+
+            if (colorInput.length() == 7 && colorInput.startsWith("#")) {
+                return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[shadow=" + colorInput + "64]" + object.asString() + FormattedTextHelper.LEGACY_SECTION + "[reset=color]", true);
+            }
+
+            if ((colorInput.length() == 9 || colorInput.length() == 8) && colorInput.startsWith("#")) {
+                return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[shadow=" + colorInput + "]" + object.asString() + FormattedTextHelper.LEGACY_SECTION + "[reset=color]", true);
+            }
+
+            attribute.echoError("Invalid color format '" + colorInput + "' for '.shadow_color'. Expected hex color (#RRGGBB or #RRGGBBAA) or ColorTag.");
+            return null;
         });
 
         // <--[tag]
