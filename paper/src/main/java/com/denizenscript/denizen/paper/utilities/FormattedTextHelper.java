@@ -785,10 +785,20 @@ public class FormattedTextHelper {
                             if (endIndex == -1) {
                                 continue;
                             }
+
                             TextComponent.Builder clickableText = Component.text();
-                            ClickEvent.Action action = ElementTag.asEnum(ClickEvent.Action.class, innardBase.get(1));
-                            // TODO click event types
-                            clickableText.clickEvent(ClickEvent.clickEvent(action == null ? ClickEvent.Action.SUGGEST_COMMAND : action, unescape(innardParts.get(0))));
+                            String actionStr = innardBase.size() > 1 ? innardBase.get(1) : "SUGGEST_COMMAND";
+                            String clickValue = unescape(innardParts.get(0));
+                            ClickEvent clickEvent = switch (actionStr.toUpperCase()) {
+                                case "RUN_COMMAND" -> ClickEvent.runCommand(clickValue);
+                                case "OPEN_URL" -> ClickEvent.openUrl(clickValue);
+                                case "OPEN_FILE" -> ClickEvent.openFile(clickValue);
+                                case "COPY_TO_CLIPBOARD" -> ClickEvent.copyToClipboard(clickValue);
+                                case "CHANGE_PAGE" -> ClickEvent.changePage(clickValue);
+                                default -> ClickEvent.suggestCommand(clickValue);
+                            };
+
+                            clickableText.clickEvent(clickEvent);
                             clickableText.append(parseInternal(str.substring(endBracket + 1, endIndex), baseColor, false, optimize));
                             lastText.append(clickableText);
                             endBracket = endIndex + "&[/click".length();
