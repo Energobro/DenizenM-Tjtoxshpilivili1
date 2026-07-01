@@ -25,9 +25,6 @@ public class StatsRecord extends Thread {
 
     public void gather() {
         String denizenVersion = Denizen.getInstance().coreImplementation.getImplementationVersion();
-        if (denizenVersion.endsWith("M")) {
-            denizenVersion = denizenVersion.substring(0, denizenVersion.length() - 1);
-        }
         // We don't need the real value of the MOTD / port, but they're useful for differentiating, so use them to generate a hash
         String differentiator = CoreUtilities.hash_md5((Bukkit.getServer().getMotd() + Bukkit.getServer().getPort()).getBytes(StandardCharsets.UTF_8));
         String deprecations = String.join("\n", Deprecations.firedRecently.keySet());
@@ -43,8 +40,7 @@ public class StatsRecord extends Thread {
                 + "&pl_minecraft_version=" + URLEncoder.encode(mcVersion)
                 + "&pl_player_count=" + Bukkit.getOnlinePlayers().size()
                 + "&pl_script_count=" + ScriptRegistry.scriptContainers.size()
-                + "&pl_deprecations=" + URLEncoder.encode(deprecations)
-                + "&pl_online_mode=true";
+                + "&pl_deprecations=" + URLEncoder.encode(deprecations);
     }
 
     public String content;

@@ -13,8 +13,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -27,30 +25,14 @@ public class DebugSubmit {
         DebugSubmitter.debugHeaderLines.add(DebugSubmit::getCoreHeader);
     }
 
-
     public static String getCoreHeader() {
         try {
             // Build a list of plugins
             StringBuilder pluginlist = new StringBuilder();
             int newlineLength = 0;
             int pluginCount = Bukkit.getPluginManager().getPlugins().length;
-            List<String> hiddenPlugins = Arrays.asList(
-                    "AuthMe", "UTitleAuth", "LoginSecurity", "nLogin", "PinAuthentication",
-                    "LockLogin", "JPremium", "FastLogin", "AmkMcAuth", "RoyalAuth", "JAuth",
-                    "AdvancedLogin", "OpeNLogin", "NexAuth", "Authy", "PasswordLogOn",
-                    "LibreLogin", "UserLogin", "SkinsRestorer", "MySkin", "FakePlayersOnline",
-                    "FakePlayerPlugin", "AntiJoinBot", "AJB", "ExploitFixer", "AvakumAntibot",
-                    "HamsterAPI", "MineCaptcha", "UUIDSpoof-Fix", "AntiBotDeluxe", "nAntiBot",
-                    "LockProxy", "IPWhitelist"
-            );
             for (Plugin pl : Bukkit.getPluginManager().getPlugins()) {
-                boolean isHidden = hiddenPlugins.stream().anyMatch(pl.getName()::equalsIgnoreCase);
-                if (isHidden) {
-                    continue;
-                }
-
-                String version = pl.getDescription().getVersion();
-                String temp = ((char) 0x01) + (pl.isEnabled() ? "2" : "4") + pl.getName() + ": " + version + ", ";
+                String temp = ((char) 0x01) + (pl.isEnabled() ? "2" : "4") + pl.getName() + ": " + pl.getDescription().getVersion() + ", ";
                 pluginlist.append(temp);
                 newlineLength += temp.length();
                 if (newlineLength > 80) {
@@ -98,7 +80,7 @@ public class DebugSubmit {
                         plNormal++;
                     }
                     else if (id.version() == 3) {
-                        plNormal++;
+                        pl3++;
                     }
                     else if (id.version() == 0) {
                         pl0++;
@@ -130,7 +112,7 @@ public class DebugSubmit {
                     proxied = true;
                 }
             }
-            String onlineMode = (ChatColor.GREEN + "online");
+            String onlineMode = (Bukkit.getServer().getOnlineMode() ? ChatColor.GREEN + "online" : (proxied ? ChatColor.YELLOW : ChatColor.RED) + "offline") + modeSuffix;
             return "Server Version: " + Bukkit.getServer().getName() + " version " + Bukkit.getServer().getVersion()
                     + "\nActive Plugins (" + pluginCount + "): " + pluginlist.substring(0, pluginlist.length() - 2)
                     + "\nLoaded Worlds (" + worldCount + "): " + worldlist.substring(0, worldlist.length() - 2)
@@ -169,7 +151,7 @@ public class DebugSubmit {
             return null;
         }
         if (isEnabled) {
-            return ChatColor.GREEN + " (Velocity: online)";
+            return isOnline ? ChatColor.GREEN + " (Velocity: online)" : ChatColor.RED + " (Velocity: offline)";
         }
         return null;
     }
