@@ -992,7 +992,7 @@ public class FormattedTextHelper {
             else if (i + "https://a.".length() < chars.length && chars[i] == 'h' && chars[i + 1] == 't' && chars[i + 2] == 't' && chars[i  + 3] == 'p') {
                 String subStr = str.substring(i, i + "https://a.".length());
                 if (subStr.startsWith("https://") || subStr.startsWith("http://")) {
-                    int nextSpace = CoreUtilities.indexOfAny(str, i, ' ', '\t', '\n', LEGACY_SECTION);
+                    int nextSpace = CoreUtilities.indexOfAny(str, i, ' ', '\t', '\n', ']', LEGACY_SECTION);
                     if (nextSpace == -1) {
                         nextSpace = str.length();
                     }
