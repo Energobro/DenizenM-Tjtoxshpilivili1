@@ -436,7 +436,8 @@ public class PaperAPIToolsImpl extends PaperAPITools {
         for (String page : pages) {
             parsedPages.add(FormattedTextHelper.parse(page, NamedTextColor.BLACK));
         }
-        meta.pages(parsedPages);
+        meta.setPages(new ArrayList<>());
+        meta.addPages(parsedPages.toArray(new Component[0]));
     }
 
     @Override
@@ -445,7 +446,8 @@ public class PaperAPIToolsImpl extends PaperAPITools {
         for (String jsonPage : jsonPages) {
             parsedPages.add(PaperModule.jsonToComponent(jsonPage));
         }
-        meta.pages(parsedPages);
+        meta.setPages(new ArrayList<>());
+        meta.addPages(parsedPages.toArray(new Component[0]));
     }
 
     @Override

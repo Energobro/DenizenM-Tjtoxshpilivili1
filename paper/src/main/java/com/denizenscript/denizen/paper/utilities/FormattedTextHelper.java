@@ -157,6 +157,19 @@ public class FormattedTextHelper {
         return input;
     }
 
+    private static String clickEventValue(ClickEvent click) {
+        ClickEvent.Payload payload = click.payload();
+        if (payload instanceof ClickEvent.Payload.Text textPayload) {
+            return textPayload.value();
+        }
+        else if (click.action() == ClickEvent.Action.CHANGE_PAGE && payload instanceof ClickEvent.Payload.Int intPayload) {
+            return String.valueOf(intPayload.integer());
+        }
+        else {
+            return String.valueOf(payload);
+        }
+    }
+
     public static boolean hasRootFormat(Component component) {
         if (component == null) {
             return false;
@@ -279,7 +292,7 @@ public class FormattedTextHelper {
         if (hasClick) {
             ClickEvent click = component.clickEvent();
             // TODO modern click events
-            builder.append(LEGACY_SECTION).append("[click=").append(click.action().name()).append(";").append(escape(click.value())).append("]");
+            builder.append(LEGACY_SECTION).append("[click=").append(click.action().name()).append(";").append(escape(clickEventValue(click))).append("]");
         }
         if (component instanceof TextComponent textComponent) {
             builder.append(textComponent.content());
