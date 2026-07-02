@@ -472,6 +472,39 @@ public class PlayerHelperImpl extends PlayerHelper {
         PacketHelperImpl.send(player, new ClientboundUpdateTagsPacket(packetInput));
     }
 
+    private static final Field ITEM_COOLDOWNS_MAP_FIELD;
+    private static final Field ITEM_COOLDOWNS_TICKCOUNT_FIELD;
+    static {
+        try {
+            ITEM_COOLDOWNS_MAP_FIELD = ItemCooldowns.class.getDeclaredField("cooldowns");
+            ITEM_COOLDOWNS_MAP_FIELD.setAccessible(true);
+            ITEM_COOLDOWNS_TICKCOUNT_FIELD = ItemCooldowns.class.getDeclaredField("tickCount");
+            ITEM_COOLDOWNS_TICKCOUNT_FIELD.setAccessible(true);
+        }
+        catch (NoSuchFieldException ex) {
+            throw new ExceptionInInitializerError(ex);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<Identifier, ItemCooldowns.CooldownInstance> getCooldownsMap(ItemCooldowns cd) {
+        try {
+            return (Map<Identifier, ItemCooldowns.CooldownInstance>) ITEM_COOLDOWNS_MAP_FIELD.get(cd);
+        }
+        catch (IllegalAccessException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private static int getCooldownsTickCount(ItemCooldowns cd) {
+        try {
+            return (int) ITEM_COOLDOWNS_TICKCOUNT_FIELD.get(cd);
+        }
+        catch (IllegalAccessException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
     @Override
     public void refreshPlayer(Player player) {
         ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
@@ -479,7 +512,7 @@ public class PlayerHelperImpl extends PlayerHelper {
         nmsPlayer.connection.send(new ClientboundRespawnPacket(nmsPlayer.createCommonSpawnInfo(nmsWorld), ClientboundRespawnPacket.KEEP_ALL_DATA));
         nmsPlayer.connection.internalTeleport(PositionMoveRotation.of(nmsPlayer), Set.of());
         if (nmsPlayer.isPassenger()) {
-           nmsPlayer.connection.send(new ClientboundSetPassengersPacket(nmsPlayer.getVehicle()));
+            nmsPlayer.connection.send(new ClientboundSetPassengersPacket(nmsPlayer.getVehicle()));
         }
         if (nmsPlayer.isVehicle()) {
             nmsPlayer.connection.send(new ClientboundSetPassengersPacket(nmsPlayer));
@@ -488,12 +521,15 @@ public class PlayerHelperImpl extends PlayerHelper {
         for (net.minecraft.world.entity.Entity nmsEntity : nmsWorld.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, boundingBox, nmsEntity -> nmsEntity instanceof Leashable nmsLeashable && nmsPlayer.equals(nmsLeashable.getLeashHolder()))) {
             nmsPlayer.connection.send(new ClientboundSetEntityLinkPacket(nmsEntity, nmsPlayer));
         }
-        if (!nmsPlayer.getCooldowns().cooldowns.isEmpty()) {
-            int tickCount = nmsPlayer.getCooldowns().tickCount;
-            for (Map.Entry<Identifier, ItemCooldowns.CooldownInstance> entry : nmsPlayer.getCooldowns().cooldowns.entrySet()) {
+
+        Map<Identifier, ItemCooldowns.CooldownInstance> cooldownsMap = getCooldownsMap(nmsPlayer.getCooldowns());
+        if (!cooldownsMap.isEmpty()) {
+            int tickCount = getCooldownsTickCount(nmsPlayer.getCooldowns());
+            for (Map.Entry<Identifier, ItemCooldowns.CooldownInstance> entry : cooldownsMap.entrySet()) {
                 nmsPlayer.connection.send(new ClientboundCooldownPacket(entry.getKey(), entry.getValue().endTime - tickCount));
             }
         }
+
         nmsPlayer.connection.send(new ClientboundSetExperiencePacket(nmsPlayer.experienceProgress, nmsPlayer.totalExperience, nmsPlayer.experienceLevel));
         for (MobEffectInstance nmsEffect : nmsPlayer.getActiveEffects()) {
             nmsPlayer.connection.send(new ClientboundUpdateMobEffectPacket(nmsPlayer.getId(), nmsEffect, false));
