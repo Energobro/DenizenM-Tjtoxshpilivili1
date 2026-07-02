@@ -137,7 +137,6 @@ public class FakeBlock {
         }
         if (player.isOnline()) {
             player.getPlayerEntity().sendBlockChange(location, location.getBlock().getBlockData());
-            scheduleChunkRefresh(location.getWorld(), chunkCoord);
         }
     }
 
@@ -147,10 +146,7 @@ public class FakeBlock {
         }
         this.material = material;
         if (player.hasChunkLoaded(location.getChunk())) {
-            if (sendNow || !NMSHandler.getVersion().isAtLeast(NMSVersion.v1_18)) {
-                player.getPlayerEntity().sendBlockChange(location, material.getModernData());
-            }
-            scheduleChunkRefresh(location.getWorld(), chunkCoord);
+            player.getPlayerEntity().sendBlockChange(location, material.getModernData());
         }
         if (duration != null && duration.getTicks() > 0) {
             currentTask = new BukkitRunnable() {

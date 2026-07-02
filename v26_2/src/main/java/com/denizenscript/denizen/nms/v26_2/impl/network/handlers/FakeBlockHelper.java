@@ -127,7 +127,8 @@ public class FakeBlockHelper {
             return;
         }
         try {
-            PAPER_CHUNK_READY.setBoolean(newPacket, true);
+            boolean originalReady = PAPER_CHUNK_READY.getBoolean(oldPacket);
+            PAPER_CHUNK_READY.setBoolean(newPacket, originalReady);
         }
         catch (Throwable ex) {
             Debug.echoError(ex);

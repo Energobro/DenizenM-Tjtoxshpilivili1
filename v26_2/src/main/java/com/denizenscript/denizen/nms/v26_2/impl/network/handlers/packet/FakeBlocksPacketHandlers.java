@@ -3,10 +3,13 @@ package com.denizenscript.denizen.nms.v26_2.impl.network.handlers.packet;
 import com.denizenscript.denizen.nms.v26_2.impl.network.handlers.DenizenNetworkManagerImpl;
 import com.denizenscript.denizen.nms.v26_2.impl.network.handlers.FakeBlockHelper;
 import com.denizenscript.denizen.objects.LocationTag;
+import com.denizenscript.denizen.Denizen;
 import com.denizenscript.denizen.utilities.blocks.ChunkCoordinate;
 import com.denizenscript.denizen.utilities.blocks.FakeBlock;
 import com.denizenscript.denizencore.utilities.ReflectionHelper;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
+import org.bukkit.Bukkit;
+import java.util.ArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.network.protocol.Packet;
@@ -34,20 +37,31 @@ public class FakeBlocksPacketHandlers {
             return packet;
         }
         try {
-            if (packet instanceof ClientboundLevelChunkWithLightPacket) {
+            if (packet instanceof ClientboundLevelChunkWithLightPacket lightPacket) {
                 FakeBlock.FakeBlockMap map = FakeBlock.blocks.get(networkManager.player.getUUID());
                 if (map == null) {
                     return packet;
                 }
-                int chunkX = ((ClientboundLevelChunkWithLightPacket) packet).getX();
-                int chunkZ = ((ClientboundLevelChunkWithLightPacket) packet).getZ();
+                int chunkX = lightPacket.getX();
+                int chunkZ = lightPacket.getZ();
                 ChunkCoordinate chunkCoord = new ChunkCoordinate(chunkX, chunkZ, networkManager.player.level().getWorld().getName());
                 List<FakeBlock> blocks = FakeBlock.getFakeBlocksFor(networkManager.player.getUUID(), chunkCoord);
                 if (blocks == null || blocks.isEmpty()) {
                     return packet;
                 }
-                ClientboundLevelChunkWithLightPacket newPacket = FakeBlockHelper.handleMapChunkPacket(networkManager.player.getBukkitEntity().getWorld(), (ClientboundLevelChunkWithLightPacket) packet, chunkX, chunkZ, blocks);
-                return newPacket;
+                List<FakeBlock> blocksSnapshot = new ArrayList<>(blocks);
+                org.bukkit.entity.Player bukkitPlayer = networkManager.player.getBukkitEntity();
+                Bukkit.getScheduler().runTaskLater(Denizen.getInstance(), () -> {
+                    if (!bukkitPlayer.isOnline()) {
+                        return;
+                    }
+                    for (FakeBlock block : blocksSnapshot) {
+                        if (block.material != null) {
+                            bukkitPlayer.sendBlockChange(block.location, block.material.getModernData());
+                        }
+                    }
+                }, 1L);
+                return packet;
             }
             else if (packet instanceof ClientboundSectionBlocksUpdatePacket sectionBlocksUpdatePacket) {
                 FakeBlock.FakeBlockMap map = FakeBlock.blocks.get(networkManager.player.getUUID());
