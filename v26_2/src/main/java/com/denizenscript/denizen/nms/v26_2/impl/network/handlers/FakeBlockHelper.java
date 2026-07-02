@@ -262,6 +262,6 @@ public class FakeBlockHelper {
         catch (Throwable ex) {
             Debug.echoError(ex);
         }
-        return null;
+        return originalPacket;
     }
 }

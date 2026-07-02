@@ -136,10 +136,8 @@ public class FakeBlock {
             blocks.remove(player.getUUID());
         }
         if (player.isOnline()) {
+            player.getPlayerEntity().sendBlockChange(location, location.getBlock().getBlockData());
             scheduleChunkRefresh(location.getWorld(), chunkCoord);
-            if (!NMSHandler.getVersion().isAtLeast(NMSVersion.v1_18)) {
-                player.getPlayerEntity().sendBlockChange(location, location.getBlock().getBlockData());
-            }
         }
     }
 
