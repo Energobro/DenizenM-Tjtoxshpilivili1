@@ -21,6 +21,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.object.ObjectContents;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
+import java.net.URI;
 import java.util.*;
 
 public class FormattedTextHelper {
@@ -992,7 +993,7 @@ public class FormattedTextHelper {
             else if (i + "https://a.".length() < chars.length && chars[i] == 'h' && chars[i + 1] == 't' && chars[i + 2] == 't' && chars[i  + 3] == 'p') {
                 String subStr = str.substring(i, i + "https://a.".length());
                 if (subStr.startsWith("https://") || subStr.startsWith("http://")) {
-                    int nextSpace = CoreUtilities.indexOfAny(str, i, ' ', '\t', '\n', ']', LEGACY_SECTION);
+                    int nextSpace = CoreUtilities.indexOfAny(str, i, ' ', '\t', '\n', ']', '>', '<', '"', '\\', LEGACY_SECTION);
                     if (nextSpace == -1) {
                         nextSpace = str.length();
                     }
@@ -1003,7 +1004,10 @@ public class FormattedTextHelper {
                     nextText = lastText.build().toBuilder();
                     nextText.content("");
                     TextComponent.Builder clickableText = Component.text().content(url);
-                    clickableText.clickEvent(ClickEvent.openUrl(url));
+                    try {
+                        URI.create(url);
+                        clickableText.clickEvent(ClickEvent.openUrl(url));
+                    } catch (Throwable ignored) { }
                     lastText.append(clickableText);
                     base.append(lastText);
                     i = nextSpace - 1;
