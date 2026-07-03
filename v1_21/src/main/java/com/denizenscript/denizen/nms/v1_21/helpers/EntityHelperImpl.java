@@ -513,16 +513,13 @@ public class EntityHelperImpl extends EntityHelper {
 
     @Override
     public void fakeTeleport(Entity entity, Location location) {
-        FriendlyByteBuf packetData = new FriendlyByteBuf(Unpooled.buffer());
-        // Referenced from ClientboundTeleportEntityPacket source
-        packetData.writeVarInt(entity.getEntityId());
-        packetData.writeDouble(location.getX());
-        packetData.writeDouble(location.getY());
-        packetData.writeDouble(location.getZ());
-        packetData.writeByte((byte)((int)(location.getYaw() * 256.0F / 360.0F)));
-        packetData.writeByte((byte)((int)(location.getPitch() * 256.0F / 360.0F)));
-        packetData.writeBoolean(entity.isOnGround());
-        ClientboundTeleportEntityPacket packet = ClientboundTeleportEntityPacket.STREAM_CODEC.decode(packetData);
+        net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) entity).getHandle();
+        Vec3 position = new Vec3(location.getX(), location.getY(), location.getZ());
+        Vec3 deltaMovement = nmsEntity.getDeltaMovement();
+        float yRot = location.getYaw();
+        float xRot = location.getPitch();
+        PositionMoveRotation positionMoveRotation = new PositionMoveRotation(position, deltaMovement, yRot, xRot);
+        ClientboundTeleportEntityPacket packet = new ClientboundTeleportEntityPacket(entity.getEntityId(), positionMoveRotation, Collections.emptySet(), entity.isOnGround());
         for (Player player : getPlayersThatSee(entity)) {
             PacketHelperImpl.send(player, packet);
         }

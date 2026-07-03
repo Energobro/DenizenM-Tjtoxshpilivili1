@@ -1,8 +1,6 @@
 package com.denizenscript.denizen.utilities.blocks;
 
 import com.denizenscript.denizen.Denizen;
-import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.objects.LocationTag;
 import com.denizenscript.denizen.objects.MaterialTag;
 import com.denizenscript.denizen.objects.PlayerTag;
