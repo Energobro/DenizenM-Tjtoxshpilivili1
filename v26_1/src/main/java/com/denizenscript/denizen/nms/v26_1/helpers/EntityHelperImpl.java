@@ -89,6 +89,7 @@ import org.bukkit.util.Vector;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.function.BiConsumer;
 
@@ -664,7 +665,17 @@ public class EntityHelperImpl extends EntityHelper {
         ((CraftLivingEntity) mob).getHandle().setLastHurtByMob(((CraftLivingEntity) damager).getHandle());
     }
 
-    public static final Field FALLINGBLOCK_BLOCK_STATE = ReflectionHelper.getFields(FallingBlockEntity.class).getFirstOfType(BlockState.class);
+    public static final Field FALLINGBLOCK_BLOCK_STATE = findFallingBlockStateField();
+
+    private static Field findFallingBlockStateField() {
+        for (Field f : FallingBlockEntity.class.getDeclaredFields()) {
+            if (f.getType() == BlockState.class && !Modifier.isStatic(f.getModifiers())) {
+                f.setAccessible(true);
+                return f;
+            }
+        }
+        return null;
+    }
 
     @Override
     public void setFallingBlockType(FallingBlock fallingBlock, BlockData block) {
