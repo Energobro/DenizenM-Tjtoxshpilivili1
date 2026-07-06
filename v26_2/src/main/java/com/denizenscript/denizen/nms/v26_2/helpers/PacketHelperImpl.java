@@ -65,6 +65,7 @@ import org.bukkit.map.MapPalette;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 
 public class PacketHelperImpl implements PacketHelper {
@@ -82,6 +83,16 @@ public class PacketHelperImpl implements PacketHelper {
 
     public static final EntityDataAccessor<Optional<Component>> ENTITY_DATA_ACCESSOR_CUSTOM_NAME = ReflectionHelper.getFieldValue(net.minecraft.world.entity.Entity.class, "DATA_CUSTOM_NAME", null);
     public static final EntityDataAccessor<Boolean> ENTITY_DATA_ACCESSOR_CUSTOM_NAME_VISIBLE = ReflectionHelper.getFieldValue(net.minecraft.world.entity.Entity.class, "DATA_CUSTOM_NAME_VISIBLE", null);
+    private static Method MAPDATA_SET_COLORS_DIRTY;
+    static {
+        try {
+            MAPDATA_SET_COLORS_DIRTY = MapItemSavedData.class.getDeclaredMethod("setColorsDirty", int.class, int.class);
+            MAPDATA_SET_COLORS_DIRTY.setAccessible(true);
+        }
+        catch (Throwable ex) {
+            Debug.echoError(ex);
+        }
+    }
 
     @Override
     public void setFakeAbsorption(Player player, float value) {
@@ -326,10 +337,9 @@ public class PacketHelperImpl implements PacketHelper {
                 }
             }
             if (anyChanged) {
-                // Flag the whole image as dirty
                 MapItemSavedData map = (MapItemSavedData) MAPVIEW_WORLDMAP.get(canvas.getMapView());
-                map.setColorsDirty(Math.max(x, 0), Math.max(y, 0));
-                map.setColorsDirty(width + x - 1, height + y - 1);
+                MAPDATA_SET_COLORS_DIRTY.invoke(map, Math.max(x, 0), Math.max(y, 0));
+                MAPDATA_SET_COLORS_DIRTY.invoke(map, width + x - 1, height + y - 1);
             }
         }
         catch (Throwable ex) {
