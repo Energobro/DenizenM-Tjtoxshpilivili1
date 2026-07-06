@@ -16,6 +16,10 @@ import com.denizenscript.denizencore.utilities.CoreUtilities;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.UUID;
+
 public class TextFormattingTags {
 
     public TextFormattingTags() {
@@ -368,36 +372,51 @@ public class TextFormattingTags {
         // -->
         TagManager.registerStaticTagBaseHandler(ElementTag.class, "&head", (attribute) -> {
             String input = attribute.hasParam() ? attribute.getParam() : "entity/player/wide/steve";
-
             boolean outerLayer = !input.startsWith("!");
             if (!outerLayer) {
                 input = input.substring(1);
+            }
+
+            if (input.startsWith("p@")) {
+                input = input.substring(2);
             }
 
             if (input.isEmpty()) {
                 input = "entity/player/wide/steve";
             }
 
-            String mmTag = "<head:" + input + ":" + outerLayer + ">";
-            return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[mm_head=" + mmTag + "]", true);
-        });
-
-        // deprecated, will be removed
-        TagManager.registerStaticTagBaseHandler(ElementTag.class, "&player_head", (attribute) -> {
-            String input = attribute.hasParam() ? attribute.getParam() : "entity/player/wide/steve";
-
-            boolean outerLayer = !input.startsWith("!");
-            if (!outerLayer) {
-                input = input.substring(1);
+            String type;
+            try {
+                UUID.fromString(input);
+                type = "uuid";
+            }
+            catch (IllegalArgumentException ex) {
+                if (input.indexOf(';') >= 0) {
+                    String[] blob = input.split(";", 2);
+                    boolean valid = blob.length == 2 && !blob[0].isEmpty() && !blob[0].equalsIgnoreCase("null") && !blob[1].equalsIgnoreCase("null");
+                    if (valid) {
+                        type = "skin_blob";
+                        input = blob[0] + '\u0001' + blob[1];
+                    }
+                    else {
+                        input = "entity/player/wide/steve";
+                        type = "texture";
+                    }
+                }
+                else if (baseEncoder(input)) {
+                    type = "skin_blob";
+                    input = input + '\u0001';
+                }
+                else if (input.indexOf('/') >= 0) {
+                    type = "texture";
+                }
+                else {
+                    type = "name";
+                }
             }
 
-            if (input.isEmpty()) {
-                input = "entity/player/wide/steve";
-            }
-
-            String mmTag = "<head:" + input + ":" + outerLayer + ">";
-
-            return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[mm_head=" + mmTag + "]", true);
+            String innard = type + "," + input + "," + outerLayer;
+            return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[head=" + innard + "]", true);
         });
 
         // <--[tag]
@@ -520,5 +539,16 @@ public class TextFormattingTags {
         TagManager.registerStaticTagBaseHandler(ElementTag.class, "&optimize", (attribute) -> {
             return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[optimize=true]", true);
         });
+    }
+
+    private static boolean baseEncoder(String input) {
+        try {
+            byte[] decoded = Base64.getDecoder().decode(input);
+            String decodedStr = new String(decoded, StandardCharsets.UTF_8);
+            return decodedStr.contains("\"textures\"");
+        }
+        catch (IllegalArgumentException ex) {
+            return false;
+        }
     }
 }

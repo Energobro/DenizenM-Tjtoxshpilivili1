@@ -19,6 +19,7 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.*;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.object.ObjectContents;
+import net.kyori.adventure.text.object.PlayerHeadObjectContents;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import java.net.URI;
@@ -758,16 +759,26 @@ public class FormattedTextHelper {
                                 endBracket = endIndex - 1;
                             }
                         }
-                        else if (innardType.equals("mm_head")) {
-                            String mmString = innardBase.get(1);
-
+                        else if (innardType.equals("head")) {
+                            String[] parts = innardBase.get(1).split(",", 3);
                             try {
-                                Component headComp = MiniMessage.miniMessage().deserialize(mmString);
-
+                                PlayerHeadObjectContents.Builder builder = ObjectContents.playerHead();
+                                switch (parts[0]) {
+                                    case "uuid" -> builder.id(UUID.fromString(parts[1]));
+                                    case "texture" -> builder.texture(Key.key(parts[1]));
+                                    case "skin_blob" -> {
+                                        String[] blob = parts[1].split("\u0001", 2);
+                                        String signature = (blob.length > 1 && !blob[1].isEmpty()) ? blob[1] : null;
+                                        builder.profileProperty(PlayerHeadObjectContents.property("textures", blob[0], signature));
+                                    }
+                                    default -> builder.name(parts[1]);
+                                }
+                                builder.hat(Boolean.parseBoolean(parts[2]));
+                                Component headComp = Component.object(objBuilder -> objBuilder.contents(builder.build()));
                                 lastText.append(headComp);
                             }
                             catch (Exception ex) {
-                                Debug.echoError("Failed to parse head tag: " + mmString);
+                                Debug.echoError("Failed to parse head tag: " + innardBase.get(1));
                             }
                         }
                         else if (innardType.equals("sprite")) {
