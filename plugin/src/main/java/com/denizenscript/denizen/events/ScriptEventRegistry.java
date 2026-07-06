@@ -13,7 +13,6 @@ import com.denizenscript.denizen.events.server.*;
 import com.denizenscript.denizen.events.vehicle.*;
 import com.denizenscript.denizen.events.world.*;
 import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.utilities.depends.Depends;
 import com.denizenscript.denizencore.events.ScriptEvent;
 import com.denizenscript.denizencore.events.ScriptEventCouldMatcher;
@@ -61,9 +60,7 @@ public class ScriptEventRegistry {
         ScriptEvent.notNameParts.add(0, "SpigotImpl");
 
         // Block events
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
-            ScriptEvent.registerScriptEvent(BellRingScriptEvent.class);
-        }
+        ScriptEvent.registerScriptEvent(BellRingScriptEvent.class);
         ScriptEvent.registerScriptEvent(BlockBuiltScriptEvent.class);
         ScriptEvent.registerScriptEvent(BlockBurnsScriptEvent.class);
         ScriptEvent.registerScriptEvent(BlockCooksSmeltsItemScriptEvent.class);
@@ -205,9 +202,8 @@ public class ScriptEventRegistry {
         ScriptEvent.registerScriptEvent(PlayerFlyingScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerHearsSoundScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerIncreasesExhaustionLevelScriptEvent.class);
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_21)) {
-            ScriptEvent.registerScriptEvent(PlayerInputScriptEvent.class);
-        }
+        ScriptEvent.registerScriptEvent(PlayerInputScriptEvent.class);
+
         if (!Denizen.supportsPaper) {
             ScriptEvent.registerScriptEvent(PlayerItemTakesDamageScriptEvent.class);
         }
@@ -233,9 +229,6 @@ public class ScriptEventRegistry {
         if (!Denizen.supportsPaper) {
             ScriptEvent.registerScriptEvent(PlayerQuitsScriptEvent.class);
         }
-        if (!Denizen.supportsPaper || NMSHandler.getVersion().isAtMost(NMSVersion.v1_17)) {
-            ScriptEvent.registerScriptEvent(PlayerRaiseLowerItemScriptEvent.PlayerRaiseLowerItemScriptEventSpigotImpl.class);
-        }
         ScriptEvent.registerScriptEvent(PlayerReceivesActionbarScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerReceivesCommandsScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerReceivesMessageScriptEvent.class);
@@ -254,9 +247,7 @@ public class ScriptEventRegistry {
         ScriptEvent.registerScriptEvent(PlayerStatisticIncrementsScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerSteersEntityScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerStepsOnScriptEvent.class);
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_18)) {
-            ScriptEvent.registerScriptEvent(PlayerStopsDamagingBlockScriptEvent.class);
-        }
+        ScriptEvent.registerScriptEvent(PlayerStopsDamagingBlockScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerSwapsItemsScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerTakesFromFurnaceScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerTakesFromLecternScriptEvent.class);

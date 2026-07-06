@@ -3,7 +3,6 @@ package com.denizenscript.denizen.events.block;
 import com.denizenscript.denizen.objects.ItemTag;
 import com.denizenscript.denizen.objects.LocationTag;
 import com.denizenscript.denizen.events.BukkitScriptEvent;
-import com.denizenscript.denizen.utilities.Utilities;
 import com.denizenscript.denizencore.objects.ObjectTag;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import org.bukkit.event.EventHandler;

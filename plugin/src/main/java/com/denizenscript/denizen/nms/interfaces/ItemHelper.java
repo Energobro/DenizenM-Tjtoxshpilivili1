@@ -1,7 +1,5 @@
 package com.denizenscript.denizen.nms.interfaces;
 
-import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.nms.util.PlayerProfile;
 import com.denizenscript.denizen.objects.ItemTag;
 import com.denizenscript.denizen.utilities.nbt.CustomNBT;
@@ -11,7 +9,6 @@ import net.kyori.adventure.nbt.CompoundBinaryTag;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.block.Banner;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -19,7 +16,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.ShapedRecipe;
-import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.ShieldMeta;
 import org.bukkit.map.MapView;
 
@@ -156,31 +152,13 @@ public abstract class ItemHelper {
     }
 
     public DyeColor getShieldColor(ItemStack item) { // TODO: once 1.21 is the minimum supported version, remove from NMS
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_21)) {
-            return ((ShieldMeta) item.getItemMeta()).getBaseColor();
-        }
-        // TODO: once 1.20 is the minimum supported version, remove legacy code ↓
-        BlockStateMeta stateMeta = (BlockStateMeta) item.getItemMeta();
-        return stateMeta.hasBlockState() ? ((Banner) stateMeta.getBlockState()).getBaseColor() : null;
+        return ((ShieldMeta) item.getItemMeta()).getBaseColor();
     }
 
     public ItemStack setShieldColor(ItemStack item, DyeColor color) { // TODO: once 1.21 is the minimum supported version, remove from NMS
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_21)) {
-            ShieldMeta shieldMeta = (ShieldMeta) item.getItemMeta();
-            shieldMeta.setBaseColor(color);
-            item.setItemMeta(shieldMeta);
-            return item;
-        }
-        // TODO: once 1.20 is the minimum supported version, remove legacy code ↓
-        if (color == null) {
-            CompoundBinaryTag noStateNbt = getNbtData(item).remove("BlockEntityTag");
-            return setNbtData(item, noStateNbt);
-        }
-        BlockStateMeta stateMeta = (BlockStateMeta) item.getItemMeta();
-        Banner banner = (Banner) stateMeta.getBlockState();
-        banner.setBaseColor(color);
-        stateMeta.setBlockState(banner);
-        item.setItemMeta(stateMeta);
+        ShieldMeta shieldMeta = (ShieldMeta) item.getItemMeta();
+        shieldMeta.setBaseColor(color);
+        item.setItemMeta(shieldMeta);
         return item;
     }
 
