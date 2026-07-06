@@ -2,7 +2,6 @@ package com.denizenscript.denizen.objects;
 
 import com.denizenscript.denizen.events.BukkitScriptEvent;
 import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.nms.abstracts.BiomeNMS;
 import com.denizenscript.denizen.nms.interfaces.EntityHelper;
 import com.denizenscript.denizen.nms.util.PlayerProfile;
@@ -3109,9 +3108,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
             // Deprecated in favor of <@link tag LocationTag.find_structure> on 1.19+.
             // -->
             else if (attribute.startsWith("structure", 2) && attribute.hasContext(2)) {
-                if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
-                    BukkitImplDeprecations.findStructureTags.warn(attribute.context);
-                }
+                BukkitImplDeprecations.findStructureTags.warn(attribute.context);
                 String typeName = attribute.getContext(2);
                 StructureType type = StructureType.getStructureTypes().get(typeName);
                 if (type == null) {
@@ -3134,9 +3131,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
             // Deprecated in favor of <@link tag LocationTag.find_structure> with 'unexplored=true' on 1.19+.
             // -->
             else if (attribute.startsWith("unexplored_structure", 2) && attribute.hasContext(2)) {
-                if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
-                    BukkitImplDeprecations.findStructureTags.warn(attribute.context);
-                }
+                BukkitImplDeprecations.findStructureTags.warn(attribute.context);
                 String typeName = attribute.getContext(2);
                 StructureType type = StructureType.getStructureTypes().get(typeName);
                 if (type == null) {
@@ -4255,329 +4250,323 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
             return output;
         });
 
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
+        // <--[tag]
+        // @attribute <LocationTag.temperature>
+        // @returns ElementTag(Decimal)
+        // @description
+        // Returns a location's temperature, based on the biome it's in.
+        // If this is less than 0.15, snow will form on the ground when weather occurs in the world and a layer of ice will form over water.
+        // See also <@link tag BiomeTag.temperature_at>.
+        // @example
+        // # Gives the player water if they are standing in a warm location.
+        // - if <player.location.temperature> > 0.5:
+        //   - give water_bucket
+        // -->
+        tagProcessor.registerTag(ElementTag.class, "temperature", (attribute, object) -> {
+            BiomeNMS biome = object.getBiomeForTag(attribute);
+            return biome != null ? new ElementTag(biome.getTemperatureAt(object)) : null;
+        });
 
-            // <--[tag]
-            // @attribute <LocationTag.temperature>
-            // @returns ElementTag(Decimal)
-            // @description
-            // Returns a location's temperature, based on the biome it's in.
-            // If this is less than 0.15, snow will form on the ground when weather occurs in the world and a layer of ice will form over water.
-            // See also <@link tag BiomeTag.temperature_at>.
-            // @example
-            // # Gives the player water if they are standing in a warm location.
-            // - if <player.location.temperature> > 0.5:
-            //   - give water_bucket
-            // -->
-            tagProcessor.registerTag(ElementTag.class, "temperature", (attribute, object) -> {
-                BiomeNMS biome = object.getBiomeForTag(attribute);
-                return biome != null ? new ElementTag(biome.getTemperatureAt(object)) : null;
-            });
+        // <--[tag]
+        // @attribute <LocationTag.downfall_type>
+        // @returns ElementTag
+        // @description
+        // Returns a location's downfall type (for when a world has weather), based on the biome it's in.
+        // This can be RAIN, SNOW, or NONE.
+        // See also <@link tag BiomeTag.downfall_at>.
+        // @example
+        // # Tells the linked player what the downfall type at their location is.
+        // - narrate "The downfall type at your location is: <player.location.downfall_type>!"
+        // -->
+        tagProcessor.registerTag(ElementTag.class, "downfall_type", (attribute, object) -> {
+            BiomeNMS biome = object.getBiomeForTag(attribute);
+            return biome != null ? new ElementTag(biome.getDownfallTypeAt(object)) : null;
+        });
 
-            // <--[tag]
-            // @attribute <LocationTag.downfall_type>
-            // @returns ElementTag
-            // @description
-            // Returns a location's downfall type (for when a world has weather), based on the biome it's in.
-            // This can be RAIN, SNOW, or NONE.
-            // See also <@link tag BiomeTag.downfall_at>.
-            // @example
-            // # Tells the linked player what the downfall type at their location is.
-            // - narrate "The downfall type at your location is: <player.location.downfall_type>!"
-            // -->
-            tagProcessor.registerTag(ElementTag.class, "downfall_type", (attribute, object) -> {
-                BiomeNMS biome = object.getBiomeForTag(attribute);
-                return biome != null ? new ElementTag(biome.getDownfallTypeAt(object)) : null;
-            });
+        // <--[tag]
+        // @attribute <LocationTag.last_interacted_slot>
+        // @returns ElementTag(Number)
+        // @mechanism LocationTag.last_interacted_slot
+        // @description
+        // Returns the last interacted slot of a Chiseled Bookshelf inventory.
+        // -->
+        tagProcessor.registerTag(ElementTag.class, "last_interacted_slot", (attribute, object) -> {
+            if (!(object.getBlockStateForTag(attribute) instanceof ChiseledBookshelf chiseledBookshelf)) {
+                return null;
+            }
+            return new ElementTag(chiseledBookshelf.getLastInteractedSlot() + 1);
+        });
 
-            // <--[tag]
-            // @attribute <LocationTag.last_interacted_slot>
-            // @returns ElementTag(Number)
-            // @mechanism LocationTag.last_interacted_slot
-            // @description
-            // Returns the last interacted slot of a Chiseled Bookshelf inventory.
-            // -->
-            tagProcessor.registerTag(ElementTag.class, "last_interacted_slot", (attribute, object) -> {
-                if (!(object.getBlockStateForTag(attribute) instanceof ChiseledBookshelf chiseledBookshelf)) {
-                    return null;
-                }
-                return new ElementTag(chiseledBookshelf.getLastInteractedSlot() + 1);
-            });
+        // <--[language]
+        // @name Structure lookups
+        // @group Useful Lists
+        // @description
+        // Structures can be located using <@link tag LocationTag.find_structure>.
+        // It works similarly to the '/locate' command, and has several side effects/edge cases:
+        // - The radius is in chunks, but isn't always a set square radius around the origin; certain structures may modify the amounts of chunks checked. For example, woodland mansions can potentially check up to 20,000 blocks away (or more) regardless of the radius used.
+        // - Lookups can take a long amount of time (several seconds, over 10 in some cases), especially when looking for unexplored structures, which will cause the server to freeze while searching.
+        // - They will not load/generate chunks (but can search not-yet-generated chunks and return a location in them).
+        // - They can lead to situations where the server hangs and crashes when trying to find unexplored structures (if there aren't any/any nearby), as it keeps looking further and further out.
+        // - The returned location only contains the X and Z values, and will always have a Y value of 0. Tags like <@link tag LocationTag.highest> are available, but note that they require the chunk to be loaded.
+        // -->
 
-            // <--[language]
-            // @name Structure lookups
-            // @group Useful Lists
-            // @description
-            // Structures can be located using <@link tag LocationTag.find_structure>.
-            // It works similarly to the '/locate' command, and has several side effects/edge cases:
-            // - The radius is in chunks, but isn't always a set square radius around the origin; certain structures may modify the amounts of chunks checked. For example, woodland mansions can potentially check up to 20,000 blocks away (or more) regardless of the radius used.
-            // - Lookups can take a long amount of time (several seconds, over 10 in some cases), especially when looking for unexplored structures, which will cause the server to freeze while searching.
-            // - They will not load/generate chunks (but can search not-yet-generated chunks and return a location in them).
-            // - They can lead to situations where the server hangs and crashes when trying to find unexplored structures (if there aren't any/any nearby), as it keeps looking further and further out.
-            // - The returned location only contains the X and Z values, and will always have a Y value of 0. Tags like <@link tag LocationTag.highest> are available, but note that they require the chunk to be loaded.
-            // -->
+        // <--[tag]
+        // @attribute <LocationTag.find_structure[structure=<structure>;radius=<#>(;unexplored=<true/{false}>)]>
+        // @returns LocationTag
+        // @warning See <@link language Structure lookups> for potential issues/edge cases in structure lookups.
+        // @group finding
+        // @description
+        // Finds the closest structure of the given type within the specified chunk radius (if any), optionally only searching for unexplored ones.
+        // For a list of default structures, see <@link url https://minecraft.wiki/w/Structure#ID>.
+        // Alternatively, you can specify a custom structure from a datapack, plugin, etc. as a namespaced key.
+        // See also <@link tag server.structures> for all structures currently available on the server.
+        // @example
+        // # Use to find the desert temple closest to the player, and tell them what direction it's in.
+        // - define found <player.location.find_structure[structure=desert_pyramid;radius=200].if_null[null]>
+        // - if <[found]> != null:
+        //   - narrate "The closet desert temple is <player.location.direction[<[found]>]> of you!"
+        // - else:
+        //   - narrate "No desert temple found."
+        // -->
+        tagProcessor.registerTag(LocationTag.class, MapTag.class, "find_structure", (attribute, object, input) -> {
+            ElementTag structureName = input.getRequiredObjectAs("structure", ElementTag.class, attribute);
+            ElementTag radius = input.getRequiredObjectAs("radius", ElementTag.class, attribute);
+            if (structureName == null || radius == null) {
+                return null;
+            }
+            org.bukkit.generator.structure.Structure structure = Registry.STRUCTURE.get(Utilities.parseNamespacedKey(structureName.asString()));
+            if (structure == null) {
+                attribute.echoError("Invalid structure specified: " + structureName + '.');
+                return null;
+            }
+            if (!radius.isInt()) {
+                attribute.echoError("Invalid radius '" + radius + " specified': must be a number.");
+                return null;
+            }
+            ElementTag unexplored = input.getElement("unexplored", "false");
+            if (!unexplored.isBoolean()) {
+                attribute.echoError("Invalid 'unexplored' value '" + unexplored + "' specified: must be a boolean.");
+                return null;
+            }
+            StructureSearchResult searchResult = object.getWorld().locateNearestStructure(object, structure, radius.asInt(), unexplored.asBoolean());
+            return searchResult != null ? new LocationTag(searchResult.getLocation()) : null;
+        });
 
-            // <--[tag]
-            // @attribute <LocationTag.find_structure[structure=<structure>;radius=<#>(;unexplored=<true/{false}>)]>
-            // @returns LocationTag
-            // @warning See <@link language Structure lookups> for potential issues/edge cases in structure lookups.
-            // @group finding
-            // @description
-            // Finds the closest structure of the given type within the specified chunk radius (if any), optionally only searching for unexplored ones.
-            // For a list of default structures, see <@link url https://minecraft.wiki/w/Structure#ID>.
-            // Alternatively, you can specify a custom structure from a datapack, plugin, etc. as a namespaced key.
-            // See also <@link tag server.structures> for all structures currently available on the server.
-            // @example
-            // # Use to find the desert temple closest to the player, and tell them what direction it's in.
-            // - define found <player.location.find_structure[structure=desert_pyramid;radius=200].if_null[null]>
-            // - if <[found]> != null:
-            //   - narrate "The closet desert temple is <player.location.direction[<[found]>]> of you!"
-            // - else:
-            //   - narrate "No desert temple found."
-            // -->
-            tagProcessor.registerTag(LocationTag.class, MapTag.class, "find_structure", (attribute, object, input) -> {
-                ElementTag structureName = input.getRequiredObjectAs("structure", ElementTag.class, attribute);
-                ElementTag radius = input.getRequiredObjectAs("radius", ElementTag.class, attribute);
-                if (structureName == null || radius == null) {
-                    return null;
-                }
-                org.bukkit.generator.structure.Structure structure = Registry.STRUCTURE.get(Utilities.parseNamespacedKey(structureName.asString()));
-                if (structure == null) {
-                    attribute.echoError("Invalid structure specified: " + structureName + '.');
-                    return null;
-                }
-                if (!radius.isInt()) {
-                    attribute.echoError("Invalid radius '" + radius + " specified': must be a number.");
-                    return null;
-                }
-                ElementTag unexplored = input.getElement("unexplored", "false");
-                if (!unexplored.isBoolean()) {
-                    attribute.echoError("Invalid 'unexplored' value '" + unexplored + "' specified: must be a boolean.");
-                    return null;
-                }
-                StructureSearchResult searchResult = object.getWorld().locateNearestStructure(object, structure, radius.asInt(), unexplored.asBoolean());
-                return searchResult != null ? new LocationTag(searchResult.getLocation()) : null;
-            });
-        }
+        // <--[tag]
+        // @attribute <LocationTag.sherds>
+        // @returns MapTag
+        // @mechanism LocationTag.sherds
+        // @description
+        // Returns a decorated pot's sherds as a map of sides to <@link objecttype MaterialTag>s of the sherds.
+        // The map will always contain every side, with a brick being the default value for when a side has no sherd.
+        // Valid sides are: <@link url https://hub.spigotmc.org/javadocs/spigot/org/bukkit/block/DecoratedPot.Side.html>.
+        // Valid sherd materials are either a brick or any pottery sherd.
+        // @example
+        // # Tells the player if they're looking at a pot that has any sherds.
+        // - if <player.cursor_on.sherds.values.contains_match[!brick].if_null[false]>:
+        //   - narrate "That pot has sherds in it! You should check!"
+        // - else:
+        //   - narrate "Try looking somewhere else."
+        // -->
+        tagProcessor.registerTag(MapTag.class, "sherds", (attribute, object) -> {
+            if (!(object.getBlockStateForTag(attribute) instanceof DecoratedPot decoratedPot)) {
+                return null;
+            }
+            MapTag sherdsMap = new MapTag();
+            for (Map.Entry<DecoratedPot.Side, Material> entry : decoratedPot.getSherds().entrySet()) {
+                sherdsMap.putObject(entry.getKey().name(), new MaterialTag(entry.getValue()));
+            }
+            return sherdsMap;
+        });
 
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20)) {
+        // <--[mechanism]
+        // @object LocationTag
+        // @name sherds
+        // @input MapTag
+        // @description
+        // Sets a decorated pot's sherds, input is a map of sides to <@link objecttype MaterialTag>s of the sherds.
+        // You only need to specify the sides you want to set, and the default value (for removing a side's sherd) is a brick.
+        // Valid sides are: <@link url https://hub.spigotmc.org/javadocs/spigot/org/bukkit/block/DecoratedPot.Side.html>.
+        // Valid materials are either a brick or any pottery sherd.
+        // @tags
+        // <LocationTag.sherds>
+        // @example
+        // # Sets a decorated pot's left side to a random sherd.
+        // - adjust <[potLocation]> sherds:[left=<server.vanilla_tagged_materials[decorated_pot_sherds].random>]
+        // @example
+        // # Removes a decorated pot's sherds.
+        // - adjust <[potLocation]> sherds:[left=brick;right=brick;front=brick;back=brick]
+        // -->
+        tagProcessor.registerMechanism("sherds", false, MapTag.class, (object, mechanism, input) -> {
+            if (!(object.getBlockState() instanceof DecoratedPot decoratedPot)) {
+                mechanism.echoError("Mechanism 'LocationTag.sherds' is only valid for decorated pots.");
+                return;
+            }
+            for (Map.Entry<StringHolder, ObjectTag> entry : input.entrySet()) {
+                DecoratedPot.Side side = ElementTag.asEnum(DecoratedPot.Side.class, entry.getKey().low);
+                if (side == null) {
+                    mechanism.echoError("Invalid decorated pot side specified: " + entry.getKey());
+                    continue;
+                }
+                MaterialTag sherd = entry.getValue().asType(MaterialTag.class, mechanism.context);
+                if (sherd == null || !Tag.ITEMS_DECORATED_POT_INGREDIENTS.isTagged(sherd.getMaterial())) {
+                    mechanism.echoError("Invalid sherd material specified: " + entry.getValue());
+                    continue;
+                }
+                decoratedPot.setSherd(side, sherd.getMaterial());
+            }
+            decoratedPot.update();
+        });
 
-            // <--[tag]
-            // @attribute <LocationTag.sherds>
-            // @returns MapTag
-            // @mechanism LocationTag.sherds
-            // @description
-            // Returns a decorated pot's sherds as a map of sides to <@link objecttype MaterialTag>s of the sherds.
-            // The map will always contain every side, with a brick being the default value for when a side has no sherd.
-            // Valid sides are: <@link url https://hub.spigotmc.org/javadocs/spigot/org/bukkit/block/DecoratedPot.Side.html>.
-            // Valid sherd materials are either a brick or any pottery sherd.
-            // @example
-            // # Tells the player if they're looking at a pot that has any sherds.
-            // - if <player.cursor_on.sherds.values.contains_match[!brick].if_null[false]>:
-            //   - narrate "That pot has sherds in it! You should check!"
-            // - else:
-            //   - narrate "Try looking somewhere else."
-            // -->
-            tagProcessor.registerTag(MapTag.class, "sherds", (attribute, object) -> {
-                if (!(object.getBlockStateForTag(attribute) instanceof DecoratedPot decoratedPot)) {
-                    return null;
-                }
-                MapTag sherdsMap = new MapTag();
-                for (Map.Entry<DecoratedPot.Side, Material> entry : decoratedPot.getSherds().entrySet()) {
-                    sherdsMap.putObject(entry.getKey().name(), new MaterialTag(entry.getValue()));
-                }
-                return sherdsMap;
-            });
+        // <--[tag]
+        // @attribute <LocationTag.buried_item>
+        // @returns ItemTag
+        // @mechanism LocationTag.buried_item
+        // @description
+        // Returns the item buried in a brushable block (also referred to as "suspicious blocks"). Returns air if there is no item buried.
+        // -->
+        tagProcessor.registerTag(ItemTag.class, "buried_item", (attribute, object) -> {
+            if (!(object.getBlockStateForTag(attribute) instanceof BrushableBlock brushableBlock)) {
+                return null;
+            }
+            return new ItemTag(brushableBlock.getItem());
+        });
 
-            // <--[mechanism]
-            // @object LocationTag
-            // @name sherds
-            // @input MapTag
-            // @description
-            // Sets a decorated pot's sherds, input is a map of sides to <@link objecttype MaterialTag>s of the sherds.
-            // You only need to specify the sides you want to set, and the default value (for removing a side's sherd) is a brick.
-            // Valid sides are: <@link url https://hub.spigotmc.org/javadocs/spigot/org/bukkit/block/DecoratedPot.Side.html>.
-            // Valid materials are either a brick or any pottery sherd.
-            // @tags
-            // <LocationTag.sherds>
-            // @example
-            // # Sets a decorated pot's left side to a random sherd.
-            // - adjust <[potLocation]> sherds:[left=<server.vanilla_tagged_materials[decorated_pot_sherds].random>]
-            // @example
-            // # Removes a decorated pot's sherds.
-            // - adjust <[potLocation]> sherds:[left=brick;right=brick;front=brick;back=brick]
-            // -->
-            tagProcessor.registerMechanism("sherds", false, MapTag.class, (object, mechanism, input) -> {
-                if (!(object.getBlockState() instanceof DecoratedPot decoratedPot)) {
-                    mechanism.echoError("Mechanism 'LocationTag.sherds' is only valid for decorated pots.");
-                    return;
-                }
-                for (Map.Entry<StringHolder, ObjectTag> entry : input.entrySet()) {
-                    DecoratedPot.Side side = ElementTag.asEnum(DecoratedPot.Side.class, entry.getKey().low);
-                    if (side == null) {
-                        mechanism.echoError("Invalid decorated pot side specified: " + entry.getKey());
-                        continue;
-                    }
-                    MaterialTag sherd = entry.getValue().asType(MaterialTag.class, mechanism.context);
-                    if (sherd == null || !Tag.ITEMS_DECORATED_POT_INGREDIENTS.isTagged(sherd.getMaterial())) {
-                        mechanism.echoError("Invalid sherd material specified: " + entry.getValue());
-                        continue;
-                    }
-                    decoratedPot.setSherd(side, sherd.getMaterial());
-                }
-                decoratedPot.update();
-            });
+        // <--[mechanism]
+        // @object LocationTag
+        // @name buried_item
+        // @input ItemTag
+        // @description
+        // Sets the buried item in a brushable block (also referred to as "suspicious blocks"). Set to air to have no item buried.
+        // @tags
+        // <LocationTag.buried_item>
+        // -->
+        tagProcessor.registerMechanism("buried_item", false, ItemTag.class, (object, mechanism, item) -> {
+            if (!(object.getBlockState() instanceof BrushableBlock brushableBlock)) {
+                mechanism.echoError("Mechanism 'LocationTag.buried_item' is only valid for brushable blocks.");
+                return;
+            }
+            brushableBlock.setItem(item.getItemStack());
+            brushableBlock.update();
+        });
 
-            // <--[tag]
-            // @attribute <LocationTag.buried_item>
-            // @returns ItemTag
-            // @mechanism LocationTag.buried_item
-            // @description
-            // Returns the item buried in a brushable block (also referred to as "suspicious blocks"). Returns air if there is no item buried.
-            // -->
-            tagProcessor.registerTag(ItemTag.class, "buried_item", (attribute, object) -> {
-                if (!(object.getBlockStateForTag(attribute) instanceof BrushableBlock brushableBlock)) {
-                    return null;
-                }
-                return new ItemTag(brushableBlock.getItem());
-            });
+        // <--[tag]
+        // @attribute <LocationTag.waxed>
+        // @returns ElementTag(Boolean)
+        // @mechanism LocationTag.waxed
+        // @group world
+        // @description
+        // If the location is a sign block, returns whether it is waxed (locked to prevent players editing the text).
+        // -->
+        tagProcessor.registerTag(ElementTag.class, "waxed", (attribute, object) -> {
+            if (!(object.getBlockStateForTag(attribute) instanceof Sign sign)) {
+                attribute.echoError("Location is not a valid Sign block.");
+                return null;
+            }
+            return new ElementTag(sign.isWaxed());
+        });
 
-            // <--[mechanism]
-            // @object LocationTag
-            // @name buried_item
-            // @input ItemTag
-            // @description
-            // Sets the buried item in a brushable block (also referred to as "suspicious blocks"). Set to air to have no item buried.
-            // @tags
-            // <LocationTag.buried_item>
-            // -->
-            tagProcessor.registerMechanism("buried_item", false, ItemTag.class, (object, mechanism, item) -> {
-                if (!(object.getBlockState() instanceof BrushableBlock brushableBlock)) {
-                    mechanism.echoError("Mechanism 'LocationTag.buried_item' is only valid for brushable blocks.");
-                    return;
-                }
-                brushableBlock.setItem(item.getItemStack());
-                brushableBlock.update();
-            });
+        // <--[mechanism]
+        // @object LocationTag
+        // @name waxed
+        // @input ElementTag(Boolean)
+        // @description
+        // Sets whether the sign at the location is waxed (locked to prevent players editing the text).
+        // @tags
+        // <LocationTag.waxed>
+        // -->
+        tagProcessor.registerMechanism("waxed", false, ElementTag.class, (object, mechanism, value) -> {
+            if (!mechanism.requireBoolean()) {
+                return;
+            }
+            if (!(object.getBlockState() instanceof Sign sign)) {
+                mechanism.echoError("'waxed' mechanism can only be called on Sign blocks.");
+                return;
+            }
+            sign.setWaxed(value.asBoolean());
+            sign.update();
+        });
 
-            // <--[tag]
-            // @attribute <LocationTag.waxed>
-            // @returns ElementTag(Boolean)
-            // @mechanism LocationTag.waxed
-            // @group world
-            // @description
-            // If the location is a sign block, returns whether it is waxed (locked to prevent players editing the text).
-            // -->
-            tagProcessor.registerTag(ElementTag.class, "waxed", (attribute, object) -> {
-                if (!(object.getBlockStateForTag(attribute) instanceof Sign sign)) {
-                    attribute.echoError("Location is not a valid Sign block.");
-                    return null;
-                }
-                return new ElementTag(sign.isWaxed());
-            });
+        // <--[tag]
+        // @attribute <LocationTag.slot[<vector>]>
+        // @returns ElementTag(Number)
+        // @description
+        // Returns the appropriate slot based on a given point along the bookshelves' surface relative to its position.
+        // It will return 0 if the given vector is not within the bounds of any slot.
+        // See also <@link tag EntityTag.bookshelf_slot>
+        // @Example
+        // # Obtain and narrate the slot that the player right-clicked.
+        // on player right clicks chiseled_bookshelf:
+        // - define slot <player.eye_location.ray_trace.sub[<context.location>]>
+        // - narrate <context.location.slot[<[slot]>]>
+        // -->
+        tagProcessor.registerTag(ElementTag.class, LocationTag.class, "slot", (attribute, object, input) -> {
+            if (!(object.getBlockStateForTag(attribute) instanceof ChiseledBookshelf chiseledBookshelf)) {
+                return null;
+            }
+            return new ElementTag(chiseledBookshelf.getSlot(input.toVector()) + 1);
+        });
 
-            // <--[mechanism]
-            // @object LocationTag
-            // @name waxed
-            // @input ElementTag(Boolean)
-            // @description
-            // Sets whether the sign at the location is waxed (locked to prevent players editing the text).
-            // @tags
-            // <LocationTag.waxed>
-            // -->
-            tagProcessor.registerMechanism("waxed", false, ElementTag.class, (object, mechanism, value) -> {
-                if (!mechanism.requireBoolean()) {
-                    return;
+        // <--[tag]
+        // @attribute <LocationTag.disabled_slots>
+        // @returns ListTag
+        // @mechanism LocationTag.disabled_slots
+        // @group world
+        // @description
+        // Returns which slots in a crafter are disabled.
+        // The slots are arranged from left to right, top to bottom.
+        // -->
+        tagProcessor.registerTag(ListTag.class, "disabled_slots", (attribute, object) -> {
+            if (!(object.getBlockStateForTag(attribute) instanceof Crafter crafter)) {
+                attribute.echoError("The 'LocationTag.disabled_slots' tag can only be called on a crafter block.");
+                return null;
+            }
+            ListTag slots = new ListTag();
+            for (int i = 0; i <= 8; i++) {
+                if (crafter.isSlotDisabled(i)) {
+                    slots.addObject(new ElementTag(i + 1));
                 }
-                if (!(object.getBlockState() instanceof Sign sign)) {
-                    mechanism.echoError("'waxed' mechanism can only be called on Sign blocks.");
-                    return;
-                }
-                sign.setWaxed(value.asBoolean());
-                sign.update();
-            });
+            }
+            return slots;
+        });
 
-            // <--[tag]
-            // @attribute <LocationTag.slot[<vector>]>
-            // @returns ElementTag(Number)
-            // @description
-            // Returns the appropriate slot based on a given point along the bookshelves' surface relative to its position.
-            // It will return 0 if the given vector is not within the bounds of any slot.
-            // See also <@link tag EntityTag.bookshelf_slot>
-            // @Example
-            // # Obtain and narrate the slot that the player right-clicked.
-            // on player right clicks chiseled_bookshelf:
-            // - define slot <player.eye_location.ray_trace.sub[<context.location>]>
-            // - narrate <context.location.slot[<[slot]>]>
-            // -->
-            tagProcessor.registerTag(ElementTag.class, LocationTag.class, "slot", (attribute, object, input) -> {
-                if (!(object.getBlockStateForTag(attribute) instanceof ChiseledBookshelf chiseledBookshelf)) {
-                    return null;
+        // <--[mechanism]
+        // @object LocationTag
+        // @name disabled_slots
+        // @input ListTag
+        // @description
+        // Sets which slots in a crafter are disabled.
+        // The slots are arranged from left to right, top to bottom.
+        // Provide no input to enable all slots.
+        // @tags
+        // <LocationTag.disabled_slots>
+        // @example
+        // # Disables the slots in the top left and middle right
+        // - adjustblock <[location]> disabled_slots:1|6
+        // -->
+        tagProcessor.registerMechanism("disabled_slots", false, ListTag.class, (object, mechanism, input) -> {
+            if (!(object.getBlockState() instanceof Crafter crafter)) {
+                mechanism.echoError("The 'LocationTag.disabled_slots' mechanism can only be called on a crafter block.");
+                return;
+            }
+            for (int i = 0; i <= 8; i++) {
+                crafter.setSlotDisabled(i, false);
+            }
+            for (String slot : input) {
+                ElementTag element = new ElementTag(slot);
+                if (!element.isInt()) {
+                    mechanism.echoError("Invalid slot '" + slot + "' specified: must be an integer.");
+                    continue;
                 }
-                return new ElementTag(chiseledBookshelf.getSlot(input.toVector()) + 1);
-            });
-
-            // <--[tag]
-            // @attribute <LocationTag.disabled_slots>
-            // @returns ListTag
-            // @mechanism LocationTag.disabled_slots
-            // @group world
-            // @description
-            // Returns which slots in a crafter are disabled.
-            // The slots are arranged from left to right, top to bottom.
-            // -->
-            tagProcessor.registerTag(ListTag.class, "disabled_slots", (attribute, object) -> {
-                if (!(object.getBlockStateForTag(attribute) instanceof Crafter crafter)) {
-                    attribute.echoError("The 'LocationTag.disabled_slots' tag can only be called on a crafter block.");
-                    return null;
+                int value = element.asInt();
+                if (value < 1 || value > 9) {
+                    mechanism.echoError("Invalid slot '" + slot + "' specified: must between 1 and 9.");
+                    continue;
                 }
-                ListTag slots = new ListTag();
-                for (int i = 0; i <= 8; i++) {
-                    if (crafter.isSlotDisabled(i)) {
-                        slots.addObject(new ElementTag(i + 1));
-                    }
-                }
-                return slots;
-            });
-
-            // <--[mechanism]
-            // @object LocationTag
-            // @name disabled_slots
-            // @input ListTag
-            // @description
-            // Sets which slots in a crafter are disabled.
-            // The slots are arranged from left to right, top to bottom.
-            // Provide no input to enable all slots.
-            // @tags
-            // <LocationTag.disabled_slots>
-            // @example
-            // # Disables the slots in the top left and middle right
-            // - adjustblock <[location]> disabled_slots:1|6
-            // -->
-            tagProcessor.registerMechanism("disabled_slots", false, ListTag.class, (object, mechanism, input) -> {
-                if (!(object.getBlockState() instanceof Crafter crafter)) {
-                    mechanism.echoError("The 'LocationTag.disabled_slots' mechanism can only be called on a crafter block.");
-                    return;
-                }
-                for (int i = 0; i <= 8; i++) {
-                    crafter.setSlotDisabled(i, false);
-                }
-                for (String slot : input) {
-                    ElementTag element = new ElementTag(slot);
-                    if (!element.isInt()) {
-                        mechanism.echoError("Invalid slot '" + slot + "' specified: must be an integer.");
-                        continue;
-                    }
-                    int value = element.asInt();
-                    if (value < 1 || value > 9) {
-                        mechanism.echoError("Invalid slot '" + slot + "' specified: must between 1 and 9.");
-                        continue;
-                    }
-                    crafter.setSlotDisabled(value - 1, true);
-                }
-                crafter.update();
-            });
-        }
+                crafter.setSlotDisabled(value - 1, true);
+            }
+            crafter.update();
+        });
 
         // <--[mechanism]
         // @object LocationTag
@@ -4594,7 +4583,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
                 mechanism.echoError("Mechanism 'LocationTag.spawner_type' is only valid for spawners.");
                 return;
             }
-            if (!mechanism.hasValue() && NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20)) {
+            if (!mechanism.hasValue()) {
                 spawner.setSpawnedType(null);
                 spawner.update();
             }
