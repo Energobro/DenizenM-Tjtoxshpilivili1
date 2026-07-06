@@ -1,8 +1,6 @@
 package com.denizenscript.denizen.objects;
 
-import com.denizenscript.denizen.Denizen;
 import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.nms.abstracts.ImprovedOfflinePlayer;
 import com.denizenscript.denizen.nms.abstracts.Sidebar;
 import com.denizenscript.denizen.nms.interfaces.AdvancementHelper;
@@ -2086,18 +2084,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         });
 
         // <--[tag]
-        // @attribute <PlayerTag.is_sneaking>
-        // @returns ElementTag(Boolean)
-        // @description
-        // Returns whether the player is currently sneaking.
-        // -->
-        if (!Denizen.supportsPaper || NMSHandler.getVersion().isAtMost(NMSVersion.v1_18)) {
-            registerOnlineOnlyTag(ElementTag.class, "is_sneaking", (attribute, object) -> {
-                return new ElementTag(object.getPlayerEntity().isSneaking());
-            });
-        }
-
-        // <--[tag]
         // @attribute <PlayerTag.is_sprinting>
         // @returns ElementTag(Boolean)
         // @mechanism PlayerTag.sprinting
@@ -2562,54 +2548,48 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
             return result;
         });
 
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_18)) {
+        // <--[tag]
+        // @attribute <PlayerTag.skin_model>
+        // @returns ElementTag
+        // @description
+        // Returns the player's skin model, either CLASSIC or SLIM.
+        // -->
+        registerOnlineOnlyTag(ElementTag.class, "skin_model", (attribute, object) -> {
+            return MultiVersionHelper1_18.getSkinModel(object.getPlayerEntity());
+        });
 
-            // <--[tag]
-            // @attribute <PlayerTag.skin_model>
-            // @returns ElementTag
-            // @description
-            // Returns the player's skin model, either CLASSIC or SLIM.
-            // -->
-            registerOnlineOnlyTag(ElementTag.class, "skin_model", (attribute, object) -> {
-                return MultiVersionHelper1_18.getSkinModel(object.getPlayerEntity());
-            });
-        }
+        // <--[tag]
+        // @attribute <PlayerTag.last_death_location>
+        // @returns LocationTag
+        // @mechanism PlayerTag.last_death_location
+        // @description
+        // Returns the location where the player last died, if any.
+        // Works with offline players.
+        // -->
+        registerOfflineTag(LocationTag.class, "last_death_location", (attribute, object) -> {
+            Location deathLoc = object.getOfflinePlayer().getLastDeathLocation();
+            return deathLoc != null ? new LocationTag(deathLoc) : null;
+        });
 
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
-
-            // <--[tag]
-            // @attribute <PlayerTag.last_death_location>
-            // @returns LocationTag
-            // @mechanism PlayerTag.last_death_location
-            // @description
-            // Returns the location where the player last died, if any.
-            // Works with offline players.
-            // -->
-            registerOfflineTag(LocationTag.class, "last_death_location", (attribute, object) -> {
-                Location deathLoc = object.getOfflinePlayer().getLastDeathLocation();
-                return deathLoc != null ? new LocationTag(deathLoc) : null;
-            });
-
-            // <--[mechanism]
-            // @object PlayerTag
-            // @name last_death_location
-            // @input LocationTag
-            // @description
-            // Sets the player's last death location, note that this only updates clientside when the player respawns.
-            // Works with offline players.
-            // See also <@link mechanism PlayerTag.refresh_player>.
-            // @tags
-            // <PlayerTag.last_death_location>
-            // -->
-            registerOfflineMechanism("last_death_location", LocationTag.class, (object, mechanism, input) -> {
-                if (object.isOnline()) {
-                    object.getPlayerEntity().setLastDeathLocation(input);
-                }
-                else {
-                    object.getNBTEditor().setLastDeathLocation(input);
-                }
-            });
-        }
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name last_death_location
+        // @input LocationTag
+        // @description
+        // Sets the player's last death location, note that this only updates clientside when the player respawns.
+        // Works with offline players.
+        // See also <@link mechanism PlayerTag.refresh_player>.
+        // @tags
+        // <PlayerTag.last_death_location>
+        // -->
+        registerOfflineMechanism("last_death_location", LocationTag.class, (object, mechanism, input) -> {
+            if (object.isOnline()) {
+                object.getPlayerEntity().setLastDeathLocation(input);
+            }
+            else {
+                object.getNBTEditor().setLastDeathLocation(input);
+            }
+        });
 
         // <--[mechanism]
         // @object PlayerTag
@@ -2680,32 +2660,29 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
             }
         });
 
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_21)) {
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name links
+        // @input ListTag(MapTag)
+        // @description
+        // Sends the specified list of server links to the player. This will override existing links player has.
+        // Each item in the list must be a MapTag in <@link language Server Links Format>.
+        // Generally prefer <@link mechanism PlayerTag.add_links>.
+        // -->
+        registerOnlineOnlyMechanism("links", ListTag.class, (player, mechanism, input) -> {
+            player.getPlayerEntity().sendLinks(Utilities.replaceServerLinks(Bukkit.getServerLinks().copy(), input, mechanism.context));
+        });
 
-            // <--[mechanism]
-            // @object PlayerTag
-            // @name links
-            // @input ListTag(MapTag)
-            // @description
-            // Sends the specified list of server links to the player. This will override existing links player has.
-            // Each item in the list must be a MapTag in <@link language Server Links Format>.
-            // Generally prefer <@link mechanism PlayerTag.add_links>.
-            // -->
-            registerOnlineOnlyMechanism("links", ListTag.class, (player, mechanism, input) -> {
-                player.getPlayerEntity().sendLinks(Utilities.replaceServerLinks(Bukkit.getServerLinks().copy(), input, mechanism.context));
-            });
-
-            // <--[mechanism]
-            // @object PlayerTag
-            // @name add_links
-            // @input ListTag(MapTag)
-            // @description
-            // Adds the specified list of server links to the player. Each item in the list must be a MapTag in <@link language Server Links Format>.
-            // -->
-            registerOnlineOnlyMechanism("add_links", ListTag.class, (player, mechanism, input) -> {
-                player.getPlayerEntity().sendLinks(Utilities.fillServerLinks(Bukkit.getServerLinks().copy(), input, mechanism.context));
-            });
-        }
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name add_links
+        // @input ListTag(MapTag)
+        // @description
+        // Adds the specified list of server links to the player. Each item in the list must be a MapTag in <@link language Server Links Format>.
+        // -->
+        registerOnlineOnlyMechanism("add_links", ListTag.class, (player, mechanism, input) -> {
+            player.getPlayerEntity().sendLinks(Utilities.fillServerLinks(Bukkit.getServerLinks().copy(), input, mechanism.context));
+        });
     }
 
     public static ObjectTagProcessor<PlayerTag> tagProcessor = new ObjectTagProcessor<>();
@@ -3821,10 +3798,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
                     mechanism.echoError("Invalid location specified: must be a sign.");
                     return;
                 }
-                if (!NMSHandler.getVersion().isAtLeast(NMSVersion.v1_18)) {
-                    NMSHandler.packetHelper.showSignEditor(getPlayerEntity(), state.getLocation());
-                    return;
-                }
                 getPlayerEntity().openSign((Sign) state);
             }
             else {
@@ -3981,10 +3954,8 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
             if (mechanism.hasValue()) {
                 if (mechanism.getValue().matchesEnum(SoundCategory.class)) {
                     category = mechanism.getValue().asEnum(SoundCategory.class);
-                    if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
-                        getPlayerEntity().stopSound(category);
-                        return;
-                    }
+                    getPlayerEntity().stopSound(category);
+                    return;
                 }
                 else {
                     key = Utilities.parseNamespacedKey(mechanism.getValue().asString());

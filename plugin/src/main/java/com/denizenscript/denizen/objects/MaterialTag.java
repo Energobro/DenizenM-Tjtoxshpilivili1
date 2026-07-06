@@ -1,7 +1,6 @@
 package com.denizenscript.denizen.objects;
 
 import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.nms.interfaces.BlockHelper;
 import com.denizenscript.denizen.objects.properties.material.*;
 import com.denizenscript.denizen.utilities.BukkitImplDeprecations;
@@ -659,34 +658,28 @@ public class MaterialTag implements ObjectTag, Adjustable, FlaggableObject {
             return result;
         });
 
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20)) {
+        // <--[tag]
+        // @attribute <MaterialTag.food_points>
+        // @returns ElementTag(Number)
+        // @description
+        // If the material is an item, returns the amount of hunger it restores when eaten.
+        // See <@link url https://minecraft.wiki/w/Food> for more information on food mechanics.
+        // -->
+        tagProcessor.registerTag(ElementTag.class, "food_points", (attribute, object) -> {
+            Material itemType = object.getMaterial();
+            return itemType.isEdible() ? new ElementTag(NMSHandler.itemHelper.getFoodPoints(itemType)) : null;
+        });
 
-            // <--[tag]
-            // @attribute <MaterialTag.food_points>
-            // @returns ElementTag(Number)
-            // @description
-            // If the material is an item, returns the amount of hunger it restores when eaten.
-            // See <@link url https://minecraft.wiki/w/Food> for more information on food mechanics.
-            // -->
-            tagProcessor.registerTag(ElementTag.class, "food_points", (attribute, object) -> {
-                Material itemType = object.getMaterial();
-                return itemType.isEdible() ? new ElementTag(NMSHandler.itemHelper.getFoodPoints(itemType)) : null;
-            });
-        }
-
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
-
-            // <--[tag]
-            // @attribute <MaterialTag.is_enabled[<world>]>
-            // @returns ElementTag(Boolean)
-            // @description
-            // Returns whether the material is enabled in the specified world.
-            // If experimental features are disabled in the given world, and the MaterialTag is an item or block that is only enabled by experimental features, this will return false.
-            // -->
-            tagProcessor.registerTag(ElementTag.class, WorldTag.class, "is_enabled", (attribute, object, world) -> {
-                return new ElementTag(object.getMaterial().isEnabledByFeature(world.getWorld()));
-            });
-        }
+        // <--[tag]
+        // @attribute <MaterialTag.is_enabled[<world>]>
+        // @returns ElementTag(Boolean)
+        // @description
+        // Returns whether the material is enabled in the specified world.
+        // If experimental features are disabled in the given world, and the MaterialTag is an item or block that is only enabled by experimental features, this will return false.
+        // -->
+        tagProcessor.registerTag(ElementTag.class, WorldTag.class, "is_enabled", (attribute, object, world) -> {
+            return new ElementTag(object.getMaterial().isEnabledByFeature(world.getWorld()));
+        });
     }
 
     public static ObjectTagProcessor<MaterialTag> tagProcessor = new ObjectTagProcessor<>();
