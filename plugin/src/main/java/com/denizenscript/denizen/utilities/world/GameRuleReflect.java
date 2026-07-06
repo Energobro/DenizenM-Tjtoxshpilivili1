@@ -5,7 +5,6 @@ import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.utilities.Utilities;
 import com.denizenscript.denizencore.utilities.ReflectionHelper;
 import org.bukkit.GameRule;
-import org.bukkit.Keyed;
 import org.bukkit.World;
 
 import java.lang.invoke.MethodHandle;
