@@ -275,7 +275,6 @@ public class BukkitImplDeprecations {
     // Added 2023/06/30
     // Bump to normal/past warning after 1.19 is the minimum supported version (change happened in 1.19)
     public static Warning biomeGlobalDownfallType = new SlowWarning("biomeGlobalDownfallType", "The 'BiomeTag.downfall_type' tag is deprecated in favor of 'BiomeTag.downfall_at', as biome downfall is now location-based");
-    public static Warning biomeSettingDownfallType = new SlowWarning("biomeSettingDownfallType", "The 'BiomeTag.downfall_type' mechanism is removed, as Minecraft no longer allows for this value to be set.");
 
     // Added 2023/09/16
     // Bump to normal warning after 1.19 is the minimum supported version (change happened in 1.19)

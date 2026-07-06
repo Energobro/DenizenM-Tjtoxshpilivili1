@@ -1,7 +1,6 @@
 package com.denizenscript.denizen.objects;
 
 import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.nms.abstracts.BiomeNMS;
 import com.denizenscript.denizen.utilities.BukkitImplDeprecations;
 import com.denizenscript.denizen.utilities.Utilities;
@@ -284,137 +283,134 @@ public class BiomeTag implements ObjectTag, Adjustable, FlaggableObject {
             return ColorTag.fromRGB(object.biome.getFoliageColor());
         });
 
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
+        // <--[tag]
+        // @attribute <BiomeTag.temperature_at[<location>]>
+        // @returns ElementTag(Decimal)
+        // @description
+        // Returns the temperature of a specific location in this biome.
+        // If this is less than 0.15, snow will form on the ground when weather occurs in the world and a layer of ice will form over water.
+        // Generally <@link tag LocationTag.temperature> should be preferred, other than some special cases.
+        // @example
+        // # Gives the player water if they are standing in a warm location.
+        // - if <player.location.biome.temperature_at[<player.location]> > 0.5:
+        //   - give water_bucket
+        // -->
+        tagProcessor.registerTag(ElementTag.class, LocationTag.class, "temperature_at", (attribute, object, param) -> {
+            return new ElementTag(object.biome.getTemperatureAt(param));
+        });
 
-            // <--[tag]
-            // @attribute <BiomeTag.temperature_at[<location>]>
-            // @returns ElementTag(Decimal)
-            // @description
-            // Returns the temperature of a specific location in this biome.
-            // If this is less than 0.15, snow will form on the ground when weather occurs in the world and a layer of ice will form over water.
-            // Generally <@link tag LocationTag.temperature> should be preferred, other than some special cases.
-            // @example
-            // # Gives the player water if they are standing in a warm location.
-            // - if <player.location.biome.temperature_at[<player.location]> > 0.5:
-            //   - give water_bucket
-            // -->
-            tagProcessor.registerTag(ElementTag.class, LocationTag.class, "temperature_at", (attribute, object, param) -> {
-                return new ElementTag(object.biome.getTemperatureAt(param));
-            });
+        // <--[tag]
+        // @attribute <BiomeTag.downfall_at[<location>]>
+        // @returns ElementTag
+        // @description
+        // Returns this biome's downfall type at a location (for when a world has weather).
+        // This can be RAIN, SNOW, or NONE.
+        // Generally <@link tag LocationTag.downfall_type> should be preferred, other than some special cases.
+        // @example
+        // # Tells the linked player what the downfall type at their location is.
+        // - narrate "The downfall type at your location is: <player.location.biome.downfall_at[<player.location>]>!"
+        // -->
+        tagProcessor.registerTag(ElementTag.class, LocationTag.class, "downfall_at", (attribute, object, param) -> {
+            return new ElementTag(object.biome.getDownfallTypeAt(param));
+        });
 
-            // <--[tag]
-            // @attribute <BiomeTag.downfall_at[<location>]>
-            // @returns ElementTag
-            // @description
-            // Returns this biome's downfall type at a location (for when a world has weather).
-            // This can be RAIN, SNOW, or NONE.
-            // Generally <@link tag LocationTag.downfall_type> should be preferred, other than some special cases.
-            // @example
-            // # Tells the linked player what the downfall type at their location is.
-            // - narrate "The downfall type at your location is: <player.location.biome.downfall_at[<player.location>]>!"
-            // -->
-            tagProcessor.registerTag(ElementTag.class, LocationTag.class, "downfall_at", (attribute, object, param) -> {
-                return new ElementTag(object.biome.getDownfallTypeAt(param));
-            });
+        // <--[tag]
+        // @attribute <BiomeTag.has_downfall>
+        // @returns ElementTag(Boolean)
+        // @mechanism BiomeTag.has_downfall
+        // @description
+        // Returns whether the biome has downfall (rain/snow).
+        // @example
+        // # Tells the linked player whether there's a possibility of rain.
+        // - if <player.location.biome.has_downfall>:
+        //   - narrate "It might rain or snow!"
+        // - else:
+        //   - narrate "It will be dry."
+        // -->
+        tagProcessor.registerTag(ElementTag.class, "has_downfall", (attribute, object) -> {
+            return new ElementTag(object.biome.hasDownfall());
+        });
 
-            // <--[tag]
-            // @attribute <BiomeTag.has_downfall>
-            // @returns ElementTag(Boolean)
-            // @mechanism BiomeTag.has_downfall
-            // @description
-            // Returns whether the biome has downfall (rain/snow).
-            // @example
-            // # Tells the linked player whether there's a possibility of rain.
-            // - if <player.location.biome.has_downfall>:
-            //   - narrate "It might rain or snow!"
-            // - else:
-            //   - narrate "It will be dry."
-            // -->
-            tagProcessor.registerTag(ElementTag.class, "has_downfall", (attribute, object) -> {
-                return new ElementTag(object.biome.hasDownfall());
-            });
+        // <--[tag]
+        // @attribute <BiomeTag.fog_color>
+        // @returns ColorTag
+        // @mechanism BiomeTag.fog_color
+        // @description
+        // Returns the biome's fog color, which is visible when outside water (see also <@link tag BiomeTag.water_fog_color>).
+        // @example
+        // # Sends the player a message in their current biome's fog color.
+        // - narrate "You are currently seeing fog that looks like <&color[<player.location.biome.fog_color>]>this!"
+        // -->
+        tagProcessor.registerTag(ColorTag.class, "fog_color", (attribute, object) -> {
+            return ColorTag.fromRGB(object.biome.getFogColor());
+        });
 
-            // <--[tag]
-            // @attribute <BiomeTag.fog_color>
-            // @returns ColorTag
-            // @mechanism BiomeTag.fog_color
-            // @description
-            // Returns the biome's fog color, which is visible when outside water (see also <@link tag BiomeTag.water_fog_color>).
-            // @example
-            // # Sends the player a message in their current biome's fog color.
-            // - narrate "You are currently seeing fog that looks like <&color[<player.location.biome.fog_color>]>this!"
-            // -->
-            tagProcessor.registerTag(ColorTag.class, "fog_color", (attribute, object) -> {
-                return ColorTag.fromRGB(object.biome.getFogColor());
-            });
+        // <--[tag]
+        // @attribute <BiomeTag.water_fog_color>
+        // @returns ColorTag
+        // @mechanism BiomeTag.water_fog_color
+        // @description
+        // Returns the biome's water fog color, which is visible when underwater (see also <@link tag BiomeTag.fog_color>).
+        // @example
+        // # Sends the player a message in their current biome's water fog color.
+        // - narrate "If you are underwater, everything looks like <&color[<player.location.biome.water_fog_color>]>this!"
+        // -->
+        tagProcessor.registerTag(ColorTag.class, "water_fog_color", (attribute, object) -> {
+            return ColorTag.fromRGB(object.biome.getWaterFogColor());
+        });
 
-            // <--[tag]
-            // @attribute <BiomeTag.water_fog_color>
-            // @returns ColorTag
-            // @mechanism BiomeTag.water_fog_color
-            // @description
-            // Returns the biome's water fog color, which is visible when underwater (see also <@link tag BiomeTag.fog_color>).
-            // @example
-            // # Sends the player a message in their current biome's water fog color.
-            // - narrate "If you are underwater, everything looks like <&color[<player.location.biome.water_fog_color>]>this!"
-            // -->
-            tagProcessor.registerTag(ColorTag.class, "water_fog_color", (attribute, object) -> {
-                return ColorTag.fromRGB(object.biome.getWaterFogColor());
-            });
+        // <--[mechanism]
+        // @object BiomeTag
+        // @name fog_color
+        // @input ColorTag
+        // @description
+        // Sets the biome's fog color, which is visible when outside water (see also <@link mechanism BiomeTag.water_fog_color>).
+        // @tags
+        // <BiomeTag.fog_color>
+        // @example
+        // # Makes the plains biome's fog color red permanently, using a server start event to keep it applied.
+        // on server start:
+        // - adjust <biome[plains]> fog_color:red
+        // -->
+        tagProcessor.registerMechanism("fog_color", false, ColorTag.class, (object, mechanism, input) -> {
+            object.biome.setFogColor(input.asRGB());
+        });
 
-            // <--[mechanism]
-            // @object BiomeTag
-            // @name fog_color
-            // @input ColorTag
-            // @description
-            // Sets the biome's fog color, which is visible when outside water (see also <@link mechanism BiomeTag.water_fog_color>).
-            // @tags
-            // <BiomeTag.fog_color>
-            // @example
-            // # Makes the plains biome's fog color red permanently, using a server start event to keep it applied.
-            // on server start:
-            // - adjust <biome[plains]> fog_color:red
-            // -->
-            tagProcessor.registerMechanism("fog_color", false, ColorTag.class, (object, mechanism, input) -> {
-                object.biome.setFogColor(input.asRGB());
-            });
+        // <--[mechanism]
+        // @object BiomeTag
+        // @name water_fog_color
+        // @input ColorTag
+        // @description
+        // Sets the biome's water fog color, which is visible when underwater (see also <@link mechanism BiomeTag.fog_color>).
+        // @tags
+        // <BiomeTag.water_fog_color>
+        // @example
+        // # Makes the plains biome's water fog color fuchsia permanently, using a server start event to keep it applied.
+        // on server start:
+        // - adjust <biome[plains]> water_fog_color:fuchsia
+        // -->
+        tagProcessor.registerMechanism("water_fog_color", false, ColorTag.class, (object, mechanism, input) -> {
+            object.biome.setWaterFogColor(input.asRGB());
+        });
 
-            // <--[mechanism]
-            // @object BiomeTag
-            // @name water_fog_color
-            // @input ColorTag
-            // @description
-            // Sets the biome's water fog color, which is visible when underwater (see also <@link mechanism BiomeTag.fog_color>).
-            // @tags
-            // <BiomeTag.water_fog_color>
-            // @example
-            // # Makes the plains biome's water fog color fuchsia permanently, using a server start event to keep it applied.
-            // on server start:
-            // - adjust <biome[plains]> water_fog_color:fuchsia
-            // -->
-            tagProcessor.registerMechanism("water_fog_color", false, ColorTag.class, (object, mechanism, input) -> {
-                object.biome.setWaterFogColor(input.asRGB());
-            });
-
-            // <--[mechanism]
-            // @object BiomeTag
-            // @name has_downfall
-            // @input ElementTag(Boolean)
-            // @description
-            // Sets whether the biome has downfall (rain/snow).
-            // @tags
-            // <BiomeTag.has_downfall>
-            // @example
-            // # Disables downfall for the plains biome permanently, using a server start event to keep it applied.
-            // on server start:
-            // - adjust <biome[plains]> has_downfall:false
-            // -->
-            tagProcessor.registerMechanism("has_downfall", false, ElementTag.class, (object, mechanism, input) -> {
-                if (mechanism.requireBoolean()) {
-                    object.biome.setHasDownfall(input.asBoolean());
-                }
-            });
-        }
+        // <--[mechanism]
+        // @object BiomeTag
+        // @name has_downfall
+        // @input ElementTag(Boolean)
+        // @description
+        // Sets whether the biome has downfall (rain/snow).
+        // @tags
+        // <BiomeTag.has_downfall>
+        // @example
+        // # Disables downfall for the plains biome permanently, using a server start event to keep it applied.
+        // on server start:
+        // - adjust <biome[plains]> has_downfall:false
+        // -->
+        tagProcessor.registerMechanism("has_downfall", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireBoolean()) {
+                object.biome.setHasDownfall(input.asBoolean());
+            }
+        });
 
         // <--[mechanism]
         // @object BiomeTag
@@ -495,15 +491,15 @@ public class BiomeTag implements ObjectTag, Adjustable, FlaggableObject {
         // - adjust <biome[plains]> temperature:-0.2
         // - adjust <biome[plains]> downfall_type:SNOW
         // -->
-        tagProcessor.registerMechanism("downfall_type", false, ElementTag.class, (object, mechanism, input) -> {
-            if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
-                BukkitImplDeprecations.biomeSettingDownfallType.warn(mechanism.context);
-                return;
-            }
-            if (mechanism.requireEnum(BiomeNMS.DownfallType.class)) {
-                object.biome.setPrecipitation(input.asEnum(BiomeNMS.DownfallType.class));
-            }
-        });
+        //tagProcessor.registerMechanism("downfall_type", false, ElementTag.class, (object, mechanism, input) -> {
+        //    if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
+        //        BukkitImplDeprecations.biomeSettingDownfallType.warn(mechanism.context);
+        //        return;
+        //    }
+        //    if (mechanism.requireEnum(BiomeNMS.DownfallType.class)) {
+        //        object.biome.setPrecipitation(input.asEnum(BiomeNMS.DownfallType.class));
+        //    }
+        // });
     }
 
     public static final ObjectTagProcessor<BiomeTag> tagProcessor = new ObjectTagProcessor<>();
