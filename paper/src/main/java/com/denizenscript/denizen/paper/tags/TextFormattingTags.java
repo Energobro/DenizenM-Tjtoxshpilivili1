@@ -317,7 +317,6 @@ public class TextFormattingTags {
         // -->
         TagManager.registerStaticTagBaseHandler(ElementTag.class, "&shadow_color", (attribute) -> {
             if (!attribute.hasParam()) {
-                attribute.echoError("The tag '&shadow_color' requires a color parameter.");
                 return null;
             }
 
@@ -380,7 +379,6 @@ public class TextFormattingTags {
             }
 
             String mmTag = "<head:" + input + ":" + outerLayer + ">";
-
             return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[mm_head=" + mmTag + "]", true);
         });
 
