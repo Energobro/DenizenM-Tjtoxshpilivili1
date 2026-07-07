@@ -2683,6 +2683,221 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         registerOnlineOnlyMechanism("add_links", ListTag.class, (player, mechanism, input) -> {
             player.getPlayerEntity().sendLinks(Utilities.fillServerLinks(Bukkit.getServerLinks().copy(), input, mechanism.context));
         });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name respawn
+        // @input None
+        // @description
+        // Forces the player to respawn if they are on the death screen.
+        // -->
+        registerOnlineOnlyMechanism("respawn", (object, mechanism) -> {
+            NMSHandler.packetHelper.respawn(object.getPlayerEntity());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name send_climbable_materials
+        // @input ListTag(MaterialTag)
+        // @description
+        // Sends the player a list of climbable materials.
+        // To climb a block, the player has to stand in it, which means only non-full blocks can be climbed.
+        // Note that this gets reset once the player rejoins or once server resources are reloaded (see <@link event server resources reloaded>).
+        // @tags
+        // <server.vanilla_tagged_materials[<tag>]>
+        // @example
+        // # Lets the linked player climb iron_bars, while keeping other climbable materials climbable
+        // - adjust <player> send_climbable_materials:<server.vanilla_tagged_materials[climbable].include[iron_bars]>
+        // @example
+        // # Lets the linked player climb only acacia_buttons, making all other materials non-climbable.
+        // - adjust <player> send_climbable_materials:acacia_button
+        // -->
+        registerOnlineOnlyMechanism("send_climbable_materials", ListTag.class, (object, mechanism, input) -> {
+            List<MaterialTag> materialTags = input.filter(MaterialTag.class, mechanism.context);
+            List<Material> materials = new ArrayList<>();
+            for (MaterialTag materialTag : materialTags) {
+                Material material = materialTag.getMaterial();
+                if (!material.isBlock()) {
+                    mechanism.echoError("Invalid material specified '" + material.name() + "': must be a block material.");
+                    continue;
+                }
+                materials.add(material);
+            }
+            NMSHandler.playerHelper.sendClimbableMaterials(object.getPlayerEntity(), materials);
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name noclip
+        // @input ElementTag(Boolean)
+        // @description
+        // When true, causes the server to allow the player to noclip (ie, walk through blocks without being prevented).
+        // This is purely serverside. The client will still not walk through blocks.
+        // This is useful alongside <@link command showfake>.
+        // Note that this may sometimes be imperfect / sometimes momentarily continue to clip block.
+        // Note that this may also prevent other collisions (eg projectile impact) but is not guaranteed to.
+        // -->
+        tagProcessor.registerMechanism("noclip", false, ElementTag.class, (object, mechanism, input) -> {
+            if (input.asBoolean()) {
+                DenizenPacketHandler.forceNoclip.add(object.getUUID());
+            }
+            else {
+                DenizenPacketHandler.forceNoclip.remove(object.getUUID());
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name vision
+        // @input ElementTag
+        // @description
+        // Changes the player's vision to that of the provided entity type. Valid types:
+        // ENDERMAN, CAVE_SPIDER, SPIDER, CREEPER
+        // Provide no value to reset the player's vision.
+        // Note: This is powered by a bug in Minecraft that has been present for a long time, but may at some point be 'fixed' by Mojang.
+        // -->
+        registerOnlineOnlyMechanism("vision", (object, mechanism) -> {
+            if (!mechanism.hasValue()) {
+                NMSHandler.packetHelper.forceSpectate(object.getPlayerEntity(), object.getPlayerEntity());
+                return;
+            }
+            if (mechanism.requireEnum(EntityType.class)) {
+                NMSHandler.packetHelper.setVision(object.getPlayerEntity(), mechanism.getValue().asEnum(EntityType.class));
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name level
+        // @input ElementTag(Number)
+        // @description
+        // Sets the level on the player. Does not affect the current progression of experience towards next level.
+        // @tags
+        // <PlayerTag.xp_level>
+        // -->
+        tagProcessor.registerMechanism("level", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireInteger()) {
+                object.setLevel(input.asInt());
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name item_slot
+        // @input ElementTag(Number)
+        // @description
+        // Sets the inventory slot that the player has selected.
+        // Works with offline players.
+        // @tags
+        // <PlayerTag.held_item_slot>
+        // -->
+        tagProcessor.registerMechanism("item_slot", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireInteger()) {
+                int slot = input.asInt() - 1;
+                if (object.isOnline()) {
+                    object.getPlayerEntity().getInventory().setHeldItemSlot(slot);
+                }
+                else {
+                    object.getNBTEditor().setItemInHand(slot);
+                }
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name item_on_cursor
+        // @input ItemTag
+        // @description
+        // Sets the item on the player's cursor.
+        // This includes chest interfaces, inventories, and hotbars, etc.
+        // @tags
+        // <PlayerTag.item_on_cursor>
+        // -->
+        registerOnlineOnlyMechanism("item_on_cursor", ItemTag.class, (object, mechanism, input) -> {
+            object.getPlayerEntity().setItemOnCursor(input.getItemStack());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name fake_absorption_health
+        // @input ElementTag(Decimal)
+        // @description
+        // Shows the player fake absorption health that persists on damage.
+        // -->
+        registerOnlineOnlyMechanism("fake_absorption_health", (object, mechanism) -> {
+            if (mechanism.requireFloat()) {
+                NMSHandler.packetHelper.setFakeAbsorption(object.getPlayerEntity(), mechanism.getValue().asFloat());
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name health_scale
+        // @input ElementTag(Decimal)
+        // @description
+        // Sets the 'health scale' on the Player. Each heart equals '2'. The standard health scale is
+        // 20, so for example, indicating a value of 40 will display double the amount of hearts
+        // standard.
+        // Player relogging will reset this mechanism.
+        // @tags
+        // <PlayerTag.health_scale>
+        // -->
+        registerOnlineOnlyMechanism("health_scale", (object, mechanism) -> {
+            if (mechanism.requireDouble()) {
+                object.getPlayerEntity().setHealthScale(mechanism.getValue().asDouble());
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name scale_health
+        // @input ElementTag(Boolean)
+        // @description
+        // Enables or disables the health scale value. Disabling will result in the standard
+        // amount of hearts being shown.
+        // @tags
+        // <PlayerTag.health_is_scaled>
+        // -->
+        registerOnlineOnlyMechanism("scale_health", (object, mechanism) -> {
+            if (mechanism.requireBoolean()) {
+                object.getPlayerEntity().setHealthScaled(mechanism.getValue().asBoolean());
+            }
+        });
+
+        // Allow offline editing of health values
+        tagProcessor.registerMechanism("max_health", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireDouble()) {
+                object.setMaxHealth(input.asDouble());
+            }
+        });
+
+        tagProcessor.registerMechanism("health", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireDouble()) {
+                object.setHealth(input.asDouble());
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name saturation
+        // @input ElementTag(Decimal)
+        // @description
+        // Sets the current food saturation level of a player.
+        // Works with offline players.
+        // @tags
+        // <PlayerTag.saturation>
+        // -->
+        tagProcessor.registerMechanism("saturation", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireFloat()) {
+                float value = input.asFloat();
+                if (object.isOnline()) {
+                    object.getPlayerEntity().setSaturation(value);
+                }
+                else {
+                    object.getNBTEditor().setSaturation(value);
+                }
+            }
+        });
     }
 
     public static ObjectTagProcessor<PlayerTag> tagProcessor = new ObjectTagProcessor<>();
@@ -2776,120 +2991,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
 
         // <--[mechanism]
         // @object PlayerTag
-        // @name send_climbable_materials
-        // @input ListTag(MaterialTag)
-        // @description
-        // Sends the player a list of climbable materials.
-        // To climb a block, the player has to stand in it, which means only non-full blocks can be climbed.
-        // Note that this gets reset once the player rejoins or once server resources are reloaded (see <@link event server resources reloaded>).
-        // @tags
-        // <server.vanilla_tagged_materials[<tag>]>
-        // @example
-        // # Lets the linked player climb iron_bars, while keeping other climbable materials climbable
-        // - adjust <player> send_climbable_materials:<server.vanilla_tagged_materials[climbable].include[iron_bars]>
-        // @example
-        // # Lets the linked player climb only acacia_buttons, making all other materials non-climbable.
-        // - adjust <player> send_climbable_materials:acacia_button
-        // -->
-        if (mechanism.matches("send_climbable_materials") && mechanism.requireObject(ListTag.class)) {
-            List<MaterialTag> materialTags = mechanism.valueAsType(ListTag.class).filter(MaterialTag.class, mechanism.context);
-            List<Material> materials = new ArrayList<>();
-            for (MaterialTag materialTag : materialTags) {
-                Material material = materialTag.getMaterial();
-                if (!material.isBlock()) {
-                    mechanism.echoError("Invalid material specified '" + material.name() + "': must be a block material.");
-                    continue;
-                }
-                materials.add(material);
-            }
-            NMSHandler.playerHelper.sendClimbableMaterials(getPlayerEntity(), materials);
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name noclip
-        // @input ElementTag(Boolean)
-        // @description
-        // When true, causes the server to allow the player to noclip (ie, walk through blocks without being prevented).
-        // This is purely serverside. The client will still not walk through blocks.
-        // This is useful alongside <@link command showfake>.
-        // Note that this may sometimes be imperfect / sometimes momentarily continue to clip block.
-        // Note that this may also prevent other collisions (eg projectile impact) but is not guaranteed to.
-        // -->
-        if (mechanism.matches("noclip") && mechanism.hasValue()) {
-            if (mechanism.getValue().asBoolean()) {
-                DenizenPacketHandler.forceNoclip.add(getUUID());
-            }
-            else {
-                DenizenPacketHandler.forceNoclip.remove(getUUID());
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name respawn
-        // @input None
-        // @description
-        // Forces the player to respawn if they are on the death screen.
-        // -->
-        if (mechanism.matches("respawn")) {
-            NMSHandler.packetHelper.respawn(getPlayerEntity());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name vision
-        // @input ElementTag
-        // @description
-        // Changes the player's vision to that of the provided entity type. Valid types:
-        // ENDERMAN, CAVE_SPIDER, SPIDER, CREEPER
-        // Provide no value to reset the player's vision.
-        // Note: This is powered by a bug in Minecraft that has been present for a long time, but may at some point be 'fixed' by Mojang.
-        // -->
-        if (mechanism.matches("vision")) {
-            if (!mechanism.hasValue()) {
-                NMSHandler.packetHelper.forceSpectate(getPlayerEntity(), getPlayerEntity());
-                return;
-            }
-            if (mechanism.requireEnum(EntityType.class)) {
-                NMSHandler.packetHelper.setVision(getPlayerEntity(), mechanism.getValue().asEnum(EntityType.class));
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name level
-        // @input ElementTag(Number)
-        // @description
-        // Sets the level on the player. Does not affect the current progression of experience towards next level.
-        // @tags
-        // <PlayerTag.xp_level>
-        // -->
-        if (mechanism.matches("level") && mechanism.requireInteger()) {
-            setLevel(mechanism.getValue().asInt());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name item_slot
-        // @input ElementTag(Number)
-        // @description
-        // Sets the inventory slot that the player has selected.
-        // Works with offline players.
-        // @tags
-        // <PlayerTag.held_item_slot>
-        // -->
-        if (mechanism.matches("item_slot") && mechanism.requireInteger()) {
-            if (isOnline()) {
-                getPlayerEntity().getInventory().setHeldItemSlot(mechanism.getValue().asInt() - 1);
-            }
-            else {
-                getNBTEditor().setItemInHand(mechanism.getValue().asInt() - 1);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
         // @name window_property
         // @input ElementTag
         // @description
@@ -2914,20 +3015,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
                     Debug.echoError("Must specify a valid window property!");
                 }
             }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name item_on_cursor
-        // @input ItemTag
-        // @description
-        // Sets the item on the player's cursor.
-        // This includes chest interfaces, inventories, and hotbars, etc.
-        // @tags
-        // <PlayerTag.item_on_cursor>
-        // -->
-        if (mechanism.matches("item_on_cursor") && mechanism.requireObject(ItemTag.class)) {
-            getPlayerEntity().setItemOnCursor(mechanism.valueAsType(ItemTag.class).getItemStack());
         }
 
         // <--[mechanism]
@@ -2978,56 +3065,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
 
         // <--[mechanism]
         // @object PlayerTag
-        // @name fake_absorption_health
-        // @input ElementTag(Decimal)
-        // @description
-        // Shows the player fake absorption health that persists on damage.
-        // -->
-        if (mechanism.matches("fake_absorption_health") && mechanism.requireFloat()) {
-            NMSHandler.packetHelper.setFakeAbsorption(getPlayerEntity(), mechanism.getValue().asFloat());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name health_scale
-        // @input ElementTag(Decimal)
-        // @description
-        // Sets the 'health scale' on the Player. Each heart equals '2'. The standard health scale is
-        // 20, so for example, indicating a value of 40 will display double the amount of hearts
-        // standard.
-        // Player relogging will reset this mechanism.
-        // @tags
-        // <PlayerTag.health_scale>
-        // -->
-        if (mechanism.matches("health_scale") && mechanism.requireDouble()) {
-            getPlayerEntity().setHealthScale(mechanism.getValue().asDouble());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name scale_health
-        // @input ElementTag(Boolean)
-        // @description
-        // Enables or disables the health scale value. Disabling will result in the standard
-        // amount of hearts being shown.
-        // @tags
-        // <PlayerTag.health_is_scaled>
-        // -->
-        if (mechanism.matches("scale_health") && mechanism.requireBoolean()) {
-            getPlayerEntity().setHealthScaled(mechanism.getValue().asBoolean());
-        }
-
-        // Allow offline editing of health values
-        if (mechanism.matches("max_health") && mechanism.requireDouble()) {
-            setMaxHealth(mechanism.getValue().asDouble());
-        }
-
-        if (mechanism.matches("health") && mechanism.requireDouble()) {
-            setHealth(mechanism.getValue().asDouble());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
         // @name resource_pack
         // @input ElementTag(|ElementTag)
         // @deprecated Use the "resourcepack" command instead of this old mechanism.
@@ -3053,25 +3090,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
             }
             else {
                 getPlayerEntity().setResourcePack(pack);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name saturation
-        // @input ElementTag(Decimal)
-        // @description
-        // Sets the current food saturation level of a player.
-        // Works with offline players.
-        // @tags
-        // <PlayerTag.saturation>
-        // -->
-        if (mechanism.matches("saturation") && mechanism.requireFloat()) {
-            if (isOnline()) {
-                getPlayerEntity().setSaturation(mechanism.getValue().asFloat());
-            }
-            else {
-                getNBTEditor().setSaturation(mechanism.getValue().asFloat());
             }
         }
 
