@@ -3231,6 +3231,869 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
             BukkitImplDeprecations.oldTimeMech.warn(mechanism.context);
             object.getPlayerEntity().resetPlayerTime();
         });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name walk_speed
+        // @input ElementTag(Decimal)
+        // @description
+        // Sets the walk speed of the player. The standard value is '0.2'. Valid range is 0.0 to 1.0
+        // Works with offline players.
+        // @tags
+        // <PlayerTag.walk_speed>
+        // -->
+        tagProcessor.registerMechanism("walk_speed", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireFloat()) {
+                float val = input.asFloat();
+                if (val < -1 || val > 1) {
+                    mechanism.echoError("Invalid speed specified. Must be between -1 and 1.");
+                    return;
+                }
+                if (object.isOnline()) {
+                    object.getPlayerEntity().setWalkSpeed(val);
+                }
+                else {
+                    object.getNBTEditor().setWalkSpeed(val);
+                }
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name exhaustion
+        // @input ElementTag(Decimal)
+        // @description
+        // Sets the exhaustion level of a player.
+        // Works with offline players.
+        // @tags
+        // <PlayerTag.exhaustion>
+        // -->
+        tagProcessor.registerMechanism("exhaustion", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireFloat()) {
+                float val = input.asFloat();
+                if (object.isOnline()) {
+                    object.getPlayerEntity().setExhaustion(val);
+                }
+                else {
+                    object.getNBTEditor().setExhaustion(val);
+                }
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name show_entity
+        // @input EntityTag
+        // @description
+        // Shows the player a previously hidden entity.
+        // To show for everyone, use <@link mechanism EntityTag.show_to_players>.
+        // See also <@link mechanism PlayerTag.hide_entity>.
+        // -->
+        registerOnlineOnlyMechanism("show_entity", EntityTag.class, (object, mechanism, input) -> {
+            HideEntitiesHelper.unhideEntity(object.getPlayerEntity(), input.getBukkitEntity());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name hide_entity
+        // @input EntityTag
+        // @description
+        // Hides an entity from the player.
+        // To hide from everyone, use <@link mechanism EntityTag.hide_from_players>.
+        // See also <@link mechanism PlayerTag.show_entity>.
+        // -->
+        registerOnlineOnlyMechanism("hide_entity", (object, mechanism) -> {
+            if (mechanism.getValue().asString().isEmpty()) {
+                mechanism.echoError("Must specify an entity to hide!");
+                return;
+            }
+            ListTag split = mechanism.valueAsType(ListTag.class);
+            if (!split.isEmpty() && new ElementTag(split.get(0)).matchesType(EntityTag.class)) {
+                EntityTag entity = EntityTag.valueOf(split.get(0), mechanism.context);
+                if (!entity.isSpawnedOrValidForTag()) {
+                    mechanism.echoError("Can't hide the unspawned entity '" + split.get(0) + "'!");
+                }
+                else {
+                    HideEntitiesHelper.hideEntity(object.getPlayerEntity(), entity.getBukkitEntity());
+                }
+            }
+            else {
+                mechanism.echoError("'" + split.get(0) + "' is not a valid entity!");
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name hide_entities
+        // @input ElementTag
+        // @description
+        // Hides a matchable type of entity from the player. Can use any advanced entity matchers per <@link language Advanced Object Matching>.
+        // To hide a specific entity from the player, use <@link mechanism PlayerTag.hide_entity>.
+        // To remove hide sets, use <@link mechanism PlayerTag.unhide_entities>.
+        // Note that dynamic matchables like 'entity_flagged' will behave in unexpected ways when dynamically changing.
+        // -->
+        tagProcessor.registerMechanism("hide_entities", false, ElementTag.class, (object, mechanism, input) -> {
+            HideEntitiesHelper.PlayerHideMap map = HideEntitiesHelper.getPlayerMapFor(object.getUUID());
+            String hideMe = input.asString();
+            map.matchersHidden.add(hideMe);
+            if (object.isOnline()) {
+                for (Entity ent : object.getPlayerEntity().getWorld().getEntities()) {
+                    if (new EntityTag(ent).tryAdvancedMatcher(hideMe, mechanism.context) && map.shouldHide(ent)) {
+                        NMSHandler.entityHelper.sendHidePacket(object.getPlayerEntity(), ent);
+                    }
+                }
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name unhide_entities
+        // @input ElementTag
+        // @description
+        // Removes any entity hides added by <@link mechanism PlayerTag.hide_entities>. Input must exactly match the input given to the hide mechanism.
+        // -->
+        tagProcessor.registerMechanism("unhide_entities", false, ElementTag.class, (object, mechanism, input) -> {
+            HideEntitiesHelper.PlayerHideMap map = HideEntitiesHelper.getPlayerMapFor(object.getUUID());
+            String unhideMe = input.asString();
+            map.matchersHidden.remove(unhideMe);
+            if (map.matchersHidden.isEmpty() && map.entitiesHidden.isEmpty() && map.overridinglyShow.isEmpty()) {
+                HideEntitiesHelper.playerHides.remove(object.getUUID());
+            }
+            if (object.isOnline()) {
+                for (Entity ent : object.getPlayerEntity().getWorld().getEntities()) {
+                    if (new EntityTag(ent).tryAdvancedMatcher(unhideMe, mechanism.context) && !map.shouldHide(ent)) {
+                        NMSHandler.entityHelper.sendShowPacket(object.getPlayerEntity(), ent);
+                    }
+                }
+            }
+        });
+
+        registerOnlineOnlyMechanism("show_boss_bar", (object, mechanism) -> {
+            BukkitImplDeprecations.oldBossBarMech.warn(mechanism.context);
+            if (!mechanism.getValue().asString().isEmpty()) {
+                String[] split = mechanism.getValue().asString().split("\\|", 2);
+                if (split.length == 2 && new ElementTag(split[0]).isDouble()) {
+                    BossBarHelper.showSimpleBossBar(object.getPlayerEntity(), split[1], new ElementTag(split[0]).asDouble() * (1.0 / 200.0));
+                }
+                else {
+                    BossBarHelper.showSimpleBossBar(object.getPlayerEntity(), split[0], 1.0);
+                }
+            }
+            else {
+                BossBarHelper.removeSimpleBossBar(object.getPlayerEntity());
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name fake_experience
+        // @input ElementTag(Decimal)(|ElementTag(Number))
+        // @description
+        // Shows the player a fake experience bar, with a number between 0.0 and 1.0 to specify how far along the bar is.
+        // Use with no input value to reset to the player's normal experience.
+        // Optionally, you can specify a fake experience level.
+        // For example: - adjust <player> fake_experience:0.5|5
+        // -->
+        registerOnlineOnlyMechanism("fake_experience", (object, mechanism) -> {
+            if (!mechanism.getValue().asString().isEmpty()) {
+                String[] split = mechanism.getValue().asString().split("\\|", 2);
+                if (split.length > 0 && new ElementTag(split[0]).isFloat()) {
+                    if (split.length > 1 && new ElementTag(split[1]).isInt()) {
+                        object.getPlayerEntity().sendExperienceChange(new ElementTag(split[0]).asFloat(), new ElementTag(split[1]).asInt());
+                    }
+                    else {
+                        object.getPlayerEntity().sendExperienceChange(new ElementTag(split[0]).asFloat());
+                    }
+                }
+                else {
+                    mechanism.echoError("'" + split[0] + "' is not a valid decimal number!");
+                }
+            }
+            else {
+                object.getPlayerEntity().sendExperienceChange(object.getPlayerEntity().getExp(), object.getPlayerEntity().getLevel());
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name fake_health
+        // @input ElementTag(Decimal)(|ElementTag(Number)(|ElementTag(Decimal)))
+        // @description
+        // Shows the player a fake health bar, with a number between 0 and 20, where 1 is half of a heart.
+        // Use with no input value to reset to the player's normal health.
+        // Optionally, you can specify a fake food level, between 0 and 20.
+        // You can also optionally specify a food saturation level between 0 and 10.
+        // For example:
+        // - adjust <player> fake_health:1
+        // - adjust <player> fake_health:10|15
+        // - adjust <player> fake_health:<player.health>|3|0
+        // -->
+        registerOnlineOnlyMechanism("fake_health", (object, mechanism) -> {
+            if (!mechanism.getValue().asString().isEmpty()) {
+                String[] split = mechanism.getValue().asString().split("\\|", 3);
+                if (split.length > 0 && new ElementTag(split[0]).isFloat()) {
+                    if (split.length > 1 && new ElementTag(split[1]).isInt()) {
+                        if (split.length > 2 && new ElementTag(split[2]).isFloat()) {
+                            NMSHandler.packetHelper.showHealth(object.getPlayerEntity(), new ElementTag(split[0]).asFloat(),
+                                    new ElementTag(split[1]).asInt(), new ElementTag(split[2]).asFloat());
+                        }
+                        else {
+                            NMSHandler.packetHelper.showHealth(object.getPlayerEntity(), new ElementTag(split[0]).asFloat(),
+                                    new ElementTag(split[1]).asInt(), object.getPlayerEntity().getSaturation());
+                        }
+                    }
+                    else {
+                        NMSHandler.packetHelper.showHealth(object.getPlayerEntity(), new ElementTag(split[0]).asFloat(),
+                                object.getPlayerEntity().getFoodLevel(), object.getPlayerEntity().getSaturation());
+                    }
+                }
+                else {
+                    mechanism.echoError("'" + split[0] + "' is not a valid decimal number!");
+                }
+            }
+            else {
+                NMSHandler.packetHelper.resetHealth(object.getPlayerEntity());
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name fake_mount_health
+        // @input ElementTag(Decimal)|ElementTag(Decimal)
+        // @description
+        // Shows the player a fake health bar for their mounted. Specify both the current and maximum health values.
+        // Use with no input value to reset to the real health value.
+        // Using a health of '0' will make your mount look dead but continue to function.
+        // For example:
+        // - adjust <player> fake_mount_health:10|15
+        // -->
+        registerOnlineOnlyMechanism("fake_mount_health", (object, mechanism) -> {
+            if (!object.getPlayerEntity().isInsideVehicle()) {
+                mechanism.echoError("Cannot run fake_mount_health - player is unmounted.");
+                return;
+            }
+            Entity vehicle = object.getPlayerEntity().getVehicle();
+            if (!(vehicle instanceof LivingEntity liveVehicle)) {
+                mechanism.echoError("Cannot run fake_mount_health - vehicle is not a living entity.");
+                return;
+            }
+            double current, maximum;
+            if (mechanism.hasValue()) {
+                ListTag input = mechanism.valueAsType(ListTag.class);
+                if (input.size() != 2) {
+                    mechanism.echoError("Cannot run fake_mount_health - improper input.");
+                    return;
+                }
+                current = new ElementTag(input.get(0)).asDouble();
+                maximum = new ElementTag(input.get(1)).asDouble();
+            }
+            else {
+                current = liveVehicle.getHealth();
+                maximum = liveVehicle.getMaxHealth();
+            }
+            NMSHandler.packetHelper.showMobHealth(object.getPlayerEntity(), liveVehicle, current, maximum);
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name fake_entity_health
+        // @input MapTag
+        // @description
+        // Shows the player a fake health number for a given entity.
+        // Input is a map with 'entity' as the target entity, and 'health' as the health amount.
+        // Optionally add 'max' to set the max health too.
+        // Using health of '0' can cause an entity to look dead.
+        // For example:
+        // - adjust <player> fake_entity_health:[entity=<player.target>;health=0]
+        // -->
+        registerOnlineOnlyMechanism("fake_entity_health", MapTag.class, (object, mechanism, input) -> {
+            EntityTag entity = input.getObjectAs("entity", EntityTag.class, mechanism.context);
+            ElementTag healthObject = input.getElement("health");
+            ElementTag maxObject = input.getElement("max");
+            if (healthObject == null) {
+                mechanism.echoError("Cannot run fake_entity_health - input map is missing 'health' key.");
+                return;
+            }
+            double health = healthObject.asDouble();
+            if (entity == null || !entity.isLivingEntity()) {
+                mechanism.echoError("Cannot run fake_entity_health - entity is invalid or not living.");
+                return;
+            }
+            double max = maxObject == null ? entity.getLivingEntity().getMaxHealth() : maxObject.asDouble();
+            NMSHandler.packetHelper.showMobHealth(object.getPlayerEntity(), entity.getLivingEntity(), health, max);
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name fake_equipment
+        // @input EntityTag(|ElementTag|ItemTag)
+        // @description
+        // Shows the player fake equipment on the specified living entity, which has no real non-visual effects.
+        // Input is in the form Entity|Slot|Item, where the slot can be one of the following: HAND, OFF_HAND, BOOTS, LEGS, CHEST, HEAD
+        // Optionally, exclude the slot and item to stop showing the fake equipment, if any, on the specified entity.
+        // For example:
+        // - adjust <player> fake_equipment:<[some_entity]>|chest|diamond_chestplate
+        // - adjust <player> fake_equipment:<player>|head|jack_o_lantern
+        // Consider instead using <@link command fakeequip>.
+        // -->
+        registerOnlineOnlyMechanism("fake_equipment", (object, mechanism) -> {
+            if (!mechanism.getValue().asString().isEmpty()) {
+                String[] split = mechanism.getValue().asString().split("\\|", 3);
+                if (split.length > 0 && new ElementTag(split[0]).matchesType(EntityTag.class)) {
+                    String slot = split.length > 1 ? split[1].toUpperCase() : null;
+                    if (split.length > 1 && (new ElementTag(slot).matchesEnum(EquipmentSlot.class)
+                            || slot.equals("MAIN_HAND") || slot.equals("BOOTS"))) {
+                        if (split.length > 2 && new ElementTag(split[2]).matchesType(ItemTag.class)) {
+                            if (slot.equals("MAIN_HAND")) {
+                                slot = "HAND";
+                            }
+                            else if (slot.equals("BOOTS")) {
+                                slot = "FEET";
+                            }
+                            NMSHandler.packetHelper.showEquipment(object.getPlayerEntity(),
+                                    new ElementTag(split[0]).asType(EntityTag.class, mechanism.context).getLivingEntity(),
+                                    EquipmentSlot.valueOf(slot),
+                                    new ElementTag(split[2]).asType(ItemTag.class, mechanism.context).getItemStack());
+                        }
+                        else if (split.length > 2) {
+                            mechanism.echoError("'" + split[2] + "' is not a valid ItemTag!");
+                        }
+                    }
+                    else if (split.length > 1) {
+                        mechanism.echoError("'" + split[1] + "' is not a valid slot; must be HAND, OFF_HAND, BOOTS, LEGS, CHEST, or HEAD!");
+                    }
+                    else {
+                        NMSHandler.packetHelper.resetEquipment(object.getPlayerEntity(),
+                                new ElementTag(split[0]).asType(EntityTag.class, mechanism.context).getLivingEntity());
+                    }
+                }
+                else {
+                    mechanism.echoError("'" + split[0] + "' is not a valid EntityTag!");
+                }
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name fov_multiplier
+        // @input ElementTag(Decimal)
+        // @description
+        // Sets the player's field of view multiplier.
+        // Leave input empty to reset.
+        // Note: Values outside a (-1, 1) range will have little effect on the player's fov.
+        // -->
+        registerOnlineOnlyMechanism("fov_multiplier", (object, mechanism) -> {
+            if (mechanism.hasValue() && mechanism.requireFloat()) {
+                NMSHandler.packetHelper.setFieldOfView(object.getPlayerEntity(), mechanism.getValue().asFloat());
+            }
+            else {
+                NMSHandler.packetHelper.setFieldOfView(object.getPlayerEntity(), Float.NaN);
+            }
+        });
+
+        registerOnlineOnlyMechanism("item_message", (object, mechanism) -> {
+            BukkitImplDeprecations.itemMessage.warn(mechanism.context);
+            ItemChangeMessage.sendMessage(object.getPlayerEntity(), mechanism.getValue().asString());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name show_endcredits
+        // @input None
+        // @description
+        // Shows the player the end credits.
+        // -->
+        registerOnlineOnlyMechanism("show_endcredits", (object, mechanism) -> {
+            NMSHandler.playerHelper.showEndCredits(object.getPlayerEntity());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name show_demo
+        // @input None
+        // @description
+        // Shows the player the demo screen.
+        // -->
+        registerOnlineOnlyMechanism("show_demo", (object, mechanism) -> {
+            NMSHandler.packetHelper.showDemoScreen(object.getPlayerEntity());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name spectator_target
+        // @input EntityTag
+        // @description
+        // Switches the player to spectator mode and causes them to immediately start spectating an entity.
+        // To instead fake this effect, use <@link mechanism PlayerTag.spectate>
+        // Give no input to detach the player from any target.
+        // @tags
+        // <PlayerTag.spectator_target>
+        // -->
+        registerOnlineOnlyMechanism("spectator_target", (object, mechanism) -> {
+            if (mechanism.hasValue()) {
+                object.getPlayerEntity().setGameMode(GameMode.SPECTATOR);
+                object.getPlayerEntity().setSpectatorTarget(mechanism.valueAsType(EntityTag.class).getBukkitEntity());
+            }
+            else if (object.getPlayerEntity().getGameMode() == GameMode.SPECTATOR) {
+                object.getPlayerEntity().setSpectatorTarget(null);
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name spectate
+        // @input EntityTag
+        // @description
+        // Forces the player to spectate from the entity's point of view, using a packet (meaning, the player starts spectating clientside, but not serverside).
+        // The player will not move from their existing location serverside.
+        // To cause real spectator mode spectating, use <@link mechanism PlayerTag.spectator_target>
+        // Note that in some cases you may want to force the player into the spectate gamemode prior to using this mechanism.
+        // Note: They cannot cancel the spectating without a re-log -- you must make them spectate themselves to cancel the effect.
+        // Like: - adjust <player> spectate:<player>
+        // -->
+        registerOnlineOnlyMechanism("spectate", EntityTag.class, (object, mechanism, input) -> {
+            NMSHandler.packetHelper.forceSpectate(object.getPlayerEntity(), input.getBukkitEntity());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name open_book
+        // @input None
+        // @description
+        // Forces the player to open the written book in their hand.
+        // The book can safely be removed from the player's hand without the player closing the book.
+        // -->
+        registerOnlineOnlyMechanism("open_book", (object, mechanism) -> {
+            ItemStack book = object.getPlayerEntity().getEquipment().getItemInMainHand();
+            if (book.getType() == Material.WRITTEN_BOOK) {
+                object.getPlayerEntity().openBook(book);
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name open_offhand_book
+        // @input None
+        // @description
+        // Forces the player to open the written book in their offhand.
+        // The book can safely be removed from the player's offhand without the player closing the book.
+        // -->
+        registerOnlineOnlyMechanism("open_offhand_book", (object, mechanism) -> {
+            ItemStack book = object.getPlayerEntity().getEquipment().getItemInOffHand();
+            if (book.getType() == Material.WRITTEN_BOOK) {
+                object.getPlayerEntity().openBook(book);
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name show_book
+        // @input ItemTag
+        // @description
+        // Displays a book to a player. Must be a WRITTEN_BOOK item.
+        // For simple usage, consider specifying a book script name as the input.
+        // -->
+        registerOnlineOnlyMechanism("show_book", ItemTag.class, (object, mechanism, input) -> {
+            if (input.getBukkitMaterial() != Material.WRITTEN_BOOK) {
+                mechanism.echoError("show_book mechanism must have a written book as input.");
+                return;
+            }
+            object.getPlayerEntity().openBook(input.getItemStack());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name resend_recipes
+        // @input None
+        // @description
+        // Sends the player a list of the full details of all recipes on the server.
+        // This is useful when reloading new item scripts with custom recipes.
+        // This will automatically resend discovered recipes at the same time (otherwise the player will seemingly have no recipes unlocked).
+        // -->
+        registerOnlineOnlyMechanism("resend_recipes", (object, mechanism) -> {
+            NMSHandler.playerHelper.resendRecipeDetails(object.getPlayerEntity());
+            NMSHandler.playerHelper.resendDiscoveredRecipes(object.getPlayerEntity());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name resend_discovered_recipes
+        // @input None
+        // @description
+        // Sends the player the full list of recipes they have discovered over again.
+        // This is useful when used alongside <@link mechanism PlayerTag.quietly_discover_recipe>.
+        // -->
+        registerOnlineOnlyMechanism("resend_discovered_recipes", (object, mechanism) -> {
+            NMSHandler.playerHelper.resendDiscoveredRecipes(object.getPlayerEntity());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name edit_sign
+        // @input LocationTag
+        // @description
+        // Allows the player to edit an existing sign. To create a sign, see <@link command Sign>.
+        // Give no input to make a fake edit interface.
+        // -->
+        registerOnlineOnlyMechanism("edit_sign", (object, mechanism) -> {
+            if (mechanism.hasValue() && mechanism.requireObject(LocationTag.class)) {
+                BlockState state = mechanism.valueAsType(LocationTag.class).getBlockState();
+                if (!(state instanceof Sign)) {
+                    mechanism.echoError("Invalid location specified: must be a sign.");
+                    return;
+                }
+                object.getPlayerEntity().openSign((Sign) state);
+            }
+            else {
+                NMSHandler.packetHelper.showSignEditor(object.getPlayerEntity(), null);
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name quietly_discover_recipe
+        // @input ListTag
+        // @description
+        // Causes the player to discover a recipe, or list of recipes, without being notified or updated about this happening.
+        // Generally helpful to follow this with <@link mechanism PlayerTag.resend_discovered_recipes>.
+        // Input is in the Namespace:Key format, for example "minecraft:gold_nugget".
+        // -->
+        registerOnlineOnlyMechanism("quietly_discover_recipe", ListTag.class, (object, mechanism, input) -> {
+            for (String keyText : input) {
+                NamespacedKey key = Utilities.parseNamespacedKey(keyText);
+                NMSHandler.playerHelper.quietlyAddRecipe(object.getPlayerEntity(), key);
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name discover_recipe
+        // @input ListTag
+        // @description
+        // Causes the player to discover a recipe, or list of recipes. Input is in the Namespace:Key format, for example "minecraft:gold_nugget".
+        // -->
+        registerOnlineOnlyMechanism("discover_recipe", ListTag.class, (object, mechanism, input) -> {
+            List<NamespacedKey> keys = new ArrayList<>();
+            for (String key : input) {
+                keys.add(Utilities.parseNamespacedKey(key));
+            }
+            object.getPlayerEntity().discoverRecipes(keys);
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name forget_recipe
+        // @input ListTag
+        // @description
+        // Causes the player to forget ('undiscover') a recipe, or list of recipes. Input is in the Namespace:Key format, for example "minecraft:gold_nugget".
+        // -->
+        registerOnlineOnlyMechanism("forget_recipe", ListTag.class, (object, mechanism, input) -> {
+            List<NamespacedKey> keys = new ArrayList<>();
+            for (String key : input) {
+                keys.add(Utilities.parseNamespacedKey(key));
+            }
+            object.getPlayerEntity().undiscoverRecipes(keys);
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name tab_list_info
+        // @input ElementTag
+        // @description
+        // Show the player some text in the header and footer area in their tab list.
+        // - adjust <player> tab_list_info:<header>|<footer>
+        // -->
+        registerOnlineOnlyMechanism("tab_list_info", (object, mechanism) -> {
+            if (!mechanism.getValue().asString().isEmpty()) {
+                String[] split = mechanism.getValue().asString().split("\\|", 2);
+                if (split.length > 0) {
+                    String header = split[0];
+                    String footer = split.length > 1 ? split[1] : "";
+                    NMSHandler.packetHelper.showTabListHeaderFooter(object.getPlayerEntity(), header, footer);
+                }
+                else {
+                    mechanism.echoError("Must specify a header and footer to show!");
+                }
+            }
+            else {
+                object.getPlayerEntity().setPlayerListHeaderFooter(null, null);
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name sign_update
+        // @input ElementTag
+        // @description
+        // Shows the player fake lines on a sign, with input in the format of LocationTag|ListTag.
+        // -->
+        registerOnlineOnlyMechanism("sign_update", (object, mechanism) -> {
+            String value = mechanism.getValue().asString();
+            String[] split = value.isEmpty() ? new String[0] : value.split("\\|", 2);
+            if (split.length > 1 && LocationTag.matches(split[0])) {
+                ListTag lines = ListTag.valueOf(split[1], mechanism.context);
+                LocationTag location = LocationTag.valueOf(split[0], mechanism.context);
+                PaperAPITools.instance.sendSignUpdate(object.getPlayerEntity(), location, lines.toArray(new String[4]));
+            }
+            else {
+                mechanism.echoError("Must specify a valid location and at least one sign line!");
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name banner_update
+        // @input ElementTag
+        // @description
+        // Shows the player fake patterns on a banner. Input must be in the form: "LOCATION|COLOR/PATTERN|..."
+        // As of Minecraft 1.13, the base color is unique material types, and so <@link command showfake> must be used for base color changes.
+        // For the list of possible patterns, see <@link url https://hub.spigotmc.org/javadocs/spigot/org/bukkit/block/banner/PatternType.html>.
+        // -->
+        registerOnlineOnlyMechanism("banner_update", (object, mechanism) -> {
+            if (!mechanism.getValue().asString().isEmpty()) {
+                String[] split = mechanism.getValue().asString().split("\\|");
+                List<Pattern> patterns = new ArrayList<>();
+                if (LocationTag.matches(split[0]) && split.length > 1) {
+                    List<String> splitList;
+                    for (int i = 1; i < split.length; i++) {
+                        String string = split[i];
+                        if (i == 1 && !string.contains("/")) {
+                            continue; // Comapt with old input format that had base_color
+                        }
+                        try {
+                            splitList = CoreUtilities.split(string, '/', 2);
+                            patterns.add(new Pattern(DyeColor.valueOf(splitList.get(0).toUpperCase()),
+                                    PatternType.valueOf(splitList.get(1).toUpperCase())));
+                        }
+                        catch (Exception ex) {
+                            mechanism.echoError("Could not apply pattern to banner: " + string);
+                        }
+                    }
+                    LocationTag location = LocationTag.valueOf(split[0], mechanism.context);
+                    NMSHandler.packetHelper.showBannerUpdate(object.getPlayerEntity(), location, patterns);
+                }
+                else {
+                    mechanism.echoError("Must specify a valid location and pattern list!");
+                }
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name stop_sound
+        // @input ElementTag
+        // @description
+        // Stops all sounds of the specified type for the player.
+        // Valid types are AMBIENT, BLOCKS, HOSTILE, MASTER, MUSIC, NEUTRAL, PLAYERS, RECORDS, VOICE, and WEATHER
+        // Instead of a type, you can specify a full sound key, which usually has the 'minecraft:' prefix.
+        // If no sound type is specified, all types will be stopped.
+        // -->
+        registerOnlineOnlyMechanism("stop_sound", (object, mechanism) -> {
+            SoundCategory category = null;
+            NamespacedKey key = null;
+            if (mechanism.hasValue()) {
+                if (mechanism.getValue().matchesEnum(SoundCategory.class)) {
+                    category = mechanism.getValue().asEnum(SoundCategory.class);
+                    object.getPlayerEntity().stopSound(category);
+                    return;
+                }
+                else {
+                    key = Utilities.parseNamespacedKey(mechanism.getValue().asString());
+                }
+            }
+            NMSHandler.playerHelper.stopSound(object.getPlayerEntity(), key, category);
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name update_advancements
+        // @input None
+        // @description
+        // Updates the player's client-side advancements to match their server data.
+        // -->
+        registerOnlineOnlyMechanism("update_advancements", (object, mechanism) -> {
+            NMSHandler.advancementHelper.update(object.getPlayerEntity());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name name
+        // @input ElementTag
+        // @description
+        // Changes the name on this player's nameplate.
+        // @tags
+        // <PlayerTag.name>
+        // -->
+        registerOnlineOnlyMechanism("name", ElementTag.class, (object, mechanism, input) -> {
+            String name = input.asString();
+            if (name.length() > 16) {
+                mechanism.echoError("Must specify a name with no more than 16 characters.");
+            }
+            else {
+                NMSHandler.instance.getProfileEditor().setPlayerName(object.getPlayerEntity(), name);
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name skin
+        // @input ElementTag
+        // @description
+        // Changes the skin of the player to the skin of the given player name.
+        // See also <@link language Player Entity Skins (Skin Blobs)>.
+        // -->
+        registerOnlineOnlyMechanism("skin", ElementTag.class, (object, mechanism, input) -> {
+            String name = input.asString();
+            if (name.length() > 16) {
+                mechanism.echoError("Must specify a name with no more than 16 characters.");
+                return;
+            }
+            PaperAPITools.instance.setSkin(object.getPlayerEntity(), name);
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name skin_blob
+        // @input ElementTag
+        // @description
+        // Changes the skin of the player to the specified blob.
+        // In the format: "texture;signature" (two values separated by a semicolon).
+        // See also <@link language Player Entity Skins (Skin Blobs)>.
+        // @tags
+        // <PlayerTag.skin_blob>
+        // -->
+        registerOnlineOnlyMechanism("skin_blob", ElementTag.class, (object, mechanism, input) -> {
+            PaperAPITools.instance.setSkinBlob(object.getPlayerEntity(), input.asString());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name is_op
+        // @input ElementTag(Boolean)
+        // @description
+        // Changes whether the player is a server operator or not.
+        // @tags
+        // <PlayerTag.is_op>
+        // -->
+        tagProcessor.registerMechanism("is_op", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireBoolean()) {
+                ImprovedOfflinePlayer.invalidateNow(object.getUUID());
+                object.getOfflinePlayer().setOp(input.asBoolean());
+            }
+        });
+
+        tagProcessor.registerMechanism("money", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireDouble() && Depends.economy != null) {
+                BukkitImplDeprecations.oldMoneyMech.warn(mechanism.context);
+                double bal = Depends.economy.getBalance(object.getOfflinePlayer());
+                double goal = input.asDouble();
+                if (goal > bal) {
+                    Depends.economy.depositPlayer(object.getOfflinePlayer(), goal - bal);
+                }
+                else if (bal > goal) {
+                    Depends.economy.withdrawPlayer(object.getOfflinePlayer(), bal - goal);
+                }
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name chat_prefix
+        // @input ElementTag
+        // @plugin Vault
+        // @description
+        // Set the player's chat prefix.
+        // Requires a Vault-compatible chat plugin.
+        // @tags
+        // <PlayerTag.chat_prefix>
+        // -->
+        registerOnlineOnlyMechanism("chat_prefix", (object, mechanism) -> {
+            if (Depends.chat == null) {
+                mechanism.echoError("Chat_Prefix mechanism invalid: No linked Chat plugin.");
+                return;
+            }
+            Depends.chat.setPlayerPrefix(object.getPlayerEntity(), mechanism.getValue().asString());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name chat_suffix
+        // @input ElementTag
+        // @plugin Vault
+        // @description
+        // Set the player's chat suffix.
+        // Requires a Vault-compatible chat plugin.
+        // @tags
+        // <PlayerTag.chat_suffix>
+        // -->
+        registerOnlineOnlyMechanism("chat_suffix", (object, mechanism) -> {
+            if (Depends.chat == null) {
+                mechanism.echoError("Chat_Suffix mechanism invalid: No linked Chat plugin.");
+                return;
+            }
+            Depends.chat.setPlayerSuffix(object.getPlayerEntity(), mechanism.getValue().asString());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name selected_npc
+        // @input NPCTag
+        // @description
+        // Sets the NPC that the player has selected.
+        // @tags
+        // <PlayerTag.selected_npc>
+        // -->
+        registerOnlineOnlyMechanism("selected_npc", (object, mechanism) -> {
+            if (Depends.citizens != null && mechanism.requireObject(NPCTag.class)) {
+                ((NPCSelector) CitizensAPI.getDefaultNPCSelector()).select(object.getPlayerEntity(), mechanism.valueAsType(NPCTag.class).getCitizen());
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name hide_particles
+        // @input ElementTag
+        // @description
+        // Hides a certain type of particle from the player.
+        // Input is the particle type name - refer to <@link tag server.particle_types>.
+        // Give no input to remove all hides from a player.
+        // Hides will persist through players reconnecting, but not through servers restarting.
+        // -->
+        tagProcessor.registerMechanism("hide_particles", false, (object, mechanism) -> {
+            if (!mechanism.hasValue()) {
+                HideParticles.hidden.remove(object.getUUID());
+            }
+            else {
+                NetworkInterceptHelper.enable();
+                HashSet<Particle> particles = HideParticles.hidden.computeIfAbsent(object.getUUID(), k -> new HashSet<>());
+                Particle particle = Particle.valueOf(mechanism.getValue().asString().toUpperCase());
+                particles.add(particle);
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name send_to
+        // @input ElementTag
+        // @plugin BungeeCord
+        // @description
+        // Sends the player to the specified Bungee server.
+        // This also works with other Bungee-Messaging compatible proxy systems, such as Velocity.
+        // -->
+        registerOnlineOnlyMechanism("send_to", ElementTag.class, (object, mechanism, input) -> {
+            Depends.bungeeSendPlayer(object.getPlayerEntity(), input.asString());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name send_server_brand
+        // @input ElementTag
+        // @description
+        // Sends the player a fake server brand, that will be displayed in the F3 Debug screen.
+        // -->
+        registerOnlineOnlyMechanism("send_server_brand", ElementTag.class, (object, mechanism, input) -> {
+            NMSHandler.packetHelper.sendBrand(object.getPlayerEntity(), input.asString());
+        });
     }
 
     public static ObjectTagProcessor<PlayerTag> tagProcessor = new ObjectTagProcessor<>();
@@ -3321,879 +4184,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
 
     @Override
     public void adjust(Mechanism mechanism) {
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name walk_speed
-        // @input ElementTag(Decimal)
-        // @description
-        // Sets the walk speed of the player. The standard value is '0.2'. Valid range is 0.0 to 1.0
-        // Works with offline players.
-        // @tags
-        // <PlayerTag.walk_speed>
-        // -->
-        if (mechanism.matches("walk_speed") && mechanism.requireFloat()) {
-            float val = mechanism.getValue().asFloat();
-            if (val < -1 || val > 1) {
-                mechanism.echoError("Invalid speed specified. Must be between -1 and 1.");
-                return;
-            }
-            if (isOnline()) {
-                getPlayerEntity().setWalkSpeed(val);
-            }
-            else {
-                getNBTEditor().setWalkSpeed(val);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name exhaustion
-        // @input ElementTag(Decimal)
-        // @description
-        // Sets the exhaustion level of a player.
-        // Works with offline players.
-        // @tags
-        // <PlayerTag.exhaustion>
-        // -->
-        if (mechanism.matches("exhaustion") && mechanism.requireFloat()) {
-            if (isOnline()) {
-                getPlayerEntity().setExhaustion(mechanism.getValue().asFloat());
-            }
-            else {
-                getNBTEditor().setExhaustion(mechanism.getValue().asFloat());
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name show_entity
-        // @input EntityTag
-        // @description
-        // Shows the player a previously hidden entity.
-        // To show for everyone, use <@link mechanism EntityTag.show_to_players>.
-        // See also <@link mechanism PlayerTag.hide_entity>.
-        // -->
-        if (mechanism.matches("show_entity") && mechanism.requireObject(EntityTag.class)) {
-            HideEntitiesHelper.unhideEntity(getPlayerEntity(), mechanism.valueAsType(EntityTag.class).getBukkitEntity());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name hide_entity
-        // @input EntityTag
-        // @description
-        // Hides an entity from the player.
-        // To hide from everyone, use <@link mechanism EntityTag.hide_from_players>.
-        // See also <@link mechanism PlayerTag.show_entity>.
-        // -->
-        if (mechanism.matches("hide_entity")) {
-            if (!mechanism.getValue().asString().isEmpty()) {
-                ListTag split = mechanism.valueAsType(ListTag.class);
-                if (split.size() > 0 && new ElementTag(split.get(0)).matchesType(EntityTag.class)) {
-                    EntityTag entity = EntityTag.valueOf(split.get(0), mechanism.context);
-                    if (!entity.isSpawnedOrValidForTag()) {
-                        Debug.echoError("Can't hide the unspawned entity '" + split.get(0) + "'!");
-                    }
-                    else {
-                        HideEntitiesHelper.hideEntity(getPlayerEntity(), entity.getBukkitEntity());
-                    }
-                }
-                else {
-                    Debug.echoError("'" + split.get(0) + "' is not a valid entity!");
-                }
-            }
-            else {
-                Debug.echoError("Must specify an entity to hide!");
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name hide_entities
-        // @input ElementTag
-        // @description
-        // Hides a matchable type of entity from the player. Can use any advanced entity matchers per <@link language Advanced Object Matching>.
-        // To hide a specific entity from the player, use <@link mechanism PlayerTag.hide_entity>.
-        // To remove hide sets, use <@link mechanism PlayerTag.unhide_entities>.
-        // Note that dynamic matchables like 'entity_flagged' will behave in unexpected ways when dynamically changing.
-        // -->
-        if (mechanism.matches("hide_entities") && mechanism.hasValue()) {
-            HideEntitiesHelper.PlayerHideMap map = HideEntitiesHelper.getPlayerMapFor(getUUID());
-            String hideMe = mechanism.getValue().asString();
-            map.matchersHidden.add(hideMe);
-            if (isOnline()) {
-                for (Entity ent : getPlayerEntity().getWorld().getEntities()) {
-                    if (new EntityTag(ent).tryAdvancedMatcher(hideMe, mechanism.context) && map.shouldHide(ent)) {
-                        NMSHandler.entityHelper.sendHidePacket(getPlayerEntity(), ent);
-                    }
-                }
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name unhide_entities
-        // @input ElementTag
-        // @description
-        // Removes any entity hides added by <@link mechanism PlayerTag.hide_entities>. Input must exactly match the input given to the hide mechanism.
-        // -->
-        if (mechanism.matches("unhide_entities") && mechanism.hasValue()) {
-            HideEntitiesHelper.PlayerHideMap map = HideEntitiesHelper.getPlayerMapFor(getUUID());
-            String unhideMe = mechanism.getValue().asString();
-            map.matchersHidden.remove(unhideMe);
-            if (map.matchersHidden.isEmpty() && map.entitiesHidden.isEmpty() && map.overridinglyShow.isEmpty()) {
-                HideEntitiesHelper.playerHides.remove(getUUID());
-            }
-            if (isOnline()) {
-                for (Entity ent : getPlayerEntity().getWorld().getEntities()) {
-                    if (new EntityTag(ent).tryAdvancedMatcher(unhideMe, mechanism.context) && !map.shouldHide(ent)) {
-                        NMSHandler.entityHelper.sendShowPacket(getPlayerEntity(), ent);
-                    }
-                }
-            }
-        }
-
-        if (mechanism.matches("show_boss_bar")) {
-            BukkitImplDeprecations.oldBossBarMech.warn(mechanism.context);
-            if (!mechanism.getValue().asString().isEmpty()) {
-                String[] split = mechanism.getValue().asString().split("\\|", 2);
-                if (split.length == 2 && new ElementTag(split[0]).isDouble()) {
-                    BossBarHelper.showSimpleBossBar(getPlayerEntity(), split[1], new ElementTag(split[0]).asDouble() * (1.0 / 200.0));
-                }
-                else {
-                    BossBarHelper.showSimpleBossBar(getPlayerEntity(), split[0], 1.0);
-                }
-            }
-            else {
-                BossBarHelper.removeSimpleBossBar(getPlayerEntity());
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name fake_experience
-        // @input ElementTag(Decimal)(|ElementTag(Number))
-        // @description
-        // Shows the player a fake experience bar, with a number between 0.0 and 1.0 to specify how far along the bar is.
-        // Use with no input value to reset to the player's normal experience.
-        // Optionally, you can specify a fake experience level.
-        // For example: - adjust <player> fake_experience:0.5|5
-        // -->
-        if (mechanism.matches("fake_experience")) {
-            if (!mechanism.getValue().asString().isEmpty()) {
-                String[] split = mechanism.getValue().asString().split("\\|", 2);
-                if (split.length > 0 && new ElementTag(split[0]).isFloat()) {
-                    if (split.length > 1 && new ElementTag(split[1]).isInt()) {
-                        getPlayerEntity().sendExperienceChange(new ElementTag(split[0]).asFloat(), new ElementTag(split[1]).asInt());
-                    }
-                    else {
-                        getPlayerEntity().sendExperienceChange(new ElementTag(split[0]).asFloat());
-                    }
-                }
-                else {
-                    mechanism.echoError("'" + split[0] + "' is not a valid decimal number!");
-                }
-            }
-            else {
-                getPlayerEntity().sendExperienceChange(getPlayerEntity().getExp(), getPlayerEntity().getLevel());
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name fake_health
-        // @input ElementTag(Decimal)(|ElementTag(Number)(|ElementTag(Decimal)))
-        // @description
-        // Shows the player a fake health bar, with a number between 0 and 20, where 1 is half of a heart.
-        // Use with no input value to reset to the player's normal health.
-        // Optionally, you can specify a fake food level, between 0 and 20.
-        // You can also optionally specify a food saturation level between 0 and 10.
-        // For example:
-        // - adjust <player> fake_health:1
-        // - adjust <player> fake_health:10|15
-        // - adjust <player> fake_health:<player.health>|3|0
-        // -->
-        if (mechanism.matches("fake_health")) {
-            if (!mechanism.getValue().asString().isEmpty()) {
-                String[] split = mechanism.getValue().asString().split("\\|", 3);
-                if (split.length > 0 && new ElementTag(split[0]).isFloat()) {
-                    if (split.length > 1 && new ElementTag(split[1]).isInt()) {
-                        if (split.length > 2 && new ElementTag(split[2]).isFloat()) {
-                            NMSHandler.packetHelper.showHealth(getPlayerEntity(), new ElementTag(split[0]).asFloat(),
-                                    new ElementTag(split[1]).asInt(), new ElementTag(split[2]).asFloat());
-                        }
-                        else {
-                            NMSHandler.packetHelper.showHealth(getPlayerEntity(), new ElementTag(split[0]).asFloat(),
-                                    new ElementTag(split[1]).asInt(), getPlayerEntity().getSaturation());
-                        }
-                    }
-                    else {
-                        NMSHandler.packetHelper.showHealth(getPlayerEntity(), new ElementTag(split[0]).asFloat(),
-                                getPlayerEntity().getFoodLevel(), getPlayerEntity().getSaturation());
-                    }
-                }
-                else {
-                    Debug.echoError("'" + split[0] + "' is not a valid decimal number!");
-                }
-            }
-            else {
-                NMSHandler.packetHelper.resetHealth(getPlayerEntity());
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name fake_mount_health
-        // @input ElementTag(Decimal)|ElementTag(Decimal)
-        // @description
-        // Shows the player a fake health bar for their mounted. Specify both the current and maximum health values.
-        // Use with no input value to reset to the real health value.
-        // Using a health of '0' will make your mount look dead but continue to function.
-        // For example:
-        // - adjust <player> fake_mount_health:10|15
-        // -->
-        if (mechanism.matches("fake_mount_health")) {
-            if (!isOnline() || !getPlayerEntity().isInsideVehicle()) {
-                mechanism.echoError("Cannot run fake_mount_health - player is offline or unmounted.");
-                return;
-            }
-            Entity vehicle = getPlayerEntity().getVehicle();
-            if (!(vehicle instanceof LivingEntity)) {
-                mechanism.echoError("Cannot run fake_mount_health - vehicle is not a living entity.");
-                return;
-            }
-            LivingEntity liveVehicle = (LivingEntity) vehicle;
-            double current, maximum;
-            if (mechanism.hasValue()) {
-                ListTag input = mechanism.valueAsType(ListTag.class);
-                if (input.size() != 2) {
-                    mechanism.echoError("Cannot run fake_mount_health - improper input.");
-                    return;
-                }
-                current = new ElementTag(input.get(0)).asDouble();
-                maximum = new ElementTag(input.get(1)).asDouble();
-            }
-            else {
-                current = liveVehicle.getHealth();
-                maximum = liveVehicle.getMaxHealth();
-            }
-            NMSHandler.packetHelper.showMobHealth(getPlayerEntity(), liveVehicle, current, maximum);
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name fake_entity_health
-        // @input MapTag
-        // @description
-        // Shows the player a fake health number for a given entity.
-        // Input is a map with 'entity' as the target entity, and 'health' as the health amount.
-        // Optionally add 'max' to set the max health too.
-        // Using health of '0' can cause an entity to look dead.
-        // For example:
-        // - adjust <player> fake_entity_health:[entity=<player.target>;health=0]
-        // -->
-        if (mechanism.matches("fake_entity_health") && mechanism.requireObject(MapTag.class)) {
-            if (!isOnline()) {
-                mechanism.echoError("Cannot run fake_entity_health - player is offline.");
-                return;
-            }
-            MapTag map = mechanism.valueAsType(MapTag.class);
-            EntityTag entity = map.getObjectAs("entity", EntityTag.class, mechanism.context);
-            ElementTag healthObject = map.getElement("health");
-            ElementTag maxObject = map.getElement("max");
-            if (healthObject == null) {
-                mechanism.echoError("Cannot run fake_entity_health - input map is missing 'health' key.");
-                return;
-            }
-            double health = healthObject.asDouble();
-            if (entity == null || !entity.isLivingEntity()) {
-                mechanism.echoError("Cannot run fake_entity_health - entity is invalid or not living.");
-                return;
-            }
-            double max = maxObject == null ? entity.getLivingEntity().getMaxHealth() : maxObject.asDouble();
-            NMSHandler.packetHelper.showMobHealth(getPlayerEntity(), entity.getLivingEntity(), health, max);
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name fake_equipment
-        // @input EntityTag(|ElementTag|ItemTag)
-        // @description
-        // Shows the player fake equipment on the specified living entity, which has no real non-visual effects.
-        // Input is in the form Entity|Slot|Item, where the slot can be one of the following: HAND, OFF_HAND, BOOTS, LEGS, CHEST, HEAD
-        // Optionally, exclude the slot and item to stop showing the fake equipment, if any, on the specified entity.
-        // For example:
-        // - adjust <player> fake_equipment:<[some_entity]>|chest|diamond_chestplate
-        // - adjust <player> fake_equipment:<player>|head|jack_o_lantern
-        // Consider instead using <@link command fakeequip>.
-        // -->
-        if (mechanism.matches("fake_equipment")) {
-            if (!mechanism.getValue().asString().isEmpty()) {
-                String[] split = mechanism.getValue().asString().split("\\|", 3);
-                if (split.length > 0 && new ElementTag(split[0]).matchesType(EntityTag.class)) {
-                    String slot = split.length > 1 ? split[1].toUpperCase() : null;
-                    if (split.length > 1 && (new ElementTag(slot).matchesEnum(EquipmentSlot.class)
-                            || slot.equals("MAIN_HAND") || slot.equals("BOOTS"))) {
-                        if (split.length > 2 && new ElementTag(split[2]).matchesType(ItemTag.class)) {
-                            if (slot.equals("MAIN_HAND")) {
-                                slot = "HAND";
-                            }
-                            else if (slot.equals("BOOTS")) {
-                                slot = "FEET";
-                            }
-                            NMSHandler.packetHelper.showEquipment(getPlayerEntity(),
-                                    new ElementTag(split[0]).asType(EntityTag.class, mechanism.context).getLivingEntity(),
-                                    EquipmentSlot.valueOf(slot),
-                                    new ElementTag(split[2]).asType(ItemTag.class, mechanism.context).getItemStack());
-                        }
-                        else if (split.length > 2) {
-                            Debug.echoError("'" + split[2] + "' is not a valid ItemTag!");
-                        }
-                    }
-                    else if (split.length > 1) {
-                        Debug.echoError("'" + split[1] + "' is not a valid slot; must be HAND, OFF_HAND, BOOTS, LEGS, CHEST, or HEAD!");
-                    }
-                    else {
-                        NMSHandler.packetHelper.resetEquipment(getPlayerEntity(),
-                                new ElementTag(split[0]).asType(EntityTag.class, mechanism.context).getLivingEntity());
-                    }
-                }
-                else {
-                    Debug.echoError("'" + split[0] + "' is not a valid EntityTag!");
-                }
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name fov_multiplier
-        // @input ElementTag(Decimal)
-        // @description
-        // Sets the player's field of view multiplier.
-        // Leave input empty to reset.
-        // Note: Values outside a (-1, 1) range will have little effect on the player's fov.
-        // -->
-        if (mechanism.matches("fov_multiplier")) {
-            if (mechanism.hasValue() && mechanism.requireFloat()) {
-                NMSHandler.packetHelper.setFieldOfView(getPlayerEntity(), mechanism.getValue().asFloat());
-            }
-            else {
-                NMSHandler.packetHelper.setFieldOfView(getPlayerEntity(), Float.NaN);
-            }
-        }
-
-        if (mechanism.matches("item_message")) {
-            BukkitImplDeprecations.itemMessage.warn(mechanism.context);
-            ItemChangeMessage.sendMessage(getPlayerEntity(), mechanism.getValue().asString());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name show_endcredits
-        // @input None
-        // @description
-        // Shows the player the end credits.
-        // -->
-        if (mechanism.matches("show_endcredits")) {
-            NMSHandler.playerHelper.showEndCredits(getPlayerEntity());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name show_demo
-        // @input None
-        // @description
-        // Shows the player the demo screen.
-        // -->
-        if (mechanism.matches("show_demo")) {
-            NMSHandler.packetHelper.showDemoScreen(getPlayerEntity());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name spectator_target
-        // @input EntityTag
-        // @description
-        // Switches the player to spectator mode and causes them to immediately start spectating an entity.
-        // To instead fake this effect, use <@link mechanism PlayerTag.spectate>
-        // Give no input to detach the player from any target.
-        // @tags
-        // <PlayerTag.spectator_target>
-        // -->
-        if (mechanism.matches("spectator_target")) {
-            if (mechanism.hasValue()) {
-                getPlayerEntity().setGameMode(GameMode.SPECTATOR);
-                getPlayerEntity().setSpectatorTarget(mechanism.valueAsType(EntityTag.class).getBukkitEntity());
-            }
-            else if (getPlayerEntity().getGameMode() == GameMode.SPECTATOR) {
-                getPlayerEntity().setSpectatorTarget(null);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name spectate
-        // @input EntityTag
-        // @description
-        // Forces the player to spectate from the entity's point of view, using a packet (meaning, the player starts spectating clientside, but not serverside).
-        // The player will not move from their existing location serverside.
-        // To cause real spectator mode spectating, use <@link mechanism PlayerTag.spectator_target>
-        // Note that in some cases you may want to force the player into the spectate gamemode prior to using this mechanism.
-        // Note: They cannot cancel the spectating without a re-log -- you must make them spectate themselves to cancel the effect.
-        // Like: - adjust <player> spectate:<player>
-        // -->
-        if (mechanism.matches("spectate") && mechanism.requireObject(EntityTag.class)) {
-            NMSHandler.packetHelper.forceSpectate(getPlayerEntity(), mechanism.valueAsType(EntityTag.class).getBukkitEntity());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name open_book
-        // @input None
-        // @description
-        // Forces the player to open the written book in their hand.
-        // The book can safely be removed from the player's hand without the player closing the book.
-        // -->
-        if (mechanism.matches("open_book")) {
-            ItemStack book = getPlayerEntity().getEquipment().getItemInMainHand();
-            if (book.getType() == Material.WRITTEN_BOOK) {
-                getPlayerEntity().openBook(book);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name open_offhand_book
-        // @input None
-        // @description
-        // Forces the player to open the written book in their offhand.
-        // The book can safely be removed from the player's offhand without the player closing the book.
-        // -->
-        if (mechanism.matches("open_offhand_book")) {
-            ItemStack book = getPlayerEntity().getEquipment().getItemInOffHand();
-            if (book.getType() == Material.WRITTEN_BOOK) {
-                getPlayerEntity().openBook(book);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name show_book
-        // @input ItemTag
-        // @description
-        // Displays a book to a player. Must be a WRITTEN_BOOK item.
-        // For simple usage, consider specifying a book script name as the input.
-        // -->
-        if (mechanism.matches("show_book")
-                && mechanism.requireObject(ItemTag.class)) {
-            ItemTag book = mechanism.valueAsType(ItemTag.class);
-            if (book.getBukkitMaterial() != Material.WRITTEN_BOOK) {
-                mechanism.echoError("show_book mechanism must have a written book as input.");
-                return;
-            }
-            getPlayerEntity().openBook(book.getItemStack());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name resend_recipes
-        // @input None
-        // @description
-        // Sends the player a list of the full details of all recipes on the server.
-        // This is useful when reloading new item scripts with custom recipes.
-        // This will automatically resend discovered recipes at the same time (otherwise the player will seemingly have no recipes unlocked).
-        // -->
-        if (mechanism.matches("resend_recipes")) {
-            NMSHandler.playerHelper.resendRecipeDetails(getPlayerEntity());
-            NMSHandler.playerHelper.resendDiscoveredRecipes(getPlayerEntity());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name resend_discovered_recipes
-        // @input None
-        // @description
-        // Sends the player the full list of recipes they have discovered over again.
-        // This is useful when used alongside <@link mechanism PlayerTag.quietly_discover_recipe>.
-        // -->
-        if (mechanism.matches("resend_discovered_recipes")) {
-            NMSHandler.playerHelper.resendDiscoveredRecipes(getPlayerEntity());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name edit_sign
-        // @input LocationTag
-        // @description
-        // Allows the player to edit an existing sign. To create a sign, see <@link command Sign>.
-        // Give no input to make a fake edit interface.
-        // -->
-        if (mechanism.matches("edit_sign")) {
-            if (mechanism.hasValue() && mechanism.requireObject(LocationTag.class)) {
-                BlockState state = mechanism.valueAsType(LocationTag.class).getBlockState();
-                if (!(state instanceof Sign)) {
-                    mechanism.echoError("Invalid location specified: must be a sign.");
-                    return;
-                }
-                getPlayerEntity().openSign((Sign) state);
-            }
-            else {
-                NMSHandler.packetHelper.showSignEditor(getPlayerEntity(), null);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name quietly_discover_recipe
-        // @input ListTag
-        // @description
-        // Causes the player to discover a recipe, or list of recipes, without being notified or updated about this happening.
-        // Generally helpful to follow this with <@link mechanism PlayerTag.resend_discovered_recipes>.
-        // Input is in the Namespace:Key format, for example "minecraft:gold_nugget".
-        // -->
-        if (mechanism.matches("quietly_discover_recipe")) {
-            for (String keyText : mechanism.valueAsType(ListTag.class)) {
-                NamespacedKey key = Utilities.parseNamespacedKey(keyText);
-                NMSHandler.playerHelper.quietlyAddRecipe(getPlayerEntity(), key);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name discover_recipe
-        // @input ListTag
-        // @description
-        // Causes the player to discover a recipe, or list of recipes. Input is in the Namespace:Key format, for example "minecraft:gold_nugget".
-        // -->
-        if (mechanism.matches("discover_recipe")) {
-            List<NamespacedKey> keys = new ArrayList<>();
-            for (String key : mechanism.valueAsType(ListTag.class)) {
-                keys.add(Utilities.parseNamespacedKey(key));
-            }
-            getPlayerEntity().discoverRecipes(keys);
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name forget_recipe
-        // @input ListTag
-        // @description
-        // Causes the player to forget ('undiscover') a recipe, or list of recipes. Input is in the Namespace:Key format, for example "minecraft:gold_nugget".
-        // -->
-        if (mechanism.matches("forget_recipe")) {
-            List<NamespacedKey> keys = new ArrayList<>();
-            for (String key : mechanism.valueAsType(ListTag.class)) {
-                keys.add(Utilities.parseNamespacedKey(key));
-            }
-            getPlayerEntity().undiscoverRecipes(keys);
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name tab_list_info
-        // @input ElementTag
-        // @description
-        // Show the player some text in the header and footer area in their tab list.
-        // - adjust <player> tab_list_info:<header>|<footer>
-        // -->
-        if (mechanism.matches("tab_list_info")) {
-            if (!mechanism.getValue().asString().isEmpty()) {
-                String[] split = mechanism.getValue().asString().split("\\|", 2);
-                if (split.length > 0) {
-                    String header = split[0];
-                    String footer = split.length > 1 ? split[1] : "";
-                    NMSHandler.packetHelper.showTabListHeaderFooter(getPlayerEntity(), header, footer);
-                }
-                else {
-                    mechanism.echoError("Must specify a header and footer to show!");
-                }
-            }
-            else {
-                getPlayerEntity().setPlayerListHeaderFooter(null, null);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name sign_update
-        // @input ElementTag
-        // @description
-        // Shows the player fake lines on a sign, with input in the format of LocationTag|ListTag.
-        // -->
-        if (mechanism.matches("sign_update")) {
-            if (!mechanism.getValue().asString().isEmpty()) {
-                String[] split = mechanism.getValue().asString().split("\\|", 2);
-                if (LocationTag.matches(split[0]) && split.length > 1) {
-                    ListTag lines = ListTag.valueOf(split[1], mechanism.context);
-                    LocationTag location = LocationTag.valueOf(split[0], mechanism.context);
-                    PaperAPITools.instance.sendSignUpdate(getPlayerEntity(), location, lines.toArray(new String[4]));
-                }
-                else {
-                    Debug.echoError("Must specify a valid location and at least one sign line!");
-                }
-            }
-            else {
-                Debug.echoError("Must specify a valid location and at least one sign line!");
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name banner_update
-        // @input ElementTag
-        // @description
-        // Shows the player fake patterns on a banner. Input must be in the form: "LOCATION|COLOR/PATTERN|..."
-        // As of Minecraft 1.13, the base color is unique material types, and so <@link command showfake> must be used for base color changes.
-        // For the list of possible patterns, see <@link url https://hub.spigotmc.org/javadocs/spigot/org/bukkit/block/banner/PatternType.html>.
-        // -->
-        if (mechanism.matches("banner_update")) {
-            if (mechanism.getValue().asString().length() > 0) {
-                String[] split = mechanism.getValue().asString().split("\\|");
-                List<Pattern> patterns = new ArrayList<>();
-                if (LocationTag.matches(split[0]) && split.length > 1) {
-                    List<String> splitList;
-                    for (int i = 1; i < split.length; i++) {
-                        String string = split[i];
-                        if (i == 1 && !string.contains("/")) {
-                            continue; // Comapt with old input format that had base_color
-                        }
-                        try {
-                            splitList = CoreUtilities.split(string, '/', 2);
-                            patterns.add(new Pattern(DyeColor.valueOf(splitList.get(0).toUpperCase()),
-                                    PatternType.valueOf(splitList.get(1).toUpperCase())));
-                        }
-                        catch (Exception e) {
-                            Debug.echoError("Could not apply pattern to banner: " + string);
-                        }
-                    }
-                    LocationTag location = LocationTag.valueOf(split[0], mechanism.context);
-                    NMSHandler.packetHelper.showBannerUpdate(getPlayerEntity(), location, patterns);
-                }
-                else {
-                    Debug.echoError("Must specify a valid location and pattern list!");
-                }
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name stop_sound
-        // @input ElementTag
-        // @description
-        // Stops all sounds of the specified type for the player.
-        // Valid types are AMBIENT, BLOCKS, HOSTILE, MASTER, MUSIC, NEUTRAL, PLAYERS, RECORDS, VOICE, and WEATHER
-        // Instead of a type, you can specify a full sound key, which usually has the 'minecraft:' prefix.
-        // If no sound type is specified, all types will be stopped.
-        // -->
-        if (mechanism.matches("stop_sound")) {
-            SoundCategory category = null;
-            NamespacedKey key = null;
-            if (mechanism.hasValue()) {
-                if (mechanism.getValue().matchesEnum(SoundCategory.class)) {
-                    category = mechanism.getValue().asEnum(SoundCategory.class);
-                    getPlayerEntity().stopSound(category);
-                    return;
-                }
-                else {
-                    key = Utilities.parseNamespacedKey(mechanism.getValue().asString());
-                }
-            }
-            NMSHandler.playerHelper.stopSound(getPlayerEntity(), key, category);
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name update_advancements
-        // @input None
-        // @description
-        // Updates the player's client-side advancements to match their server data.
-        // -->
-        if (mechanism.matches("update_advancements")) {
-            NMSHandler.advancementHelper.update(getPlayerEntity());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name name
-        // @input ElementTag
-        // @description
-        // Changes the name on this player's nameplate.
-        // @tags
-        // <PlayerTag.name>
-        // -->
-        if (mechanism.matches("name") && mechanism.hasValue()) {
-            String name = mechanism.getValue().asString();
-            if (name.length() > 16) {
-                Debug.echoError("Must specify a name with no more than 16 characters.");
-            }
-            else {
-                NMSHandler.instance.getProfileEditor().setPlayerName(getPlayerEntity(), mechanism.getValue().asString());
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name skin
-        // @input ElementTag
-        // @description
-        // Changes the skin of the player to the skin of the given player name.
-        // See also <@link language Player Entity Skins (Skin Blobs)>.
-        // -->
-        if (mechanism.matches("skin") && mechanism.hasValue()) {
-            String name = mechanism.getValue().asString();
-            if (name.length() > 16) {
-                mechanism.echoError("Must specify a name with no more than 16 characters.");
-                return;
-            }
-            PaperAPITools.instance.setSkin(getPlayerEntity(), name);
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name skin_blob
-        // @input ElementTag
-        // @description
-        // Changes the skin of the player to the specified blob.
-        // In the format: "texture;signature" (two values separated by a semicolon).
-        // See also <@link language Player Entity Skins (Skin Blobs)>.
-        // @tags
-        // <PlayerTag.skin_blob>
-        // -->
-        if (mechanism.matches("skin_blob") && mechanism.hasValue()) {
-            PaperAPITools.instance.setSkinBlob(getPlayerEntity(), mechanism.getValue().asString());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name is_op
-        // @input ElementTag(Boolean)
-        // @description
-        // Changes whether the player is a server operator or not.
-        // @tags
-        // <PlayerTag.is_op>
-        // -->
-        if (mechanism.matches("is_op") && mechanism.requireBoolean()) {
-            ImprovedOfflinePlayer.invalidateNow(getUUID());
-            getOfflinePlayer().setOp(mechanism.getValue().asBoolean());
-        }
-
-        if (mechanism.matches("money") && mechanism.requireDouble() && Depends.economy != null) {
-            BukkitImplDeprecations.oldMoneyMech.warn(mechanism.context);
-            double bal = Depends.economy.getBalance(getOfflinePlayer());
-            double goal = mechanism.getValue().asDouble();
-            if (goal > bal) {
-                Depends.economy.depositPlayer(getOfflinePlayer(), goal - bal);
-            }
-            else if (bal > goal) {
-                Depends.economy.withdrawPlayer(getOfflinePlayer(), bal - goal);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name chat_prefix
-        // @input ElementTag
-        // @plugin Vault
-        // @description
-        // Set the player's chat prefix.
-        // Requires a Vault-compatible chat plugin.
-        // @tags
-        // <PlayerTag.chat_prefix>
-        // -->
-        if (mechanism.matches("chat_prefix")) {
-            if (Depends.chat == null) {
-                Debug.echoError("Chat_Prefix mechanism invalid: No linked Chat plugin.");
-                return;
-            }
-            Depends.chat.setPlayerPrefix(getPlayerEntity(), mechanism.getValue().asString());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name chat_suffix
-        // @input ElementTag
-        // @plugin Vault
-        // @description
-        // Set the player's chat suffix.
-        // Requires a Vault-compatible chat plugin.
-        // @tags
-        // <PlayerTag.chat_suffix>
-        // -->
-        if (mechanism.matches("chat_suffix")) {
-            if (Depends.chat == null) {
-                Debug.echoError("Chat_Suffix mechanism invalid: No linked Chat plugin.");
-                return;
-            }
-            Depends.chat.setPlayerSuffix(getPlayerEntity(), mechanism.getValue().asString());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name selected_npc
-        // @input NPCTag
-        // @description
-        // Sets the NPC that the player has selected.
-        // @tags
-        // <PlayerTag.selected_npc>
-        // -->
-        if (mechanism.matches("selected_npc") && Depends.citizens != null && mechanism.requireObject(NPCTag.class)) {
-            ((NPCSelector) CitizensAPI.getDefaultNPCSelector()).select(getPlayerEntity(), mechanism.valueAsType(NPCTag.class).getCitizen());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name hide_particles
-        // @input ElementTag
-        // @description
-        // Hides a certain type of particle from the player.
-        // Input is the particle type name - refer to <@link tag server.particle_types>.
-        // Give no input to remove all hides from a player.
-        // Hides will persist through players reconnecting, but not through servers restarting.
-        // -->
-        if (mechanism.matches("hide_particles")) {
-            if (!mechanism.hasValue()) {
-                HideParticles.hidden.remove(getUUID());
-            }
-            else {
-                NetworkInterceptHelper.enable();
-                HashSet<Particle> particles = HideParticles.hidden.computeIfAbsent(getUUID(), k -> new HashSet<>());
-                Particle particle = Particle.valueOf(mechanism.getValue().asString().toUpperCase());
-                particles.add(particle);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name send_to
-        // @input ElementTag
-        // @plugin BungeeCord
-        // @description
-        // Sends the player to the specified Bungee server.
-        // This also works with other Bungee-Messaging compatible proxy systems, such as Velocity.
-        // -->
-        if (mechanism.matches("send_to") && mechanism.hasValue()) {
-            if (!isOnline()) {
-                Debug.echoError("Cannot use send_to on offline player.");
-                return;
-            }
-            Depends.bungeeSendPlayer(getPlayerEntity(), mechanism.getValue().asString());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name send_server_brand
-        // @input ElementTag
-        // @description
-        // Sends the player a fake server brand, that will be displayed in the F3 Debug screen.
-        // -->
-        if (mechanism.matches("send_server_brand") && mechanism.hasValue()) {
-            if (!isOnline()) {
-                Debug.echoError("Cannot use send_server_brand on offline player.");
-                return;
-            }
-            NMSHandler.packetHelper.sendBrand(getPlayerEntity(), mechanism.getValue().asString());
-        }
 
         tagProcessor.processMechanism(this, mechanism);
 
