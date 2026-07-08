@@ -538,6 +538,28 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         }
     }
 
+    public static void resourcePackMechanism(PlayerTag object, Mechanism mechanism) {
+        BukkitImplDeprecations.playerResourcePackMech.warn(mechanism.context);
+        String pack = mechanism.getValue().asString();
+        int pipe = pack.indexOf('|');
+        if (pipe > 0) {
+            String hash = pack.substring(pipe + 1);
+            pack = pack.substring(0, pipe);
+            if (hash.length() != 40) {
+                mechanism.echoError("Invalid resource_pack hash. Should be 40 characters of hexadecimal data.");
+                return;
+            }
+            byte[] hashData = new byte[20];
+            for (int i = 0; i < 20; i++) {
+                hashData[i] = (byte) Integer.parseInt(hash.substring(i * 2, i * 2 + 2), 16);
+            }
+            object.getPlayerEntity().setResourcePack(pack, hashData);
+        }
+        else {
+            object.getPlayerEntity().setResourcePack(pack);
+        }
+    }
+
     public void setExp(float xp) {
         if (isOnline()) {
             getPlayerEntity().setExp(xp);
@@ -2898,6 +2920,317 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
                 }
             }
         });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name window_property
+        // @input ElementTag
+        // @description
+        // Sets various properties of a window the player has open, such as the open page in a lectern.
+        // Input is of the form PROPERTY,VALUE where the value is a number.
+        // Note that any adjusted window properties are entirely clientside.
+        // Valid properties: <@link url https://hub.spigotmc.org/javadocs/spigot/org/bukkit/inventory/InventoryView.Property.html>
+        // -->
+        registerOnlineOnlyMechanism("window_property", (object, mechanism) -> {
+            String[] split = mechanism.getValue().asString().split(",", 2);
+            if (split.length != 2) {
+                mechanism.echoError("Invalid input! Must be in the form PROPERTY,VALUE");
+                return;
+            }
+            try {
+                object.getPlayerEntity().setWindowProperty(InventoryView.Property.valueOf(split[0].toUpperCase()), Integer.parseInt(split[1]));
+            }
+            catch (NumberFormatException ex) {
+                mechanism.echoError("Input value must be a number!");
+            }
+            catch (IllegalArgumentException ex) {
+                mechanism.echoError("Must specify a valid window property!");
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name resource_pack
+        // @input ElementTag(|ElementTag)
+        // @deprecated Use the "resourcepack" command instead of this old mechanism.
+        // @description
+        // Deprecated, use <@link command resourcepack>.
+        // -->
+        registerOnlineOnlyMechanism("resource_pack", PlayerTag::resourcePackMechanism);
+        registerOnlineOnlyMechanism("texture_pack", PlayerTag::resourcePackMechanism);
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name food_level
+        // @input ElementTag(Number)
+        // @description
+        // Sets the current food level of a player. Typically, '20' is full.
+        // @tags
+        // <PlayerTag.food_level>
+        // -->
+        tagProcessor.registerMechanism("food_level", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireInteger()) {
+                object.setFoodLevel(input.asInt());
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name can_fly
+        // @input ElementTag(Boolean)
+        // @description
+        // Sets whether the player is allowed to fly.
+        // Works with offline players.
+        // @tags
+        // <PlayerTag.can_fly>
+        // -->
+        tagProcessor.registerMechanism("can_fly", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireBoolean()) {
+                boolean value = input.asBoolean();
+                if (object.isOnline()) {
+                    object.getPlayerEntity().setAllowFlight(value);
+                }
+                else {
+                    object.getNBTEditor().setAllowFlight(value);
+                }
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name send_map
+        // @input ElementTag(Number)
+        // @description
+        // Forces a player to receive the entirety of the specified map ID instantly.
+        // This is mainly used as a way to correct bugs in map rendering.
+        // -->
+        registerOnlineOnlyMechanism("send_map", (object, mechanism) -> {
+            if (mechanism.requireInteger()) {
+                int mapId = mechanism.getValue().asInt();
+                MapView map = Bukkit.getServer().getMap((short) mapId);
+                if (map != null) {
+                    object.getPlayerEntity().sendMap(map);
+                }
+                else {
+                    mechanism.echoError("No map found for ID " + mapId + "!");
+                }
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name sprinting
+        // @input ElementTag(Boolean)
+        // @description
+        // Sets whether the player is sprinting.
+        // @tags
+        // <PlayerTag.is_sprinting>
+        // -->
+        registerOnlineOnlyMechanism("sprinting", (object, mechanism) -> {
+            if (mechanism.requireBoolean()) {
+                object.getPlayerEntity().setSprinting(mechanism.getValue().asBoolean());
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name fly_speed
+        // @input ElementTag(Decimal)
+        // @description
+        // Sets the fly speed of the player. Valid range is 0.0 to 1.0
+        // Works with offline players.
+        // @tags
+        // <PlayerTag.fly_speed>
+        // -->
+        tagProcessor.registerMechanism("fly_speed", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireFloat()) {
+                float val = input.asFloat();
+                if (val < -1 || val > 1) {
+                    mechanism.echoError("Invalid speed specified. Must be between -1 and 1.");
+                    return;
+                }
+                if (object.isOnline()) {
+                    object.getPlayerEntity().setFlySpeed(val);
+                }
+                else {
+                    object.getNBTEditor().setFlySpeed(val);
+                }
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name flying
+        // @input ElementTag(Boolean)
+        // @description
+        // Sets whether the player is flying.
+        // @tags
+        // <PlayerTag.is_flying>
+        // -->
+        registerOnlineOnlyMechanism("flying", (object, mechanism) -> {
+            if (mechanism.requireBoolean()) {
+                boolean doFly = mechanism.getValue().asBoolean();
+                if (doFly && !object.getPlayerEntity().getAllowFlight()) {
+                    mechanism.echoError("Must adjust 'can_fly:true' before you can adjust 'flying:true'");
+                    return;
+                }
+                object.getPlayerEntity().setFlying(doFly);
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name gamemode
+        // @input ElementTag
+        // @description
+        // Sets the game mode of the player.
+        // Valid gamemodes are survival, creative, adventure, and spectator.
+        // Works with offline players.
+        // @tags
+        // <PlayerTag.gamemode>
+        // -->
+        tagProcessor.registerMechanism("gamemode", false, ElementTag.class, (object, mechanism, input) -> {
+            if (mechanism.requireEnum(GameMode.class)) {
+                object.setGameMode(GameMode.valueOf(input.asString().toUpperCase()));
+            }
+        });
+
+        registerOnlineOnlyMechanism("kick", (object, mechanism) -> {
+            BukkitImplDeprecations.oldKickMech.warn(mechanism.context);
+            object.getPlayerEntity().kickPlayer(mechanism.getValue().asString());
+        });
+
+        registerOnlineOnlyMechanism("weather", (object, mechanism) -> {
+            if (mechanism.requireEnum(WeatherType.class)) {
+                BukkitImplDeprecations.oldWeatherMech.warn(mechanism.context);
+                object.getPlayerEntity().setPlayerWeather(WeatherType.valueOf(mechanism.getValue().asString().toUpperCase()));
+            }
+        });
+
+        registerOnlineOnlyMechanism("reset_weather", (object, mechanism) -> {
+            BukkitImplDeprecations.oldWeatherMech.warn(mechanism.context);
+            object.getPlayerEntity().resetPlayerWeather();
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name award_advancement
+        // @input ElementTag
+        // @description
+        // Awards an advancement to the player.
+        // @tags
+        // <PlayerTag.has_advancement[<name>]>
+        // -->
+        registerOnlineOnlyMechanism("award_advancement", (object, mechanism) -> {
+            Advancement adv = AdvancementHelper.getAdvancement(mechanism.getValue().asString());
+            if (adv == null) {
+                if (mechanism.shouldDebug()) {
+                    mechanism.echoError("Advancement '" + mechanism.getValue().asString() + "' does not exist.");
+                }
+                return;
+            }
+            AdvancementProgress prog = object.getPlayerEntity().getAdvancementProgress(adv);
+            for (String criteria : prog.getRemainingCriteria()) {
+                prog.awardCriteria(criteria);
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name revoke_advancement
+        // @input ElementTag
+        // @description
+        // Un-awards an advancement from the player.
+        // @tags
+        // <PlayerTag.has_advancement[<name>]>
+        // -->
+        registerOnlineOnlyMechanism("revoke_advancement", (object, mechanism) -> {
+            Advancement adv = AdvancementHelper.getAdvancement(mechanism.getValue().asString());
+            if (adv == null) {
+                if (mechanism.shouldDebug()) {
+                    mechanism.echoError("Advancement '" + mechanism.getValue().asString() + "' does not exist.");
+                }
+                return;
+            }
+            AdvancementProgress prog = object.getPlayerEntity().getAdvancementProgress(adv);
+            for (String criteria : prog.getAwardedCriteria()) {
+                prog.revokeCriteria(criteria);
+            }
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name player_list_name
+        // @input ElementTag
+        // @description
+        // Sets the entry that is shown in the 'player list' that is shown when pressing tab.
+        // @tags
+        // <PlayerTag.list_name>
+        // -->
+        registerOnlineOnlyMechanism("player_list_name", (object, mechanism) -> {
+            PaperAPITools.instance.setPlayerListName(object.getPlayerEntity(), mechanism.getValue().asString());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name display_name
+        // @input ElementTag
+        // @description
+        // Sets the name displayed for the player when chatting.
+        // This only applies if there's a chat plugin using it.
+        // @tags
+        // <PlayerTag.display_name>
+        // -->
+        registerOnlineOnlyMechanism("display_name", (object, mechanism) -> {
+            object.getPlayerEntity().setDisplayName(mechanism.getValue().asString());
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name show_workbench
+        // @input LocationTag
+        // @description
+        // Shows the player a workbench GUI corresponding to a given location.
+        // -->
+        registerOnlineOnlyMechanism("show_workbench", LocationTag.class, (object, mechanism, input) -> {
+            object.getPlayerEntity().openWorkbench(input, true);
+        });
+
+        // <--[mechanism]
+        // @object PlayerTag
+        // @name location
+        // @input LocationTag
+        // @description
+        // If the player is online, teleports the player to a given location.
+        // Otherwise, sets the player's next spawn location.
+        // @tags
+        // <PlayerTag.location>
+        // -->
+        tagProcessor.registerMechanism("location", false, LocationTag.class, (object, mechanism, input) -> {
+            object.setLocation(input);
+        });
+
+        registerOnlineOnlyMechanism("time", (object, mechanism) -> {
+            if (mechanism.requireInteger()) {
+                BukkitImplDeprecations.oldTimeMech.warn(mechanism.context);
+                object.getPlayerEntity().setPlayerTime(mechanism.getValue().asInt(), true);
+            }
+        });
+
+        registerOnlineOnlyMechanism("freeze_time", (object, mechanism) -> {
+            BukkitImplDeprecations.oldTimeMech.warn(mechanism.context);
+            if (mechanism.requireInteger("Invalid integer specified. Assuming current world time.")) {
+                object.getPlayerEntity().setPlayerTime(mechanism.getValue().asInt(), false);
+            }
+            else {
+                object.getPlayerEntity().setPlayerTime(object.getPlayerEntity().getWorld().getTime(), false);
+            }
+        });
+
+        registerOnlineOnlyMechanism("reset_time", (object, mechanism) -> {
+            BukkitImplDeprecations.oldTimeMech.warn(mechanism.context);
+            object.getPlayerEntity().resetPlayerTime();
+        });
     }
 
     public static ObjectTagProcessor<PlayerTag> tagProcessor = new ObjectTagProcessor<>();
@@ -2988,319 +3321,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
 
     @Override
     public void adjust(Mechanism mechanism) {
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name window_property
-        // @input ElementTag
-        // @description
-        // Sets various properties of a window the player has open, such as the open page in a lectern.
-        // Input is of the form PROPERTY,VALUE where the value is a number.
-        // Note that any adjusted window properties are entirely clientside.
-        // Valid properties: <@link url https://hub.spigotmc.org/javadocs/spigot/org/bukkit/inventory/InventoryView.Property.html>
-        // -->
-        if (mechanism.matches("window_property")) {
-            String[] split = mechanism.getValue().asString().split(",", 2);
-            if (split.length != 2) {
-                Debug.echoError("Invalid input! Must be in the form PROPERTY,VALUE");
-            }
-            else {
-                try {
-                    getPlayerEntity().setWindowProperty(InventoryView.Property.valueOf(split[0].toUpperCase()), Integer.parseInt(split[1]));
-                }
-                catch (NumberFormatException e) {
-                    Debug.echoError("Input value must be a number!");
-                }
-                catch (IllegalArgumentException e) {
-                    Debug.echoError("Must specify a valid window property!");
-                }
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name award_advancement
-        // @input ElementTag
-        // @description
-        // Awards an advancement to the player.
-        // @tags
-        // <PlayerTag.has_advancement[<name>]>
-        // -->
-        if (mechanism.matches("award_advancement")) {
-            Advancement adv = AdvancementHelper.getAdvancement(mechanism.getValue().asString());
-            if (adv == null) {
-                if (mechanism.shouldDebug()) {
-                    Debug.echoError("Advancement '" + mechanism.getValue().asString() + "' does not exist.");
-                }
-                return;
-            }
-            AdvancementProgress prog = getPlayerEntity().getAdvancementProgress(adv);
-            for (String criteria : prog.getRemainingCriteria()) {
-                prog.awardCriteria(criteria);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name revoke_advancement
-        // @input ElementTag
-        // @description
-        // Un-awards an advancement from the player.
-        // @tags
-        // <PlayerTag.has_advancement[<name>]>
-        // -->
-        if (mechanism.matches("revoke_advancement")) {
-            Advancement adv = AdvancementHelper.getAdvancement(mechanism.getValue().asString());
-            if (adv == null) {
-                if (mechanism.shouldDebug()) {
-                    Debug.echoError("Advancement '" + mechanism.getValue().asString() + "' does not exist.");
-                }
-                return;
-            }
-            AdvancementProgress prog = getPlayerEntity().getAdvancementProgress(adv);
-            for (String criteria : prog.getAwardedCriteria()) {
-                prog.revokeCriteria(criteria);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name resource_pack
-        // @input ElementTag(|ElementTag)
-        // @deprecated Use the "resourcepack" command instead of this old mechanism.
-        // @description
-        // Deprecated, use <@link command resourcepack>.
-        // -->
-        if (mechanism.matches("resource_pack") || mechanism.matches("texture_pack")) {
-            BukkitImplDeprecations.playerResourcePackMech.warn(mechanism.context);
-            String pack = mechanism.getValue().asString();
-            int pipe = pack.indexOf('|');
-            if (pipe > 0) {
-                String hash = pack.substring(pipe + 1);
-                pack = pack.substring(0, pipe);
-                if (hash.length() != 40) {
-                    Debug.echoError("Invalid resource_pack hash. Should be 40 characters of hexadecimal data.");
-                    return;
-                }
-                byte[] hashData = new byte[20];
-                for (int i = 0; i < 20; i++) {
-                    hashData[i] = (byte) Integer.parseInt(hash.substring(i * 2, i * 2 + 2), 16);
-                }
-                getPlayerEntity().setResourcePack(pack, hashData);
-            }
-            else {
-                getPlayerEntity().setResourcePack(pack);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name send_map
-        // @input ElementTag(Number)
-        // @description
-        // Forces a player to receive the entirety of the specified map ID instantly.
-        // This is mainly used as a way to correct bugs in map rendering.
-        // -->
-        if (mechanism.matches("send_map") && mechanism.requireInteger()) {
-            MapView map = Bukkit.getServer().getMap((short) mechanism.getValue().asInt());
-            if (map != null) {
-                getPlayerEntity().sendMap(map);
-            }
-            else {
-                Debug.echoError("No map found for ID " + mechanism.getValue().asInt() + "!");
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name food_level
-        // @input ElementTag(Number)
-        // @description
-        // Sets the current food level of a player. Typically, '20' is full.
-        // @tags
-        // <PlayerTag.food_level>
-        // -->
-        if (mechanism.matches("food_level") && mechanism.requireInteger()) {
-            setFoodLevel(mechanism.getValue().asInt());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name can_fly
-        // @input ElementTag(Boolean)
-        // @description
-        // Sets whether the player is allowed to fly.
-        // Works with offline players.
-        // @tags
-        // <PlayerTag.can_fly>
-        // -->
-        if (mechanism.matches("can_fly") && mechanism.requireBoolean()) {
-            if (isOnline()) {
-                getPlayerEntity().setAllowFlight(mechanism.getValue().asBoolean());
-            }
-            else {
-                getNBTEditor().setAllowFlight(mechanism.getValue().asBoolean());
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name fly_speed
-        // @input ElementTag(Decimal)
-        // @description
-        // Sets the fly speed of the player. Valid range is 0.0 to 1.0
-        // Works with offline players.
-        // @tags
-        // <PlayerTag.fly_speed>
-        // -->
-        if (mechanism.matches("fly_speed") && mechanism.requireFloat()) {
-            float val = mechanism.getValue().asFloat();
-            if (val < -1 || val > 1) {
-                mechanism.echoError("Invalid speed specified. Must be between -1 and 1.");
-                return;
-            }
-            if (isOnline()) {
-                getPlayerEntity().setFlySpeed(val);
-            }
-            else {
-                getNBTEditor().setFlySpeed(val);
-            }
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name flying
-        // @input ElementTag(Boolean)
-        // @description
-        // Sets whether the player is flying.
-        // @tags
-        // <PlayerTag.is_flying>
-        // -->
-        if (mechanism.matches("flying") && mechanism.requireBoolean()) {
-            boolean doFly = mechanism.getValue().asBoolean();
-            if (doFly && !getPlayerEntity().getAllowFlight()) {
-                Debug.echoError("Must adjust 'can_fly:true' before you can adjust 'flying:true'");
-                return;
-            }
-            getPlayerEntity().setFlying(doFly);
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name sprinting
-        // @input ElementTag(Boolean)
-        // @description
-        // Sets whether the player is sprinting.
-        // @tags
-        // <PlayerTag.is_sprinting>
-        // -->
-        if (mechanism.matches("sprinting") && mechanism.requireBoolean()) {
-            getPlayerEntity().setSprinting(mechanism.getValue().asBoolean());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name gamemode
-        // @input ElementTag
-        // @description
-        // Sets the game mode of the player.
-        // Valid gamemodes are survival, creative, adventure, and spectator.
-        // Works with offline players.
-        // @tags
-        // <PlayerTag.gamemode>
-        // -->
-        if (mechanism.matches("gamemode") && mechanism.requireEnum(GameMode.class)) {
-            setGameMode(GameMode.valueOf(mechanism.getValue().asString().toUpperCase()));
-        }
-
-        if (mechanism.matches("kick")) {
-            BukkitImplDeprecations.oldKickMech.warn(mechanism.context);
-            getPlayerEntity().kickPlayer(mechanism.getValue().asString());
-        }
-
-        if (mechanism.matches("weather") && mechanism.requireEnum(WeatherType.class)) {
-            BukkitImplDeprecations.oldWeatherMech.warn(mechanism.context);
-            getPlayerEntity().setPlayerWeather(WeatherType.valueOf(mechanism.getValue().asString().toUpperCase()));
-        }
-
-        if (mechanism.matches("reset_weather")) {
-            BukkitImplDeprecations.oldWeatherMech.warn(mechanism.context);
-            getPlayerEntity().resetPlayerWeather();
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name player_list_name
-        // @input ElementTag
-        // @description
-        // Sets the entry that is shown in the 'player list' that is shown when pressing tab.
-        // @tags
-        // <PlayerTag.list_name>
-        // -->
-        if (mechanism.matches("player_list_name")) {
-            PaperAPITools.instance.setPlayerListName(getPlayerEntity(), mechanism.getValue().asString());
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name display_name
-        // @input ElementTag
-        // @description
-        // Sets the name displayed for the player when chatting.
-        // This only applies if there's a chat plugin using it.
-        // @tags
-        // <PlayerTag.display_name>
-        // -->
-        if (mechanism.matches("display_name")) {
-            getPlayerEntity().setDisplayName(mechanism.getValue().asString());
-            return;
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name show_workbench
-        // @input LocationTag
-        // @description
-        // Shows the player a workbench GUI corresponding to a given location.
-        // -->
-        if (mechanism.matches("show_workbench") && mechanism.requireObject(LocationTag.class)) {
-            getPlayerEntity().openWorkbench(mechanism.valueAsType(LocationTag.class), true);
-            return;
-        }
-
-        // <--[mechanism]
-        // @object PlayerTag
-        // @name location
-        // @input LocationTag
-        // @description
-        // If the player is online, teleports the player to a given location.
-        // Otherwise, sets the player's next spawn location.
-        // @tags
-        // <PlayerTag.location>
-        // -->
-        if (mechanism.matches("location") && mechanism.requireObject(LocationTag.class)) {
-            setLocation(mechanism.valueAsType(LocationTag.class));
-        }
-
-        if (mechanism.matches("time") && mechanism.requireInteger()) {
-            BukkitImplDeprecations.oldTimeMech.warn(mechanism.context);
-            getPlayerEntity().setPlayerTime(mechanism.getValue().asInt(), true);
-        }
-
-        if (mechanism.matches("freeze_time")) {
-            BukkitImplDeprecations.oldTimeMech.warn(mechanism.context);
-            if (mechanism.requireInteger("Invalid integer specified. Assuming current world time.")) {
-                getPlayerEntity().setPlayerTime(mechanism.getValue().asInt(), false);
-            }
-            else {
-                getPlayerEntity().setPlayerTime(getPlayerEntity().getWorld().getTime(), false);
-            }
-        }
-
-        if (mechanism.matches("reset_time")) {
-            BukkitImplDeprecations.oldTimeMech.warn(mechanism.context);
-            getPlayerEntity().resetPlayerTime();
-        }
 
         // <--[mechanism]
         // @object PlayerTag
