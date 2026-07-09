@@ -3,6 +3,9 @@ package com.denizenscript.denizen.nms.v26_2.impl;
 import com.denizenscript.denizen.nms.NMSHandler;
 import com.denizenscript.denizen.nms.abstracts.BiomeNMS;
 import com.denizenscript.denizen.nms.v26_2.Handler;
+import com.denizenscript.denizencore.objects.ObjectTag;
+import com.denizenscript.denizencore.objects.core.ColorTag;
+import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.utilities.ReflectionHelper;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import net.minecraft.core.BlockPos;
@@ -31,16 +34,31 @@ import org.bukkit.craftbukkit.util.CraftNamespacedKey;
 import org.bukkit.entity.EntityType;
 
 import java.lang.invoke.MethodHandle;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.lang.reflect.Field;
+import java.util.*;
 
 public class BiomeNMSImpl extends BiomeNMS {
 
     public static final MethodHandle BIOME_CLIMATESETTINGS_CONSTRUCTOR = ReflectionHelper.getConstructor(Biome.ClimateSettings.class, boolean.class, float.class, Biome.TemperatureModifier.class, float.class);
     public static final MethodHandle MAPPED_REGISTRY_REGISTRATION_INFOS = ReflectionHelper.getFields(MappedRegistry.class).getGetter("registrationInfos");
     public static final MethodHandle BIOME_ATTRIBUTES_SETTER = ReflectionHelper.getFields(Biome.class).getSetter("attributes");
+    public static final Map<String, EnvironmentAttribute<?>> ATTRIBUTE_CACHE = new HashMap<>();
+
+    static {
+        try {
+            for (Field field : EnvironmentAttributes.class.getFields()) {
+                if (field.getType().equals(EnvironmentAttribute.class)) {
+                    field.setAccessible(true);
+                    EnvironmentAttribute<?> attribute = (EnvironmentAttribute<?>) field.get(null);
+                    if (attribute != null) {
+                        ATTRIBUTE_CACHE.put(field.getName().toUpperCase(), attribute);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Debug.echoError(e);
+        }
+    }
 
     public Holder.Reference<Biome> biomeHolder;
     public ServerLevel world;
@@ -156,6 +174,59 @@ public class BiomeNMSImpl extends BiomeNMS {
         );
         ReflectionHelper.setFieldValue(Biome.class, "specialEffects", biomeHolder.value(), nmsNewEffects);
         setNetworkedRegistrationInfo();
+    }
+
+    @Override
+    public void setAttribute(BiomeNMS biomeNMS, String name, ObjectTag value) {
+        EnvironmentAttribute<?> attribute = ATTRIBUTE_CACHE.get(name.toUpperCase());
+        if (attribute == null) {
+            Debug.echoError("Environment attribute '" + name + "' does not exist.");
+            return;
+        }
+
+        var defaultValue = attribute.defaultValue();
+        String expectedTypeName = defaultValue.getClass().getSimpleName();
+
+        final ElementTag elementTag = value.asElement();
+        Object object = switch (defaultValue) {
+            case Integer ignored -> {
+                expectedTypeName = "ColorTag";
+                var color = ColorTag.valueOf(elementTag.asString(), null);
+                yield color != null ? color.asARGB() : null;
+            }
+            case Float ignored -> elementTag.isFloat() ? elementTag.asFloat() : null;
+            case Boolean ignored -> elementTag.isBoolean() ? elementTag.asBoolean() : null;
+            default -> null;
+        };
+
+        if (object == null) {
+            Debug.echoError("Invalid value format for attribute '" + name + "'. Expected type: "
+                    + expectedTypeName + ", but got: '" + value + "'");
+            return;
+        }
+
+        object = ((EnvironmentAttribute) attribute).sanitizeValue(object);
+        ((BiomeNMSImpl) biomeNMS).setEnvironmentAttribute((EnvironmentAttribute) attribute, object);
+    }
+
+    @Override
+    public ObjectTag getAttribute(BiomeNMS biomeNMS, String name) {
+        EnvironmentAttribute<?> attribute = ATTRIBUTE_CACHE.get(name.toUpperCase());
+        if (attribute == null) {
+            return null;
+        }
+
+        Object value = ((BiomeNMSImpl) biomeNMS).getEnvironmentAttribute(attribute);
+        if (value == null) {
+            return null;
+        }
+
+        return switch (value) {
+            case Integer integer -> ColorTag.fromARGB(integer);
+            case Float f -> new ElementTag(f);
+            case Boolean b -> new ElementTag(b);
+            default -> null;
+        };
     }
 
     @Override

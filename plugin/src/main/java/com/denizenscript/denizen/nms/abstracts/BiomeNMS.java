@@ -1,5 +1,6 @@
 package com.denizenscript.denizen.nms.abstracts;
 
+import com.denizenscript.denizencore.objects.ObjectTag;
 import com.denizenscript.denizencore.objects.core.ColorTag;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -82,6 +83,10 @@ public abstract class BiomeNMS {
     public enum DownfallType {
         RAIN, SNOW, NONE
     }
+
+    public abstract void setAttribute(BiomeNMS biomeNMS, String name, ObjectTag value);
+
+    public abstract ObjectTag getAttribute(BiomeNMS nmsBiome, String name);
 
     public abstract void setFoliageColor(int color);
 
