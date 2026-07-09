@@ -209,6 +209,7 @@ public class PropertyRegistry {
         registerItemProperty(ItemRepairCost.class, "repair_cost");
         PropertyParser.registerProperty(ItemScript.class, ItemTag.class);
         PropertyParser.registerProperty(ItemSignContents.class, ItemTag.class); // Special case handling in ItemComponentsPatch
+        PropertyParser.registerProperty(ItemSignContentsBack.class, ItemTag.class); // Special case handling in ItemComponentsPatch
         PropertyParser.registerProperty(ItemSignIsWaxed.class, ItemTag.class); // Special case handling in ItemComponentsPatch
         registerItemProperty(ItemSkullskin.class, "profile");
         PropertyParser.registerProperty(ItemSpawnerCount.class, ItemTag.class); // Special case handling in ItemComponentsPatch

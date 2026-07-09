@@ -28,6 +28,7 @@ import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.block.Sign;
+import org.bukkit.block.sign.Side;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -42,6 +43,7 @@ import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Consumer;
 
 import java.net.URI;
+import java.text.Format;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -107,18 +109,23 @@ public class PaperAPIToolsImpl extends PaperAPITools {
     }
 
     @Override
-    public String[] getSignLines(Sign sign) {
-        String[] output = new String[4];
-        int i = 0;
-        for (Component component : sign.lines()) {
-            output[i++] = FormattedTextHelper.stringify(component);
-        }
-        return output;
+    public List<String> getSignLines(Sign sign) {
+        return PaperModule.stringifyComponentList(sign.getSide(Side.FRONT).lines());
+    }
+
+    @Override
+    public List<String> getBackSignLines(Sign sign) {
+        return PaperModule.stringifyComponentList(sign.getSide(Side.BACK).lines());
     }
 
     @Override
     public void setSignLine(Sign sign, int line, String text) {
-        sign.line(line, FormattedTextHelper.parse(text == null ? "" : text, NamedTextColor.BLACK));
+        sign.getSide(Side.FRONT).line(line, FormattedTextHelper.parse(text == null ? "" : text, NamedTextColor.BLACK));
+    }
+
+    @Override
+    public void setBackSignLine(Sign sign, int line, String text) {
+        sign.getSide(Side.BACK).line(line, FormattedTextHelper.parse(text == null ? "" : text, NamedTextColor.BLACK));
     }
 
     @Override

@@ -8,16 +8,15 @@ import com.denizenscript.denizencore.utilities.CoreUtilities;
 import org.bukkit.block.Sign;
 import org.bukkit.inventory.meta.BlockStateMeta;
 
-public class ItemSignContents extends ItemProperty<ListTag> {
+public class ItemSignContentsBack extends ItemProperty<ListTag> {
 
     // <--[property]
     // @object ItemTag
-    // @name sign_contents
+    // @name sign_back_contents
     // @input ListTag
     // @description
-    // Controls the contents of a sign item.
-    // For MC 1.20+, this is the contents on the front of the sign.
-    // For the back of the sign, see <@link property ItemTag.sign_back_contents>.
+    // Controls the contents on the back of a sign item.
+    // For the front of the sign, see <@link property ItemTag.sign_contents>.
     // -->
 
     public static boolean describes(ItemTag item) {
@@ -27,7 +26,7 @@ public class ItemSignContents extends ItemProperty<ListTag> {
 
     @Override
     public ListTag getPropertyValue() {
-        return new ListTag(PaperAPITools.instance.getSignLines((Sign) ((BlockStateMeta) getItemMeta()).getBlockState()), true);
+        return new ListTag(PaperAPITools.instance.getBackSignLines((Sign) ((BlockStateMeta) getItemMeta()).getBlockState()), true);
     }
 
     @Override
@@ -35,7 +34,7 @@ public class ItemSignContents extends ItemProperty<ListTag> {
         BlockStateMeta bsm = as(BlockStateMeta.class);
         Sign sign = (Sign) bsm.getBlockState();
         for (int i = 0; i < 4; i++) {
-            PaperAPITools.instance.setSignLine(sign, i, "");
+            PaperAPITools.instance.setBackSignLine(sign, i, "");
         }
         CoreUtilities.fixNewLinesToListSeparation(value);
         if (value.size() > 4) {
@@ -43,7 +42,7 @@ public class ItemSignContents extends ItemProperty<ListTag> {
         }
         else {
             for (int i = 0; i < value.size(); i++) {
-                PaperAPITools.instance.setSignLine(sign, i, value.get(i));
+                PaperAPITools.instance.setBackSignLine(sign, i, value.get(i));
             }
         }
         bsm.setBlockState(sign);
@@ -52,10 +51,10 @@ public class ItemSignContents extends ItemProperty<ListTag> {
 
     @Override
     public String getPropertyId() {
-        return "sign_contents";
+        return "sign_back_contents";
     }
 
     public static void register() {
-        autoRegister("sign_contents", ItemSignContents.class, ListTag.class, false);
+        autoRegister("sign_back_contents", ItemSignContentsBack.class, ListTag.class, false);
     }
 }

@@ -20,6 +20,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.bukkit.Bukkit;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class PaperModule {
 
     public static void init() {
@@ -136,5 +139,13 @@ public class PaperModule {
             return null;
         }
         return GsonComponentSerializer.gson().serialize(component);
+    }
+
+    public static List<String> stringifyComponentList(List<Component> components) {
+        List<String> values = new ArrayList<>(components.size());
+        for (Component component : components) {
+            values.add(FormattedTextHelper.stringify(component));
+        }
+        return values;
     }
 }

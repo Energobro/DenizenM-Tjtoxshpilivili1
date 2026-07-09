@@ -16,6 +16,7 @@ import net.md_5.bungee.chat.ChatVersion;
 import net.md_5.bungee.chat.VersionedComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.Sign;
+import org.bukkit.block.sign.Side;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -30,10 +31,7 @@ import org.bukkit.util.Consumer;
 
 import java.lang.invoke.MethodHandle;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Predicate;
 
 public class PaperAPITools {
@@ -86,14 +84,25 @@ public class PaperAPITools {
         return player.getPlayerListName();
     }
 
-    public String[] getSignLines(Sign sign) {
-        return sign.getLines();
+    public List<String> getSignLines(Sign sign) {
+        List<String> lines = new ArrayList<>(4);
+        lines.addAll(Arrays.asList(sign.getSide(Side.FRONT).getLines()));
+        return lines;
+    }
+
+    public List<String> getBackSignLines(Sign sign) {
+        List<String> lines = new ArrayList<>(4);
+        lines.addAll(Arrays.asList(sign.getSide(Side.BACK).getLines()));
+        return lines;
     }
 
     public void setSignLine(Sign sign, int line, String text) {
-        sign.setLine(line, text == null ? "" : text);
+        sign.getSide(Side.FRONT).setLine(line, text == null ? "" : text);
     }
 
+    public void setBackSignLine(Sign sign, int line, String text) {
+        sign.getSide(Side.BACK).setLine(line, text == null ? "" : text);
+    }
     public void sendResourcePack(Player player, String url, String hash, boolean forced, String prompt) {
         byte[] hashData = new byte[20];
         for (int i = 0; i < 20; i++) {
