@@ -15,10 +15,12 @@ import com.denizenscript.denizencore.objects.ObjectTag;
 import com.denizenscript.denizencore.objects.core.ColorTag;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.objects.core.ListTag;
+import com.denizenscript.denizencore.objects.core.MapTag;
 import com.denizenscript.denizencore.tags.Attribute;
 import com.denizenscript.denizencore.tags.ObjectTagProcessor;
 import com.denizenscript.denizencore.tags.TagContext;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
+import com.denizenscript.denizencore.utilities.text.StringHolder;
 import org.bukkit.Bukkit;
 import org.bukkit.Keyed;
 import org.bukkit.World;
@@ -26,6 +28,7 @@ import org.bukkit.block.Biome;
 import org.bukkit.entity.EntityType;
 
 import java.util.List;
+import java.util.Map;
 
 public class BiomeTag implements ObjectTag, Adjustable, FlaggableObject {
 
@@ -163,6 +166,9 @@ public class BiomeTag implements ObjectTag, Adjustable, FlaggableObject {
     public static void register() {
 
         AbstractFlagTracker.registerFlagHandlers(tagProcessor);
+
+        tagProcessor.registerTag(ObjectTag.class, ElementTag.class, "attribute", (attribute, object, input) ->
+                object.getBiome().getAttribute(object.getBiome(), input.asString()));
 
         // <--[tag]
         // @attribute <BiomeTag.downfall_type>
@@ -357,6 +363,12 @@ public class BiomeTag implements ObjectTag, Adjustable, FlaggableObject {
         // -->
         tagProcessor.registerTag(ColorTag.class, "water_fog_color", (attribute, object) -> {
             return ColorTag.fromRGB(object.biome.getWaterFogColor());
+        });
+
+        tagProcessor.registerMechanism("attribute", false, MapTag.class, (object, attribute, input) -> {
+            for (Map.Entry<StringHolder, ObjectTag> entry : input.entrySet()) {
+                object.getBiome().setAttribute(object.getBiome(), entry.getKey().str, entry.getValue());
+            }
         });
 
         // <--[mechanism]
