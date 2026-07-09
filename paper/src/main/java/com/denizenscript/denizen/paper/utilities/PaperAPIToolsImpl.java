@@ -43,7 +43,6 @@ import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Consumer;
 
 import java.net.URI;
-import java.text.Format;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;

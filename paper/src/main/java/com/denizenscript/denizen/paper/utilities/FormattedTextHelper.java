@@ -1044,7 +1044,8 @@ public class FormattedTextHelper {
         if (!nextText.content().isEmpty()) {
             base.append(nextText);
         }
-        return cleanBase && !optimize ? root.append(base).build() : base.build();
+        Component result = cleanBase && !optimize ? root.append(base).build() : base.build();
+        return optimize ? compactStyleRuns(result) : result;
     }
 
     public static int indexOfLastColorBlockStart(String text) {
@@ -1333,5 +1334,67 @@ public class FormattedTextHelper {
             message = prePart + "... *snip!*..." + postPart;
         }
         return message;
+    }
+
+    private static boolean isEmptyOwnContent(Component component) {
+        return component instanceof TextComponent textComponent && textComponent.content().isEmpty();
+    }
+
+    public static Component compactStyleRuns(Component component) {
+        if (component == null) {
+            return null;
+        }
+        List<Component> children = component.children();
+        if (children.isEmpty()) {
+            return component;
+        }
+        List<Component> compactedChildren = null;
+        for (int idx = 0; idx < children.size(); idx++) {
+            Component originalChild = children.get(idx);
+            Component compactedChild = compactStyleRuns(originalChild);
+            if (compactedChild != originalChild) {
+                if (compactedChildren == null) {
+                    compactedChildren = new ArrayList<>(children);
+                }
+                compactedChildren.set(idx, compactedChild);
+            }
+        }
+        List<Component> workingList = compactedChildren != null ? compactedChildren : children;
+        List<Component> merged = null;
+        int i = 0;
+        while (i < workingList.size()) {
+            Component current = workingList.get(i);
+            if (isEmptyOwnContent(current)) {
+                int j = i + 1;
+                while (j < workingList.size()
+                        && isEmptyOwnContent(workingList.get(j))
+                        && current.style().equals(workingList.get(j).style())) {
+                    j++;
+                }
+                if (j - i > 1) {
+                    if (merged == null) {
+                        merged = new ArrayList<>(workingList.subList(0, i));
+                    }
+                    TextComponent.Builder mergedParent = Component.text().style(current.style());
+                    for (int k = i; k < j; k++) {
+                        for (Component grandchild : workingList.get(k).children()) {
+                            mergedParent.append(grandchild);
+                        }
+                    }
+                    merged.add(mergedParent.build());
+                    i = j;
+                    continue;
+                }
+            }
+            if (merged != null) {
+                merged.add(current);
+            }
+            i++;
+        }
+
+        if (merged == null) {
+            return compactedChildren != null ? component.children(compactedChildren) : component;
+        }
+        return component.children(merged);
     }
 }
