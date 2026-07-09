@@ -114,7 +114,7 @@ public class PaperAPIToolsImpl extends PaperAPITools {
     }
 
     @Override
-    public List<String> getBackSignLines(Sign sign) {
+    public List<String> getSignBackLines(Sign sign) {
         return PaperModule.stringifyComponentList(sign.getSide(Side.BACK).lines());
     }
 
@@ -124,7 +124,7 @@ public class PaperAPIToolsImpl extends PaperAPITools {
     }
 
     @Override
-    public void setBackSignLine(Sign sign, int line, String text) {
+    public void setSignBackLine(Sign sign, int line, String text) {
         sign.getSide(Side.BACK).line(line, FormattedTextHelper.parse(text == null ? "" : text, NamedTextColor.BLACK));
     }
 

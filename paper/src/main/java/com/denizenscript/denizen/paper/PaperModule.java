@@ -142,10 +142,10 @@ public class PaperModule {
     }
 
     public static List<String> stringifyComponentList(List<Component> components) {
-        List<String> values = new ArrayList<>(components.size());
+        List<String> result = new ArrayList<>(components.size());
         for (Component component : components) {
-            values.add(FormattedTextHelper.stringify(component));
+            result.add(FormattedTextHelper.stringify(component));
         }
-        return values;
+        return result ;
     }
 }

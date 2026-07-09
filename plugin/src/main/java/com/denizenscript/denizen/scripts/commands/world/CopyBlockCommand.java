@@ -113,7 +113,7 @@ public class CopyBlockCommand extends AbstractCommand {
                 }
                 n = 0;
                 for (String line : ((Sign) sourceState).getSide(Side.BACK).getLines()) {
-                    PaperAPITools.instance.setBackSignLine(((Sign) updateState), n++, line);
+                    PaperAPITools.instance.setSignBackLine(((Sign) updateState), n++, line);
                 }
             }
             else if (sourceState instanceof Skull) {

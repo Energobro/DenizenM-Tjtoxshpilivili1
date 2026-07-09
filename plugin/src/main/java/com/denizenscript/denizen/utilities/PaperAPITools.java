@@ -85,22 +85,18 @@ public class PaperAPITools {
     }
 
     public List<String> getSignLines(Sign sign) {
-        List<String> lines = new ArrayList<>(4);
-        lines.addAll(Arrays.asList(sign.getSide(Side.FRONT).getLines()));
-        return lines;
+        return Arrays.asList(sign.getSide(Side.FRONT).getLines());
     }
 
-    public List<String> getBackSignLines(Sign sign) {
-        List<String> lines = new ArrayList<>(4);
-        lines.addAll(Arrays.asList(sign.getSide(Side.BACK).getLines()));
-        return lines;
+    public List<String> getSignBackLines(Sign sign) {
+        return Arrays.asList(sign.getSide(Side.BACK).getLines());
     }
 
     public void setSignLine(Sign sign, int line, String text) {
         sign.getSide(Side.FRONT).setLine(line, text == null ? "" : text);
     }
 
-    public void setBackSignLine(Sign sign, int line, String text) {
+    public void setSignBackLine(Sign sign, int line, String text) {
         sign.getSide(Side.BACK).setLine(line, text == null ? "" : text);
     }
     public void sendResourcePack(Player player, String url, String hash, boolean forced, String prompt) {

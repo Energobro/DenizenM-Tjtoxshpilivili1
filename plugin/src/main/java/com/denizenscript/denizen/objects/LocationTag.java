@@ -4174,7 +4174,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // @mechanism LocationTag.sign_glow_color
         // @group world
         // @description
-        // Returns the name of the glow-color of the sign at the location.
+        // Returns the name of the glow color of the sign at the location.
         // See also <@link tag LocationTag.sign_glowing>
         // -->
         tagProcessor.registerTag(ElementTag.class, "sign_glow_color", (attribute, object) -> {
@@ -4196,7 +4196,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // -->
         tagProcessor.registerTag(ListTag.class, "sign_back_contents", (attribute, object) -> {
             if (object.getBlockStateForTag(attribute) instanceof Sign sign) {
-                return new ListTag(PaperAPITools.instance.getBackSignLines(sign), true);
+                return new ListTag(PaperAPITools.instance.getSignBackLines(sign), true);
             }
             return null;
         });
@@ -4217,7 +4217,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
                 return;
             }
             for (int i = 0; i < 4; i++) {
-                PaperAPITools.instance.setBackSignLine(sign, i, "");
+                PaperAPITools.instance.setSignBackLine(sign, i, "");
             }
             CoreUtilities.fixNewLinesToListSeparation(input);
             if (input.size() > 4) {
@@ -4225,7 +4225,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
             }
             else {
                 for (int i = 0; i < input.size(); i++) {
-                    PaperAPITools.instance.setBackSignLine(sign, i, input.get(i));
+                    PaperAPITools.instance.setSignBackLine(sign, i, input.get(i));
                 }
             }
             sign.update();
@@ -4275,7 +4275,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // @mechanism LocationTag.sign_back_glow_color
         // @group world
         // @description
-        // Returns the name of the glow-color on the back of the sign at the location.
+        // Returns the name of the glow color on the back of the sign at the location.
         // To get the color of the front, see <@link tag LocationTag.sign_glow_color>.
         // See also <@link tag LocationTag.sign_back_glowing>.
         // -->
@@ -4294,8 +4294,9 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // @description
         // Changes the glow color on the back of a sign.
         // For the list of possible colors, see <@link url https://hub.spigotmc.org/javadocs/spigot/org/bukkit/DyeColor.html>.
+        // Use <@link mechanism LocationTag.sign_back_glowing> to toggle whether the sign is glowing.
         // If a sign is not glowing, this is equivalent to applying a chat color to the sign.
-        // Use <@link mechanism LocationTag.sign_glowing> to toggle whether the front of the sign is glowing.
+        // To set the color of the front, see <@link mechanism LocationTag.sign_glow_color>.
         // @tags
         // <LocationTag.sign_back_glow_color>
         // <LocationTag.sign_back_glowing>
