@@ -14,7 +14,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.event.EventHandler;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 
 public class ServerListPingScriptEventPaperImpl extends ListPingScriptEvent {
 

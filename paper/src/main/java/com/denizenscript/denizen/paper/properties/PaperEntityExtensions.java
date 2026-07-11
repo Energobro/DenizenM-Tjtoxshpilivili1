@@ -159,92 +159,89 @@ public class PaperEntityExtensions {
             }
         });
 
-        if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_19)) {
+        // <--[tag]
+        // @attribute <EntityTag.collides_at[<location>]>
+        // @returns ElementTag(Boolean)
+        // @group paper
+        // @Plugin Paper
+        // @description
+        // Returns whether the entity's bounding box would collide if the entity was moved to the given location.
+        // This checks for any colliding entities (like boats and shulkers), the world border and regular blocks.
+        // (Note that this won't load chunks at the location.)
+        // -->
+        EntityTag.tagProcessor.registerTag(ElementTag.class, LocationTag.class, "collides_at", (attribute, entity, location) -> {
+            return new ElementTag(entity.getBukkitEntity().collidesAt(location));
+        });
 
-            // <--[tag]
-            // @attribute <EntityTag.collides_at[<location>]>
-            // @returns ElementTag(Boolean)
-            // @group paper
-            // @Plugin Paper
-            // @description
-            // Returns whether the entity's bounding box would collide if the entity was moved to the given location.
-            // This checks for any colliding entities (like boats and shulkers), the world border and regular blocks.
-            // (Note that this won't load chunks at the location.)
-            // -->
-            EntityTag.tagProcessor.registerTag(ElementTag.class, LocationTag.class, "collides_at", (attribute, entity, location) -> {
-                return new ElementTag(entity.getBukkitEntity().collidesAt(location));
-            });
+        // <--[mechanism]
+        // @object EntityTag
+        // @name damage_item
+        // @input MapTag
+        // @Plugin Paper
+        // @group paper
+        // @description
+        // Damages the given equipment slot for the given amount.
+        // This runs all vanilla logic associated with damaging an item like gamemode and enchantment checks, events, stat changes, advancement triggers, and notifying clients to play break animations.
+        // Input is a map with "slot" as a valid equipment slot, and "amount" as the damage amount to be dealt.
+        // Valid equipment slot values can be found at <@link url https://hub.spigotmc.org/javadocs/spigot/org/bukkit/inventory/EquipmentSlot.html>.
+        //
+        // @example
+        // # Damages your precious boots! :(
+        // - adjust <player> damage_item:[slot=feet;amount=45]
+        // -->
+        EntityTag.registerSpawnedOnlyMechanism("damage_item", false, MapTag.class, (object, mechanism, input) -> {
+            ElementTag slot = input.getElement("slot");
+            ElementTag amount = input.getElement("amount");
+            if (slot == null || !slot.matchesEnum(EquipmentSlot.class)) {
+                mechanism.echoError("Must specify a valid equipment slot to damage.");
+                return;
+            }
+            if (amount == null || !amount.isInt()) {
+                mechanism.echoError("Must specify a valid amount to damage this item for.");
+                return;
+            }
+            object.getLivingEntity().damageItemStack(slot.asEnum(EquipmentSlot.class), amount.asInt());
+        });
 
-            // <--[mechanism]
-            // @object EntityTag
-            // @name damage_item
-            // @input MapTag
-            // @Plugin Paper
-            // @group paper
-            // @description
-            // Damages the given equipment slot for the given amount.
-            // This runs all vanilla logic associated with damaging an item like gamemode and enchantment checks, events, stat changes, advancement triggers, and notifying clients to play break animations.
-            // Input is a map with "slot" as a valid equipment slot, and "amount" as the damage amount to be dealt.
-            // Valid equipment slot values can be found at <@link url https://hub.spigotmc.org/javadocs/spigot/org/bukkit/inventory/EquipmentSlot.html>.
-            //
-            // @example
-            // # Damages your precious boots! :(
-            // - adjust <player> damage_item:[slot=feet;amount=45]
-            // -->
-            EntityTag.registerSpawnedOnlyMechanism("damage_item", false, MapTag.class, (object, mechanism, input) -> {
-                ElementTag slot = input.getElement("slot");
-                ElementTag amount = input.getElement("amount");
-                if (slot == null || !slot.matchesEnum(EquipmentSlot.class)) {
-                    mechanism.echoError("Must specify a valid equipment slot to damage.");
-                    return;
-                }
-                if (amount == null || !amount.isInt()) {
-                    mechanism.echoError("Must specify a valid amount to damage this item for.");
-                    return;
-                }
-                object.getLivingEntity().damageItemStack(slot.asEnum(EquipmentSlot.class), amount.asInt());
-            });
-
-            // <--[mechanism]
-            // @object EntityTag
-            // @name shear
-            // @input None
-            // @Plugin paper
-            // @group paper
-            // @description
-            // Shears entities in the same way as a player can do using shears, including drops.
-            // If the entity is not ready to be sheared, there will be no drops but the sound will still play.
-            //
-            // This mech will:
-            // - Shear a sheep
-            // - harvest a bogged
-            // - harvest a mushroom cow (note: entity data will be lost as Minecraft will remove the entity and spawn an entirely new cow instead)
-            // - derp a snowman (i.e. remove the pumpkin)
-            //
-            // Optionally, specify a sound source to change the source of the sound.
-            // Valid sound sources can be found here: <@link url https://jd.advntr.dev/api/latest/net/kyori/adventure/sound/Sound.Source.html>.
-            //
-            // @example
-            // # Shears the entity you're looking at.
-            // - adjust <player.target> shear
-            //
-            // -->
-            EntityTag.registerSpawnedOnlyMechanism("shear", false, (object, mechanism) -> {
-                if (!(object.getBukkitEntity() instanceof Shearable shearable)) {
-                    return;
-                }
-                if (!mechanism.hasValue()) {
-                    shearable.shear();
-                    return;
-                }
-                ElementTag input = mechanism.getValue();
-                if (!mechanism.requireEnum(Sound.Source.class)) {
-                    mechanism.echoError("Invalid sound source specified: " + input);
-                    return;
-                }
-                Sound.Source source = input.asEnum(Sound.Source.class);
-                shearable.shear(source);
-            });
-        }
+        // <--[mechanism]
+        // @object EntityTag
+        // @name shear
+        // @input None
+        // @Plugin paper
+        // @group paper
+        // @description
+        // Shears entities in the same way as a player can do using shears, including drops.
+        // If the entity is not ready to be sheared, there will be no drops but the sound will still play.
+        //
+        // This mech will:
+        // - Shear a sheep
+        // - harvest a bogged
+        // - harvest a mushroom cow (note: entity data will be lost as Minecraft will remove the entity and spawn an entirely new cow instead)
+        // - derp a snowman (i.e. remove the pumpkin)
+        //
+        // Optionally, specify a sound source to change the source of the sound.
+        // Valid sound sources can be found here: <@link url https://jd.advntr.dev/api/latest/net/kyori/adventure/sound/Sound.Source.html>.
+        //
+        // @example
+        // # Shears the entity you're looking at.
+        // - adjust <player.target> shear
+        //
+        // -->
+        EntityTag.registerSpawnedOnlyMechanism("shear", false, (object, mechanism) -> {
+            if (!(object.getBukkitEntity() instanceof Shearable shearable)) {
+                return;
+            }
+            if (!mechanism.hasValue()) {
+                shearable.shear();
+                return;
+            }
+            ElementTag input = mechanism.getValue();
+            if (!mechanism.requireEnum(Sound.Source.class)) {
+                mechanism.echoError("Invalid sound source specified: " + input);
+                return;
+            }
+            Sound.Source source = input.asEnum(Sound.Source.class);
+            shearable.shear(source);
+        });
     }
 }
