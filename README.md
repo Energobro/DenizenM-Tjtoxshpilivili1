@@ -24,7 +24,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
         * `<context.new_item>` / `<context.old_item>` – The current and previous `ItemTag` in the slot.
 * **Biome (by `isnsest`)**:
     * Added 'BiomeTag.attribute' mechanism ang tag to set a specific biome vanilla attributes, accepts a `MapTag`.
-    * Note: Specify only the attribute name directly (e.g. SKY_COLOR, not visuals/SKY_COLOR).
+    * Note: Specify only the attribute name directly (e.g. `SKY_COLOR`, not `visuals/SKY_COLOR`).
     * Usage example - `adjust <biome> attribute:[SKY_COLOR=<ColorTag or valid HEX>;CLOUD_HEIGHT=600]`
     * More details you can find [here](https://minecraft.wiki/w/Environment_attribute).
 * **Text & Formatting:**
