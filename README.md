@@ -83,7 +83,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
 * **Removals:**
     * The `.scriptname` tag has been removed from all objects.
     * `Denizen ASAP Strong warning` has been fully removed.
-    * [WIP] Removed NMSVersion checks for versions prior to 1.21.
+    * **[WIP]** Removed NMSVersion checks for versions prior to 1.21.
 
 ## 🐛 Bug Fixes
 * **showfake:** Fixed an issue where the command would trigger an error message despite functioning correctly.
