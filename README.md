@@ -22,10 +22,11 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
         * `<context.entity>` – The `EntityTag` involved.
         * `<context.slot>` – The name of the equipment slot.
         * `<context.new_item>` / `<context.old_item>` – The current and previous `ItemTag` in the slot.
-* **Resource Pack:** Fully overhauled the logic for the `resourcepack` command to support adding multiple resource packs.
-    * Added a new `add` argument to the `resourcepack` command to send additional resource packs to a player.
-    * Added `PlayerTag.remove_resource_pack` mechanism to remove a specific resource pack by ID from a player.
-    * Added `PlayerTag.remove_resource_packs` mechanism to remove all resource packs from a player.
+* **Biome**:
+    * Added 'BiomeTag.attribute' mechanism ang tag to set a specific biome vanilla attributes, accepts a `MapTag`.
+    * Note: Specify only the attribute name directly (e.g. SKY_COLOR, not visuals/SKY_COLOR).
+    * Usage example - `adjust <biome> attribute:[SKY_COLOR=<ColorTag or valid HEX>;CLOUD_HEIGHT=600]`
+    * More details you can find [here](https://minecraft.wiki/w/Environment_attribute).
 * **Text & Formatting:**
     * New tags: `<&sprite>`, `<&shadow_color>`, `<&shadow_gradient>`, `<&dual_gradient>` and `<&head>`.
       * Sprite usage example: `<&sprite[minecraft:items:item/porkchop]>`
@@ -42,6 +43,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
       * Head usage examples:
          * Full Face Texture - `<&head[Tjtoxshpilivili1]>`
          * Only Face Texture (without surface pixels) - `<&head[!Tjtoxshpilivili1]>`
+         * Head tag also accepts `<PlayerTag.skin_blob>`, `UUID` and `base64` skin texture's.
     * Added `.shadow_color`, `.shadow_gradient` and `.dual_gradient` tags to `ElementTag`.
 * **Internal Migration:** Fully migrated to **Paper Components** for improved performance and modern API compatibility.
 
@@ -50,12 +52,16 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
   * An `async` option has been added that teleports the player to unloaded chunks without causing server lag; sometimes there is a slight delay in execution. Details: https://docs.papermc.io/paper/dev/entity-teleport/
   * Added `~waitable` tag support for teleports utilizing the async parameter. This allows scripts to precisely track and wait until the asynchronous teleportation process is fully completed.
   * Usage examples:
-    * Async teleport - `teleport <player> <player.location.random_offset[99999,0,99999]> async`
-    * Waitable async teleport - `~teleport <player> <player.location.random_offset[99999,0,99999]> async`
+    * Async teleport - `teleport <object> <location> async`
+    * Waitable async teleport - `~teleport <object> <location> async`
 * **Playeffect**:
   * Migrated to Paper's modern `ParticleBuilder` API, fixing a vanilla limitation where particles wouldn't render beyond 32 blocks from the player.
   * Added automatic handling for the `forced` parameter. Previously, even if you specified a high visibility radius (e.g., visibility:100) for a particle spawned 50 blocks away, it wouldn't display. Forcing the particle now ensures it correctly renders at extended distances.
   * Usage example - `playeffect effect:END_ROD quantity:100 <player.location.random_offset[50,0,50]> visibility:100 forced`
+* **Resource Pack:** Fully overhauled the logic for the `resourcepack` command to support adding multiple resource packs.
+    * Added a new `add` argument to the `resourcepack` command to send additional resource packs to a player.
+    * Added `PlayerTag.remove_resource_pack` mechanism to remove a specific resource pack by ID from a player.
+    * Added `PlayerTag.remove_resource_packs` mechanism to remove all resource packs from a player.
 
 ## 🧪 Items & Mechanics
 * **Attributes:**
@@ -65,9 +71,9 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
   * Updated `custom_model_data` mechanism and property, returns a MapTag of `floats`, `strings`, `flags` (booleans), and `colors`.
   * Now accepts a `MapTag` containing `Lists` of `floats`, `strings`, `flags` (booleans), and `colors` (RGB) for advanced item model selection, while fully retaining backward compatibility for single-number inputs.
   * Usage examples:
-    * Backward compatibility - `inventory adjust slot:hand custom_model_data:1000`
-    * New format - `inventory adjust slot:hand custom_model_data:<map[floats=<list[1000]>;flags=<list[...]>;strings=<list[foo:bar]>;colors=<list[<color[127,0,0]>]>]>`
-      * Simple usage - `custom_model_data:[floats=1000;flags=...;strings=foo:bar;colors=<color[127,0,0]>]`
+    * Backward compatibility - `custom_model_data: 1000`
+    * New format - `custom_model_data: <map[floats=<list[1000]>;flags=<list[...]>;strings=<list[foo:bar]>;colors=<list[<color[127,0,0]>]>]>`
+      * Simple usage - `custom_model_data: [floats=1000;flags=...;strings=foo:bar;colors=<color[127,0,0]>]`
 
 ## 🧹 Optimization & Cleanup
 * **Core Optimization:** Implementation of custom optimizations across several internal classes.
