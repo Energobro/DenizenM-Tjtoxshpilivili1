@@ -29,7 +29,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
     * More details you can find [here](https://minecraft.wiki/w/Environment_attribute).
 * **Text & Formatting:**
     * New tags: `<&sprite>`, `<&shadow_color>`, `<&shadow_gradient>`, `<&dual_gradient>` and `<&head>`.
-      * Sprite usage example: `<&sprite[minecraft:items:item/porkchop]>`
+      * Sprite usage example - `<&sprite[minecraft:items:item/porkchop]>`
       * Shadow Color usage examples:
          * Simple variant - `<&shadow_color[#51a2ff]>`
          * With adjustable transparency - `<&shadow_color[<color[#51a2ff].with_alpha[254]>]>`
@@ -57,7 +57,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
 * **Playeffect**:
   * Migrated to Paper's modern `ParticleBuilder` API, fixing a vanilla limitation where particles wouldn't render beyond 32 blocks from the player.
   * Added automatic handling for the `forced` parameter. Previously, even if you specified a high visibility radius (e.g., visibility:100) for a particle spawned 50 blocks away, it wouldn't display. Forcing the particle now ensures it correctly renders at extended distances.
-  * Usage example - `playeffect effect:END_ROD quantity:100 <player.location.random_offset[50,0,50]> visibility:100 forced`
+  * Usage example - `playeffect effect:END_ROD quantity:100 <location> visibility:100 forced`
 * **Resource Pack:** Fully overhauled the logic for the `resourcepack` command to support adding multiple resource packs.
     * Added a new `add` argument to the `resourcepack` command to send additional resource packs to a player.
     * Added `PlayerTag.remove_resource_pack` mechanism to remove a specific resource pack by ID from a player.
@@ -83,6 +83,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
 * **Removals:**
     * The `.scriptname` tag has been removed from all objects.
     * `Denizen ASAP Strong warning` has been fully removed.
+    * [WIP] Removed NMSVersion checks for versions prior to 1.21.
 
 ## 🐛 Bug Fixes
 * **showfake:** Fixed an issue where the command would trigger an error message despite functioning correctly.
