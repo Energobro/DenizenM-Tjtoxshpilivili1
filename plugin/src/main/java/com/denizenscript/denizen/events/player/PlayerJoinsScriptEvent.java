@@ -6,7 +6,6 @@ import com.denizenscript.denizen.events.BukkitScriptEvent;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.objects.ObjectTag;
 import com.denizenscript.denizencore.scripts.ScriptEntryData;
-import com.denizenscript.denizencore.utilities.CoreUtilities;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -38,6 +37,12 @@ public class PlayerJoinsScriptEvent extends BukkitScriptEvent implements Listene
     // -->
 
     public PlayerJoinsScriptEvent() {
+        this.<PlayerJoinsScriptEvent>registerTextDetermination("none", (evt) -> {
+            event.setJoinMessage(null);
+        });
+        this.<PlayerJoinsScriptEvent, ElementTag>registerDetermination(null, ElementTag.class, (evt, context, determination) -> {
+            event.setJoinMessage(determination.asString());
+        });
     }
 
     public PlayerJoinEvent event;
@@ -53,20 +58,6 @@ public class PlayerJoinsScriptEvent extends BukkitScriptEvent implements Listene
             return false;
         }
         return super.matches(path);
-    }
-
-    @Override
-    public boolean applyDetermination(ScriptPath path, ObjectTag determinationObj) {
-        if (determinationObj instanceof ElementTag) {
-            String determination = determinationObj.toString();
-            if (CoreUtilities.equalsIgnoreCase(determination, "none")) {
-                event.setJoinMessage(null);
-                return true;
-            }
-            event.setJoinMessage(determination);
-            return true;
-        }
-        return super.applyDetermination(path, determinationObj);
     }
 
     @Override

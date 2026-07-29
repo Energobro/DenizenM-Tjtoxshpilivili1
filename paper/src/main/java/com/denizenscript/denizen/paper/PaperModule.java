@@ -66,6 +66,7 @@ public class PaperModule {
         ScriptEvent.registerScriptEvent(PlayerChangesUncheckedSignScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerPreparesGrindstoneCraftScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerQuitsScriptEventPaperImpl.class);
+        ScriptEvent.registerScriptEvent(PlayerJoinsScriptEventPaperImpl.class);
         ScriptEvent.registerScriptEvent(PlayerRaiseLowerItemScriptEventPaperImpl.class);
         ScriptEvent.registerScriptEvent(PlayerReceivesLinksScriptEvent.class);
         ScriptEvent.registerScriptEvent(PlayerSelectsStonecutterRecipeScriptEvent.class);
