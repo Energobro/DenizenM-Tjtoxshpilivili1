@@ -1,7 +1,5 @@
 package com.denizenscript.denizen.paper.utilities;
 
-import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.paper.properties.PaperElementExtensions;
 import com.denizenscript.denizen.utilities.Utilities;
 import com.denizenscript.denizencore.objects.core.ColorTag;
@@ -17,12 +15,12 @@ import net.kyori.adventure.text.*;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.*;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.object.ObjectContents;
 import net.kyori.adventure.text.object.PlayerHeadObjectContents;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.*;
 
 public class FormattedTextHelper {
@@ -599,9 +597,6 @@ public class FormattedTextHelper {
         else {
             args = List.of();
         }
-        if (NMSHandler.getVersion().isAtMost(NMSVersion.v1_19)) {
-            return Component.translatable(translationKey.asString(), args);
-        }
         ElementTag fallback = map.getElement("fallback");
         return Component.translatable(translationKey.asString(), fallback != null ? fallback.asString() : null, args, List.of());
     }
@@ -1015,27 +1010,29 @@ public class FormattedTextHelper {
                 started = i + 1;
             }
             else if (i + "https://a.".length() < chars.length && chars[i] == 'h' && chars[i + 1] == 't' && chars[i + 2] == 't' && chars[i  + 3] == 'p') {
-                String subStr = str.substring(i, i + "https://a.".length());
-                if (subStr.startsWith("https://") || subStr.startsWith("http://")) {
-                    int nextSpace = CoreUtilities.indexOfAny(str, i, ' ', '\t', '\n', ']', '>', '<', '"', '\\', LEGACY_SECTION);
-                    if (nextSpace == -1) {
-                        nextSpace = str.length();
+                if (str.startsWith("https://", i) || str.startsWith("http://", i)) {
+                    int urlEnd = indexOfUrlEnd(chars, i);
+                    if (urlEnd - i < "https://a.".length()) {
+                        continue;
                     }
-                    String url = str.substring(i, nextSpace);
+                    String url = str.substring(i, urlEnd);
+                    try {
+                        new URI(url);
+                    }
+                    catch (URISyntaxException ignored) {
+                        continue;
+                    }
                     nextText.content(nextText.content() + str.substring(started, i));
                     lastText = nextText;
                     // TODO builder copying
                     nextText = lastText.build().toBuilder();
                     nextText.content("");
                     TextComponent.Builder clickableText = Component.text().content(url);
-                    try {
-                        URI.create(url);
-                        clickableText.clickEvent(ClickEvent.openUrl(url));
-                    } catch (Throwable ignored) { }
+                    clickableText.clickEvent(ClickEvent.openUrl(url));
                     lastText.append(clickableText);
                     base.append(lastText);
-                    i = nextSpace - 1;
-                    started = nextSpace;
+                    i = urlEnd - 1;
+                    started = urlEnd;
                     continue;
                 }
             }
@@ -1046,6 +1043,17 @@ public class FormattedTextHelper {
         }
         Component result = cleanBase && !optimize ? root.append(base).build() : base.build();
         return optimize ? compactStyleRuns(result) : result;
+    }
+
+    public static final AsciiMatcher URL_VALID = new AsciiMatcher(AsciiMatcher.LETTERS_LOWER + AsciiMatcher.LETTERS_UPPER + AsciiMatcher.DIGITS + "-._~:/?#@!$&'()*+,;=%");
+
+    public static int indexOfUrlEnd(char[] chars, int start) {
+        for (int i = start; i < chars.length; i++) {
+            if (!URL_VALID.isMatch(chars[i])) {
+                return i;
+            }
+        }
+        return chars.length;
     }
 
     public static int indexOfLastColorBlockStart(String text) {
