@@ -43,7 +43,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
       * Head usage examples:
          * Full Face Texture - `<&head[Tjtoxshpilivili1]>`
          * Only Face Texture (without surface pixels) - `<&head[!Tjtoxshpilivili1]>`
-         * Head tag also accepts `<PlayerTag.skin_blob>`, `UUID` and `base64` skin texture's.
+         * Head tag also accepts `<PlayerTag.skin_blob>`, `UUID` and `base64` skin textures.
     * Added `.shadow_color`, `.shadow_gradient` and `.dual_gradient` tags to `ElementTag`.
 * **Internal Migration:** Fully migrated to **Paper Components** for improved performance and modern API compatibility.
 
