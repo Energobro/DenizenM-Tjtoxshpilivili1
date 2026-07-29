@@ -9,6 +9,7 @@ import com.denizenscript.denizencore.objects.ObjectTag;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.scripts.ScriptEntryData;
 import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -29,7 +30,7 @@ public class PlayerRaiseLowerItemScriptEvent extends BukkitScriptEvent implement
     // @Events
     // player raises|lowers|toggles <item>
     //
-    // @Synonyms player raises shield, player raises spyglass
+    // @Synonyms player raises shield, player raises spyglass, player raises spear
     //
     // @Group Player
     //
@@ -54,6 +55,10 @@ public class PlayerRaiseLowerItemScriptEvent extends BukkitScriptEvent implement
     // -->
 
     public static final EnumSet<Material> raisableItems = EnumSet.of(Material.SHIELD, Material.CROSSBOW, Material.BOW, Material.TRIDENT, Material.SPYGLASS);
+
+    static {
+        raisableItems.addAll(Tag.ITEMS_SPEARS.getValues());
+    }
 
     public PlayerRaiseLowerItemScriptEvent() {
         registerCouldMatcher("player raises|lowers|toggles <item>");
