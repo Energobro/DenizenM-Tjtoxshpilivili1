@@ -22,7 +22,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
         * `<context.entity>` – The `EntityTag` involved.
         * `<context.slot>` – The name of the equipment slot.
         * `<context.new_item>` / `<context.old_item>` – The current and previous `ItemTag` in the slot.
-* **Biome**:
+* **Biome (by `isnsest`)**:
     * Added 'BiomeTag.attribute' mechanism ang tag to set a specific biome vanilla attributes, accepts a `MapTag`.
     * Note: Specify only the attribute name directly (e.g. SKY_COLOR, not visuals/SKY_COLOR).
     * Usage example - `adjust <biome> attribute:[SKY_COLOR=<ColorTag or valid HEX>;CLOUD_HEIGHT=600]`
