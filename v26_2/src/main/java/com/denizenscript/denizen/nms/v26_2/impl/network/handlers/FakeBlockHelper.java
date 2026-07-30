@@ -7,7 +7,6 @@ import com.denizenscript.denizencore.utilities.ReflectionHelper;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -18,24 +17,22 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.chunk.Strategy;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.craftbukkit.CraftRegistry;
 import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.block.CraftBlockStates;
 import org.bukkit.craftbukkit.block.data.CraftBlockData;
-import org.bukkit.craftbukkit.util.CraftMagicNumbers;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class FakeBlockHelper {
@@ -47,52 +44,7 @@ public class FakeBlockHelper {
     public static Field CHUNKDATA_BLOCKENTITYINFO_PACKEDXZ = ReflectionHelper.getFields(CHUNKDATA_BLOCKENTITYINFO_CLASS).get("packedXZ");
     public static Field CHUNKDATA_BLOCKENTITYINFO_Y = ReflectionHelper.getFields(CHUNKDATA_BLOCKENTITYINFO_CLASS).get("y");
     public static MethodHandle CHUNKPACKET_CHUNKDATA_SETTER = ReflectionHelper.getFinalSetterForFirstOfType(ClientboundLevelChunkWithLightPacket.class, ClientboundLevelChunkPacketData.class);
-
-    public static Constructor<?> PALETTEDCONTAINER_CTOR;
-    public static Strategy STRATEGY_BLOCKS;
-    public static Strategy STRATEGY_BIOMES;
-
-    static {
-        try {
-            List<Strategy> strats = new ArrayList<>();
-            for (Field f : PalettedContainer.class.getDeclaredFields()) {
-                if (Modifier.isStatic(f.getModifiers()) && Strategy.class.isAssignableFrom(f.getType())) {
-                    f.setAccessible(true);
-                    strats.add((Strategy) f.get(null));
-                }
-            }
-            for (Field f : Strategy.class.getDeclaredFields()) {
-                if (Modifier.isStatic(f.getModifiers()) && Strategy.class.isAssignableFrom(f.getType())) {
-                    f.setAccessible(true);
-                    Strategy s = (Strategy) f.get(null);
-                    if (s != null && !strats.contains(s)) {
-                        strats.add(s);
-                    }
-                }
-            }
-
-            if (strats.size() >= 2) {
-                STRATEGY_BLOCKS = strats.get(0);
-                STRATEGY_BIOMES = strats.get(1);
-            }
-            for (Constructor<?> c : PalettedContainer.class.getConstructors()) {
-                if (c.getParameterCount() == 3 && c.getParameterTypes()[2] == Strategy.class) {
-                    PALETTEDCONTAINER_CTOR = c;
-                    break;
-                }
-            }
-            if (PALETTEDCONTAINER_CTOR == null) {
-                for (Constructor<?> c : PalettedContainer.class.getConstructors()) {
-                    if (c.getParameterCount() == 2 && c.getParameterTypes()[1] == Strategy.class) {
-                        PALETTEDCONTAINER_CTOR = c;
-                        break;
-                    }
-                }
-            }
-        } catch (Throwable ex) {
-            Debug.echoError(ex);
-        }
-    }
+    public static Constructor<?> PALETTEDCONTAINER_CTOR = Arrays.stream(PalettedContainer.class.getConstructors()).filter(c -> c.getParameterCount() == 2).findFirst().get();
 
     public static BlockState getNMSState(FakeBlock block) {
         return ((CraftBlockData) block.material.getModernData()).getState();
@@ -124,11 +76,12 @@ public class FakeBlockHelper {
         }
         catch (Throwable ex) {
             tryPaperPatch = false;
+            Debug.echoError("Paper packet patch failed:");
+            Debug.echoError(ex);
             return;
         }
         try {
-            boolean originalReady = PAPER_CHUNK_READY.getBoolean(oldPacket);
-            PAPER_CHUNK_READY.setBoolean(newPacket, originalReady);
+            PAPER_CHUNK_READY.setBoolean(newPacket, true);
         }
         catch (Throwable ex) {
             Debug.echoError(ex);
@@ -136,22 +89,14 @@ public class FakeBlockHelper {
     }
 
     public static ClientboundLevelChunkWithLightPacket handleMapChunkPacket(World world, ClientboundLevelChunkWithLightPacket originalPacket, int chunkX, int chunkZ, List<FakeBlock> blocks) {
-        if (STRATEGY_BLOCKS == null || STRATEGY_BIOMES == null || PALETTEDCONTAINER_CTOR == null) {
-            return null;
-        }
-
         try {
             ClientboundLevelChunkWithLightPacket duplicateCorePacket = DenizenNetworkManagerImpl.copyPacket(originalPacket, ClientboundLevelChunkWithLightPacket.STREAM_CODEC);
             copyPacketPaperPatch(duplicateCorePacket, originalPacket);
             RegistryFriendlyByteBuf copier = new RegistryFriendlyByteBuf(Unpooled.buffer(), CraftRegistry.getMinecraftRegistry());
             originalPacket.getChunkData().write(copier);
             ClientboundLevelChunkPacketData packet = new ClientboundLevelChunkPacketData(copier, chunkX, chunkZ);
-
             FriendlyByteBuf serial = originalPacket.getChunkData().getReadBuffer();
             FriendlyByteBuf outputSerial = new FriendlyByteBuf(Unpooled.buffer(serial.readableBytes()));
-            RegistryAccess registryAccess = ((CraftWorld) world).getHandle().registryAccess();
-            RegistryFriendlyByteBuf regSerial = new RegistryFriendlyByteBuf(serial, registryAccess);
-            RegistryFriendlyByteBuf regOutput = new RegistryFriendlyByteBuf(outputSerial, registryAccess);
             List blockEntities = new ArrayList((List) CHUNKDATA_BLOCK_ENTITIES.get(originalPacket.getChunkData()));
             CHUNKDATA_BLOCK_ENTITIES.set(packet, blockEntities);
             for (int i = 0; i < blockEntities.size(); i++) {
@@ -163,64 +108,26 @@ public class FakeBlockHelper {
                 for (FakeBlock block : blocks) {
                     LocationTag loc = block.location;
                     if (loc.getBlockX() == x && loc.getBlockY() == y && loc.getBlockZ() == z && block.material != null) {
-                        Material bukkitMaterial = block.material.getMaterial();
-                        BlockState nmsState = CraftMagicNumbers.getBlock(bukkitMaterial).defaultBlockState();
-                        if (nmsState.getBlock() instanceof EntityBlock entityBlock) {
-                            BlockEntity newBlockEnt = entityBlock.newBlockEntity(net.minecraft.core.BlockPos.ZERO, nmsState);
-
-                            if (newBlockEnt != null) {
-                                try {
-                                    Object newData = CHUNKDATA_BLOCK_ENTITY_CONSTRUCTOR.invoke(xz, y, newBlockEnt.getType(), newBlockEnt.getUpdateTag(net.minecraft.core.HolderLookup.Provider.create(java.util.stream.Stream.empty())));
-                                    blockEntities.set(i, newData);
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        } else {
-                            blockEntities.remove(i);
-                        }
+                        BlockEntity newBlockEnt = CraftBlockStates.createNewTileEntity(block.material.getMaterial());
+                        Object newData = CHUNKDATA_BLOCK_ENTITY_CONSTRUCTOR.invoke(xz, y, newBlockEnt.getType(), newBlockEnt.getUpdateTag(CraftRegistry.getMinecraftRegistry()));
+                        blockEntities.set(i, newData);
                         break;
                     }
                 }
             }
-
             int worldMinY = world.getMinHeight();
             int worldMaxY = world.getMaxHeight();
             int minChunkY = worldMinY >> 4;
             int maxChunkY = worldMaxY >> 4;
-            Registry<Biome> biomeRegistry = registryAccess.lookupOrThrow(Registries.BIOME);
+            Registry<Biome> biomeRegistry = ((CraftWorld) world).getHandle().registryAccess().lookupOrThrow(Registries.BIOME);
             for (int y = minChunkY; y < maxChunkY; y++) {
-                if (regSerial.readableBytes() <= 0) {
-                    break;
-                }
-
-                int blockCount = regSerial.readShort();
-                PalettedContainer<BlockState> states;
-                PalettedContainer<Biome> biomes;
-                if (PALETTEDCONTAINER_CTOR.getParameterCount() == 3) {
-                    states = (PalettedContainer<BlockState>) PALETTEDCONTAINER_CTOR.newInstance(
-                            Block.BLOCK_STATE_REGISTRY,
-                            Blocks.AIR.defaultBlockState(),
-                            STRATEGY_BLOCKS
-                    );
-                    biomes = (PalettedContainer<Biome>) PALETTEDCONTAINER_CTOR.newInstance(
-                            biomeRegistry,
-                            biomeRegistry.getOrThrow(Biomes.PLAINS),
-                            STRATEGY_BIOMES
-                    );
-                } else {
-                    states = (PalettedContainer<BlockState>) PALETTEDCONTAINER_CTOR.newInstance(
-                            Blocks.AIR.defaultBlockState(),
-                            STRATEGY_BLOCKS
-                    );
-                    biomes = (PalettedContainer<Biome>) PALETTEDCONTAINER_CTOR.newInstance(
-                            biomeRegistry.getOrThrow(Biomes.PLAINS),
-                            STRATEGY_BIOMES
-                    );
-                }
-
-                states.read(regSerial);
-                biomes.read(regSerial);
+                int blockCount = serial.readShort();
+                int fluidCount = serial.readShort();
+                // reflected constructors as workaround for spigot remapper bug - Mojang "IdMap" became Spigot "IRegistry" but should be "Registry"
+                PalettedContainer<BlockState> states = (PalettedContainer<BlockState>) PALETTEDCONTAINER_CTOR.newInstance(Blocks.AIR.defaultBlockState(), Strategy.createForBlockStates(Block.BLOCK_STATE_REGISTRY));
+                states.read(serial);
+                PalettedContainer<Biome> biomes = (PalettedContainer<Biome>) PALETTEDCONTAINER_CTOR.newInstance(biomeRegistry.getOrThrow(Biomes.PLAINS), Strategy.createForBiomes(biomeRegistry));
+                biomes.read(serial);
                 if (anyBlocksInSection(blocks, y)) {
                     int minY = y << 4;
                     int maxY = (y << 4) + 16;
@@ -244,18 +151,12 @@ public class FakeBlockHelper {
                         }
                     }
                 }
-
-                regOutput.writeShort(blockCount);
-                states.write(regOutput);
-                biomes.write(regOutput);
+                outputSerial.writeShort(blockCount);
+                outputSerial.writeShort(fluidCount);
+                states.write(outputSerial);
+                biomes.write(outputSerial);
             }
-
-            if (regSerial.readableBytes() > 0) {
-                regOutput.writeBytes(regSerial);
-            }
-
-            byte[] outputBytes = new byte[outputSerial.writerIndex()];
-            outputSerial.getBytes(0, outputBytes);
+            byte[] outputBytes = outputSerial.array();
             CHUNKDATA_BUFFER_SETTER.invoke(packet, outputBytes);
             CHUNKPACKET_CHUNKDATA_SETTER.invoke(duplicateCorePacket, packet);
             return duplicateCorePacket;
@@ -263,6 +164,6 @@ public class FakeBlockHelper {
         catch (Throwable ex) {
             Debug.echoError(ex);
         }
-        return originalPacket;
+        return null;
     }
 }

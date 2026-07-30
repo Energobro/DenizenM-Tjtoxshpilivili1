@@ -2,6 +2,7 @@ package com.denizenscript.denizen.nms.interfaces;
 
 import com.denizenscript.denizen.nms.util.PlayerProfile;
 import com.denizenscript.denizen.objects.EntityTag;
+import com.denizenscript.denizencore.utilities.debugging.Debug;
 import net.kyori.adventure.nbt.CompoundBinaryTag;
 import org.bukkit.*;
 import org.bukkit.block.*;
@@ -62,7 +63,11 @@ public interface BlockHelper {
             material = text.substring(0, openBracket);
             otherData = text.substring(openBracket);
         }
-        return Material.matchMaterial(material).createBlockData(otherData);
+        Material mat = Material.matchMaterial(material);
+        if (mat == null) {
+            throw new IllegalArgumentException("Failed to parse block data '" + text + "': material '" + material + "' doesn't exist on this server version.");
+        }
+        return mat.createBlockData(otherData);
     }
 
     default void makeBlockStateRaw(BlockState state) {} // TODO: once 1.19 is the minimum supported version, remove this

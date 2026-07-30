@@ -197,12 +197,14 @@ public class PaperAPIToolsImpl extends PaperAPITools {
             }
         }
         entity.teleportAsync(loc, cause, teleportFlags.toArray(new TeleportFlag[0])).thenAccept(success -> {
-            if (!success) {
-                Debug.echoError("Async teleport failed for entity 'e@" + entity.getUniqueId() + "' to location <LG>" + loc + "<W>.");
-            }
-            if (callback != null) {
-                DenizenCore.runOnMainThread(() -> callback.accept(success));
-            }
+            DenizenCore.runOnMainThread(() -> {
+                if (!success && entity.isValid()) {
+                    Debug.echoError("Async teleport failed for entity 'e@" + entity.getUniqueId() + "' to location <LG>" + loc + "<W>, even though the entity is still valid - likely blocked by another plugin cancelling the teleport, or an invalid/unreachable destination.");
+                }
+                if (callback != null) {
+                    callback.accept(success);
+                }
+            });
         });
     }
 

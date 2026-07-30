@@ -1,6 +1,8 @@
 package com.denizenscript.denizen.utilities.blocks;
 
 import com.denizenscript.denizen.Denizen;
+import com.denizenscript.denizen.nms.NMSHandler;
+import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.objects.LocationTag;
 import com.denizenscript.denizen.objects.MaterialTag;
 import com.denizenscript.denizen.objects.PlayerTag;
@@ -134,7 +136,10 @@ public class FakeBlock {
             blocks.remove(player.getUUID());
         }
         if (player.isOnline()) {
-            player.getPlayerEntity().sendBlockChange(location, location.getBlock().getBlockData());
+            scheduleChunkRefresh(location.getWorld(), chunkCoord);
+            if (!NMSHandler.getVersion().isAtLeast(NMSVersion.v1_18)) {
+                player.getPlayerEntity().sendBlockChange(location, location.getBlock().getBlockData());
+            }
         }
     }
 
@@ -144,7 +149,10 @@ public class FakeBlock {
         }
         this.material = material;
         if (player.hasChunkLoaded(location.getChunk())) {
-            player.getPlayerEntity().sendBlockChange(location, material.getModernData());
+            if (sendNow || !NMSHandler.getVersion().isAtLeast(NMSVersion.v1_18)) {
+                player.getPlayerEntity().sendBlockChange(location, material.getModernData());
+            }
+            scheduleChunkRefresh(location.getWorld(), chunkCoord);
         }
         if (duration != null && duration.getTicks() > 0) {
             currentTask = new BukkitRunnable() {
