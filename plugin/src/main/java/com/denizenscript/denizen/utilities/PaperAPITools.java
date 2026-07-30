@@ -347,7 +347,7 @@ public class PaperAPITools {
         player.addResourcePack(uuid, url, ResourcePackCommand.parseHash(hash), prompt, forced);
     }
 
-    public void spawnParticle(Player player, Particle particle, Location location, int count, double offsetX, double offsetY, double offsetZ, double extra, Object data, boolean forced) {
-        player.spawnParticle(particle, location, count, offsetX, offsetY, offsetZ, extra, data);
+    public void spawnParticle(Collection<Player> players, Particle particle, Location location, int count, double offsetX, double offsetY, double offsetZ, double extra, Object data, boolean forced) {
+        throw new UnsupportedOperationException();
     }
 }

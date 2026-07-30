@@ -486,7 +486,7 @@ public class PaperAPIToolsImpl extends PaperAPITools {
     }
 
     @Override
-    public void spawnParticle(Player player, Particle particle, Location location, int count, double offsetX, double offsetY, double offsetZ, double extra, Object data, boolean forced) {
+    public void spawnParticle(Collection<Player> players, Particle particle, Location location, int count, double offsetX, double offsetY, double offsetZ, double extra, Object data, boolean forced) {
         particle.builder()
                 .location(location)
                 .count(count)
@@ -494,7 +494,7 @@ public class PaperAPIToolsImpl extends PaperAPITools {
                 .extra(extra)
                 .data(data)
                 .force(forced)
-                .receivers(player)
+                .receivers(players)
                 .spawn();
     }
 

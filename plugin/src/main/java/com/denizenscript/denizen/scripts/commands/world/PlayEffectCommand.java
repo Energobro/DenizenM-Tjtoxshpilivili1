@@ -1,7 +1,5 @@
 package com.denizenscript.denizen.scripts.commands.world;
 
-import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.objects.*;
 import com.denizenscript.denizen.objects.properties.bukkit.BukkitColorExtensions;
 import com.denizenscript.denizen.utilities.BukkitImplDeprecations;
@@ -499,17 +497,15 @@ public class PlayEffectCommand extends AbstractCommand {
                 }
                 Random random = CoreUtilities.getRandom();
                 int quantityInt = quantity.asInt();
-                for (Player player : players) {
-                    if (velocity == null) {
-                        PaperAPITools.instance.spawnParticle(player, particleEffect, location, quantityInt, offset.getX(), offset.getY(), offset.getZ(), data.asDouble(), dataObject, isForced);
-                    }
-                    else {
-                        for (int i = 0; i < quantityInt; i++) {
-                            LocationTag singleLocation = location.clone().add((random.nextDouble() - 0.5) * offset.getX(),
-                                    (random.nextDouble() - 0.5) * offset.getY(),
-                                    (random.nextDouble() - 0.5) * offset.getZ());
-                            PaperAPITools.instance.spawnParticle(player, particleEffect, singleLocation, 0, velocity.getX(), velocity.getY(), velocity.getZ(), 1, dataObject, isForced);
-                        }
+                if (velocity == null) {
+                    PaperAPITools.instance.spawnParticle(players, particleEffect, location, quantityInt, offset.getX(), offset.getY(), offset.getZ(), data.asDouble(), dataObject, isForced);
+                }
+                else {
+                    for (int i = 0; i < quantityInt; i++) {
+                        LocationTag singleLocation = location.clone().add((random.nextDouble() - 0.5) * offset.getX(),
+                                (random.nextDouble() - 0.5) * offset.getY(),
+                                (random.nextDouble() - 0.5) * offset.getZ());
+                        PaperAPITools.instance.spawnParticle(players, particleEffect, singleLocation, 0, velocity.getX(), velocity.getY(), velocity.getZ(), 1, dataObject, isForced);
                     }
                 }
             }
@@ -534,9 +530,7 @@ public class PlayEffectCommand extends AbstractCommand {
                 if (iconcrack != null) {
                     ItemStack itemStack = iconcrack.getItemStack();
                     Particle particle = Particle.valueOf("ITEM_CRACK");
-                    for (Player player : players) {
-                        PaperAPITools.instance.spawnParticle(player, particle, location, quantity.asInt(), offset.getX(), offset.getY(), offset.getZ(), data.asFloat(), itemStack, isForced);
-                    }
+                    PaperAPITools.instance.spawnParticle(players, particle, location, quantity.asInt(), offset.getX(), offset.getY(), offset.getZ(), data.asFloat(), itemStack, isForced);
                 }
             }
         }
