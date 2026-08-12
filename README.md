@@ -96,7 +96,6 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
 
 #### Need help using Denizen? Try one of these places:
 
-- **Discord** - chat room (Modern, strongly recommended): https://dsc.gg/dsng
 - **My Telegram Channel** - spoilers, works with Denizen, new features: https://t.me/energ0bro
 - **Denizen Home Page** - a link directory (Modern): https://denizenscript.com/
 - **Meta Documentation (!! WITHOUT NEW CHANGES !!)** - command/tag/event/etc. search (Modern): https://meta.denizenscript.com/
