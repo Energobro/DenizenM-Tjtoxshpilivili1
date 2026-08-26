@@ -6,6 +6,7 @@ import com.denizenscript.denizen.utilities.blocks.FakeBlock;
 import com.denizenscript.denizencore.utilities.ReflectionHelper;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import io.netty.buffer.Unpooled;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -17,6 +18,7 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -25,7 +27,7 @@ import net.minecraft.world.level.chunk.Strategy;
 import org.bukkit.World;
 import org.bukkit.craftbukkit.CraftRegistry;
 import org.bukkit.craftbukkit.CraftWorld;
-import org.bukkit.craftbukkit.block.CraftBlockStates;
+import org.bukkit.craftbukkit.util.CraftMagicNumbers;
 import org.bukkit.craftbukkit.block.data.CraftBlockData;
 
 import java.lang.invoke.MethodHandle;
@@ -108,9 +110,15 @@ public class FakeBlockHelper {
                 for (FakeBlock block : blocks) {
                     LocationTag loc = block.location;
                     if (loc.getBlockX() == x && loc.getBlockY() == y && loc.getBlockZ() == z && block.material != null) {
-                        BlockEntity newBlockEnt = CraftBlockStates.createNewTileEntity(block.material.getMaterial());
-                        Object newData = CHUNKDATA_BLOCK_ENTITY_CONSTRUCTOR.invoke(xz, y, newBlockEnt.getType(), newBlockEnt.getUpdateTag(CraftRegistry.getMinecraftRegistry()));
-                        blockEntities.set(i, newData);
+                        BlockState fakeState = CraftMagicNumbers.getBlock(block.material.getMaterial()).defaultBlockState();
+                        BlockEntity newBlockEnt = fakeState.getBlock() instanceof EntityBlock entityBlock ? entityBlock.newBlockEntity(BlockPos.ZERO, fakeState) : null;
+                        if (newBlockEnt == null) {
+                            blockEntities.remove(i--);
+                        }
+                        else {
+                            Object newData = CHUNKDATA_BLOCK_ENTITY_CONSTRUCTOR.invoke(xz, y, newBlockEnt.getType(), newBlockEnt.getUpdateTag(CraftRegistry.getMinecraftRegistry()));
+                            blockEntities.set(i, newData);
+                        }
                         break;
                     }
                 }
