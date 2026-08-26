@@ -679,10 +679,28 @@ public class PaperElementExtensions {
             return new ElementTag(res, true);
         });
 
+        // <--[tag]
+        // @attribute <ElementTag.parse_minimessage>
+        // @returns ElementTag
+        // @Plugin Paper
+        // @group paper
+        // @description
+        // Returns the element with all MiniMessage tags parsed, see <@link url https://docs.papermc.io/adventure/minimessage/format/> for more information.
+        // This may be useful for reading data from external plugins, but should not be used in normal scripts.
+        // -->
         ElementTag.tagProcessor.registerTag(ElementTag.class, "parse_minimessage", (attribute, object) -> {
             return new ElementTag(FormattedTextHelper.stringify(MiniMessage.miniMessage().deserialize(object.asString())));
         });
 
+        // <--[tag]
+        // @attribute <ElementTag.to_minimessage>
+        // @returns ElementTag
+        // @Plugin Paper
+        // @group paper
+        // @description
+        // Returns the element with all text formatting parsed into MiniMessage format.
+        // This may be useful for sending data to external plugins, but should not be used in normal scripts.
+        // -->
         ElementTag.tagProcessor.registerTag(ElementTag.class, "to_minimessage", (attribute, object) -> {
             return new ElementTag(PaperAPITools.instance.convertTextToMiniMessage(object.asString(), false));
         });
