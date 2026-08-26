@@ -324,7 +324,9 @@ public interface AreaContainmentObject extends ObjectTag {
                 for (CuboidTag.LocationPair pair2 : cuboid.pairs) {
                     boolean contained = false;
                     for (CuboidTag.LocationPair pair : cub2.pairs) {
-                        if (!pair.low.getWorld().equals(pair2.low.getWorld())) {
+                        // Compared by name rather than by world object: same answer, without resolving the world through Bukkit
+                        // and writing the result back into a location that may be shared. See LocationTag.getWorld.
+                        if (!CoreUtilities.equalsIgnoreCase(pair.low.getWorldName(), pair2.low.getWorldName())) {
                             return new ElementTag(false);
                         }
                         if (pair2.low.getX() >= pair.low.getX()

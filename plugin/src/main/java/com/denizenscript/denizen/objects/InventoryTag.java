@@ -242,6 +242,13 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
     }
 
     @Override
+    public boolean isFlagTrackerAsyncSafe() {
+        // A noted inventory carries its tracker in a field of the noted object itself, so fetching it reads nothing but that field.
+        // The inventory's own contents are a different question entirely, and nothing here touches them.
+        return true;
+    }
+
+    @Override
     public String getReasonNotFlaggable() {
         if (noteName == null) {
             return "the inventory is not noted - only noted inventories can hold flags";

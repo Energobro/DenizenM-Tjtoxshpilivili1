@@ -24,6 +24,7 @@ import org.bukkit.util.Vector;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CuboidBlockSet implements BlockSet {
 
@@ -143,9 +144,17 @@ public class CuboidBlockSet implements BlockSet {
 
     public ListTag entities = null;
 
-    public boolean isModifying = false;
+    /**
+     * Set while something is rewriting this set's blocks, so nothing reads them meanwhile.
+     * Volatile because a 'schematic save' on an async script's own thread reads it - see SchematicCommand.isAsyncSafe.
+     */
+    public volatile boolean isModifying = false;
 
-    public int readingProcesses = 0;
+    /**
+     * How many things are currently reading this set's blocks, so nothing rewrites them meanwhile.
+     * Atomic for the same reason isModifying is volatile: an async save claims it without the main thread's help.
+     */
+    public final AtomicInteger readingProcesses = new AtomicInteger();
 
     public CuboidBlockSet duplicate() {
         CuboidBlockSet result = new CuboidBlockSet();

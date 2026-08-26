@@ -6,12 +6,14 @@ import com.denizenscript.denizen.utilities.BukkitImplDeprecations;
 import com.denizenscript.denizen.utilities.LegacyParticleNaming;
 import com.denizenscript.denizen.utilities.PaperAPITools;
 import com.denizenscript.denizen.utilities.Utilities;
+import com.denizenscript.denizencore.DenizenCore;
 import com.denizenscript.denizencore.exceptions.InvalidArgumentsException;
 import com.denizenscript.denizencore.objects.Argument;
 import com.denizenscript.denizencore.objects.ObjectTag;
 import com.denizenscript.denizencore.objects.core.*;
 import com.denizenscript.denizencore.scripts.ScriptEntry;
 import com.denizenscript.denizencore.scripts.commands.AbstractCommand;
+import com.denizenscript.denizencore.scripts.queues.ScriptQueue;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import org.bukkit.*;
@@ -37,6 +39,43 @@ public class PlayEffectCommand extends AbstractCommand {
         setSyntax("playeffect [effect:<name>] [at:<location>|...] (data:<#.#>) (special_data:<map>) (visibility:<#.#>) (quantity:<#>) (offset:<#.#>,<#.#>,<#.#>) (targets:<player>|...) (velocity:<vector>) (forced)");
         setRequiredArguments(2, 9);
         isProcedural = false;
+        // Particles are sent and forgotten - nothing in a script reads anything back from this - so an async script can hand it over and carry on.
+        setAsyncDeferrable(true);
+    }
+
+    @Override
+    public boolean isAsyncSafe(ScriptEntry scriptEntry) {
+        // Safe only with an explicit 'targets:'. Without one, every branch walks location.getWorld().getPlayers() to find who is in range, and
+        // that copies ServerLevel.players - a plain ArrayList the main thread rewrites on join, quit and world change, unlike PlayerList.players.
+        // With targets, the receivers are already PlayerTags and what is left is building the particle data and sending packets, which Paper
+        // supports off-thread (no AsyncCatcher on CraftPlayer.playEffect or CraftWorld.spawnParticle).
+        // The two things that had to be fixed to make this true are PaperAPIToolsImpl.spawnParticle, which used to resolve the world through the
+        // location, and the vibration destination below.
+        return scriptEntry.hasRawArgumentPrefix("targets") || scriptEntry.hasRawArgumentPrefix("target") || scriptEntry.hasRawArgumentPrefix("t");
+    }
+
+    /**
+     * Builds a vibration's entity destination, resolving the entity on the main thread.
+     * <p>
+     * {@link EntityTag#getBukkitEntity()} tests the entity for staleness and, when it is stale, re-resolves it through {@code Bukkit.getEntity(uuid)}
+     * and writes the result back into the tag - live server access with a lazy write, and the only such thing left in this command. It is reached
+     * only by the 'vibration' particle aimed at an entity, so paying a hand-off here costs nothing for any other use of the command.
+     * On the main thread this runs inline, so nothing about a synchronous script changes.
+     */
+    private static Vibration.Destination entityDestination(ObjectTag destination, ScriptEntry scriptEntry) {
+        Vibration.Destination[] result = new Vibration.Destination[1];
+        Runnable build = () -> result[0] = new Vibration.Destination.EntityDestination(destination.asType(EntityTag.class, scriptEntry.context).getBukkitEntity());
+        if (DenizenCore.isMainThread()) {
+            build.run();
+            return result[0];
+        }
+        long waitStart = System.nanoTime();
+        DenizenCore.runOnMainThreadAndWait(build);
+        // The queue really did stop and wait here, so the stats have to say so. CommandExecutor counts the hand-offs it makes itself, but a command
+        // that crosses from inside its own execution is invisible to <QueueTag.async_stats> unless it reports the wait, and a counter that quietly
+        // misses waits is worse than no counter - it reads as proof that nothing crossed.
+        ScriptQueue.recordMainThreadWait(scriptEntry.getResidingQueue(), System.nanoTime() - waitStart);
+        return result[0];
     }
 
     // <--[language]
@@ -361,7 +400,7 @@ public class PlayEffectCommand extends AbstractCommand {
                                 ObjectTag destination = dataList.getObject(2);
                                 Vibration.Destination destObj;
                                 if (destination.shouldBeType(EntityTag.class)) {
-                                    destObj = new Vibration.Destination.EntityDestination(destination.asType(EntityTag.class, scriptEntry.context).getBukkitEntity());
+                                    destObj = entityDestination(destination, scriptEntry);
                                 }
                                 else {
                                     destObj = new Vibration.Destination.BlockDestination(destination.asType(LocationTag.class, scriptEntry.context));
@@ -432,7 +471,7 @@ public class PlayEffectCommand extends AbstractCommand {
                             ObjectTag destination = dataMap.getObjectAs("destination", ObjectTag.class, scriptEntry.context);
                             Vibration.Destination destObj;
                             if (destination.shouldBeType(EntityTag.class)) {
-                                destObj = new Vibration.Destination.EntityDestination(destination.asType(EntityTag.class, scriptEntry.context).getBukkitEntity());
+                                destObj = entityDestination(destination, scriptEntry);
                             }
                             else if (destination.shouldBeType(LocationTag.class)) {
                                 destObj = new Vibration.Destination.BlockDestination(destination.asType(LocationTag.class, scriptEntry.context));

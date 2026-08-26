@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -69,6 +70,26 @@ public class DenizenNetworkManagerImpl extends Connection {
     }
 
     public static final Map<Class<? extends Packet<ClientGamePacketListener>>, List<PacketHandler<?>>> packetHandlers = new HashMap<>();
+
+    /**
+     * Packet types whose handlers have been read through and made fit to run off the main thread.
+     * Everything else keeps the old behaviour when a packet is sent from another thread: pass it straight to the connection, unintercepted,
+     * because a handler that reads live server state there would be a crash or a wrong answer.
+     * That skip stopped being harmless once commands like narrate and actionbar became async-safe, since a script's own thread now sends
+     * their packets - and skipping meant 'player receives message', 'player receives actionbar' and hidden particles quietly not applying
+     * to them, a difference from the same script run on the main thread that nothing reported.
+     * A listed type is only cheap to intercept while nothing is listening: each of these handlers checks whether its event is loaded first,
+     * and hands itself to the main thread only if it is.
+     * The four scoreboard types on the second line have no handler at all, so there is nothing to make fit and nothing to run - they are listed
+     * only so that the async-safe sidebar command doesn't trip the warning below and drop out of the packet counter and the packet debug output.
+     * The two tablist types on the third line do have handlers, two of them on the update packet - the 'player receives tablist update' event and
+     * the profile editor - and both were given the treatment described above before being listed here. The two sound types on the fourth line
+     * share one handler, for the 'player hears sound' event, given the same treatment for 'playsound targets:...'.
+     */
+    public static final Set<Class<?>> asyncInterceptable = Set.of(ClientboundSystemChatPacket.class, ClientboundSetActionBarTextPacket.class, ClientboundLevelParticlesPacket.class,
+            ClientboundSetObjectivePacket.class, ClientboundSetPlayerTeamPacket.class, ClientboundSetScorePacket.class, ClientboundSetDisplayObjectivePacket.class,
+            ClientboundPlayerInfoUpdatePacket.class, ClientboundPlayerInfoRemovePacket.class,
+            ClientboundSoundPacket.class, ClientboundSoundEntityPacket.class);
 
     public static <T extends Packet<ClientGamePacketListener>> void registerPacketHandler(Class<T> packetClass, PacketHandler<T> handler) {
         packetHandlers.computeIfAbsent(packetClass, k -> new ArrayList<>()).add(handler);
@@ -304,7 +325,8 @@ public class DenizenNetworkManagerImpl extends Connection {
 
     @Override
     public void send(Packet<?> packet, @Nullable ChannelFutureListener channelFutureListener, boolean flush) {
-        if (!Bukkit.isPrimaryThread()) {
+        // The counters below are read off-thread now for the intercepted types, so a burst of async sends can lose a tick of the stat. That is a debug figure, not a behaviour.
+        if (!Bukkit.isPrimaryThread() && !asyncInterceptable.contains(packet.getClass())) {
             if (Settings.cache_warnOnAsyncPackets
                     && !(packet instanceof ClientboundSystemChatPacket) && !(packet instanceof ClientboundPlayerChatPacket) // Vanilla supports an async chat system, though it's normally disabled, some plugins use this as justification for sending messages async
                     && !(packet instanceof ClientboundCommandSuggestionsPacket)) { // Async tab complete is wholly unsupported in Spigot (and will cause an exception), however Paper explicitly adds async support (for unclear reasons), so let it through too

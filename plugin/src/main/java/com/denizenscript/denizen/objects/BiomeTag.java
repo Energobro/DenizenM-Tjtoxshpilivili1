@@ -163,6 +163,12 @@ public class BiomeTag implements ObjectTag, Adjustable, FlaggableObject {
         // Nothing to do.
     }
 
+    @Override
+    public boolean isFlagTrackerAsyncSafe() {
+        // A corner of the server flag map, named by the biome's own stored key.
+        return true;
+    }
+
     public static void register() {
 
         AbstractFlagTracker.registerFlagHandlers(tagProcessor);

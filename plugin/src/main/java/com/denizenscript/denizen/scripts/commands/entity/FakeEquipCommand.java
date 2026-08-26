@@ -29,6 +29,11 @@ public class FakeEquipCommand extends AbstractCommand {
         setSyntax("fakeequip [<entity>|...] (for:<player>|...) (duration:<duration>/reset) (hand:<item>) (offhand:<item>) (head:<item>) (chest:<item>) (legs:<item>) (boots:<item>)");
         setRequiredArguments(1, 9);
         isProcedural = false;
+        setAsyncDeferrable(true); // Writes the fake-equipment overrides and sends packets - nothing comes back to the script.
+        // Not async-safe: execute calls entity.getLivingEntity() for every target, which resolves a live Bukkit entity out of the world.
+        // Its 'overrides' store stays a plain HashMap on purpose - unlike the fake block and fake entity stores, nothing reads it off the main
+        // thread: no tag exposes it, and the packet handlers that do read it cannot run off-thread (DenizenNetworkManagerImpl only intercepts
+        // a listed few packet types from another thread, and equipment is not one of them).
     }
 
     // <--[command]

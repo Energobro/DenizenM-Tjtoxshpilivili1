@@ -24,6 +24,12 @@ public class AnimateCommand extends AbstractCommand {
         setSyntax("animate [<entity>|...] [animation:<name>] (for:<player>|...)");
         setRequiredArguments(2, 3);
         isProcedural = false;
+        // Not deferrable, despite being fire-and-forget like the rest.
+        // Deferring runs parseArgs on the script's own thread, and this command's entity argument is almost never given as an EntityTag already:
+        // "<player>" and "<npc>" are the documented forms, and converting either to an EntityTag goes to the live server
+        // (Bukkit.getPlayer for a player, the Citizens NPC for an npc). ObjectTag.asType only skips that for an exact class match.
+        // The argument can't be checked ahead of time either - isAsyncDeferrable runs before the tags in it have been read.
+        // So this one waits for the main thread, and only loses the tick that waiting costs.
     }
 
     // <--[command]

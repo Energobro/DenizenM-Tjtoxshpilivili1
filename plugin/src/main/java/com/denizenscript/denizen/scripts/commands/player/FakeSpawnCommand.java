@@ -27,6 +27,12 @@ public class FakeSpawnCommand extends AbstractCommand {
         addRemappedPrefixes("duration", "d");
         addRemappedPrefixes("players", "to");
         autoCompile();
+        // Stays fully on the main thread, and it is the only one of the fake-* family that actually costs an async script a crossing:
+        // autoCompile fuses argument reading with execution, so it cannot be deferred either (see the note in TitleCommand for why that does
+        // not by itself block async-safety). What blocks it is the spawn path. PlayerHelperImpl.sendEntitySpawn opens with
+        // (CraftWorld) location.getWorld() and then world.createEntity(...), which builds a real NMS entity against the live ServerLevel,
+        // and afterwards applies the script's own mechanisms to it - arbitrary adjustments that reach whatever the server holds.
+        // 'mount_to' reads a live entity as well. FakeEntity's stores are concurrent now, but that is for the tags that read them, not for this.
     }
 
     // <--[command]

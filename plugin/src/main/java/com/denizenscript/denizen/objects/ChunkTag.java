@@ -1,5 +1,6 @@
 package com.denizenscript.denizen.objects;
 
+import com.denizenscript.denizencore.DenizenCore;
 import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.utilities.BukkitImplDeprecations;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
@@ -224,6 +225,13 @@ public class ChunkTag implements ObjectTag, Adjustable, FlaggableObject {
     }
 
     public boolean isLoadedSafe() {
+        if (!DenizenCore.isMainThread()) {
+            // The wrapper below repoints the world's chunk-source thread field at whoever calls it, which is a main thread trick and nothing an
+            // async queue may do. It is dormant today - it returns immediately unless the tag timeout feature is running - but the marking that
+            // lets <ChunkTag.is_loaded> be read off-thread must not rest on that staying true. The query stands on its own off the main thread:
+            // CraftWorld.isChunkLoaded has no AsyncCatcher, and underneath it Paper's chunk holder map is lock-free by design.
+            return isLoaded();
+        }
         try {
             NMSHandler.chunkHelper.changeChunkServerThread(getBukkitWorld());
             return isLoaded();

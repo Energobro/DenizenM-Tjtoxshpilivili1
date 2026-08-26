@@ -14,6 +14,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Creates a temporary fake block and shows it to a PlayerTag.
@@ -22,8 +23,14 @@ public class FakeBlock {
 
     public static class FakeBlockMap {
 
-        public Map<LocationTag, FakeBlock> byLocation = new HashMap<>();
+        // Read off the main thread by <player.fake_block_locations> and <player.fake_block[...]>, while showfake and the expiry tasks write it
+        // from the main thread. A plain HashMap can be restructured by a put or a remove while a reader is walking it, so this one is concurrent.
+        public Map<LocationTag, FakeBlock> byLocation = new ConcurrentHashMap<>();
 
+        // Main thread only, deliberately left plain: it is written here beside byLocation, and read only by the chunk and block-update packet
+        // handlers, which cannot run off-thread - DenizenNetworkManagerImpl skips the whole interception layer for a packet sent from another
+        // thread, bar the few types listed there, and none of those are block packets. Anything that starts writing this off-thread must
+        // make the per-chunk lists safe too, not just the map.
         public Map<ChunkCoordinate, List<FakeBlock>> byChunk = new HashMap<>();
 
         public FakeBlock getOrAdd(PlayerTag player, LocationTag location) {
@@ -52,7 +59,8 @@ public class FakeBlock {
         }
     }
 
-    public final static Map<UUID, FakeBlockMap> blocks = new HashMap<>();
+    // Concurrent for the same reason as byLocation above: the PlayerTag fake-block tags read it off the main thread. Every write is still on the main thread.
+    public final static Map<UUID, FakeBlockMap> blocks = new ConcurrentHashMap<>();
 
     public static FakeBlock getFakeBlockFor(UUID id, LocationTag location) {
         FakeBlockMap map = blocks.get(id);
@@ -73,7 +81,9 @@ public class FakeBlock {
     public final PlayerTag player;
     public final LocationTag location;
     public final ChunkCoordinate chunkCoord;
-    public MaterialTag material;
+    // Volatile because <player.fake_block[...]> hands this field straight back off the main thread, and updateBlock writes it *after* the
+    // block has already been published into byLocation - without it a reader could find the block and still see the previous material, or null.
+    public volatile MaterialTag material;
     public BukkitTask currentTask = null;
 
     private FakeBlock(PlayerTag player, LocationTag location) {
@@ -89,11 +99,7 @@ public class FakeBlock {
                 continue;
             }
             UUID uuid = player.getPlayerEntity().getUniqueId();
-            FakeBlockMap playerBlocks = blocks.get(uuid);
-            if (playerBlocks == null) {
-                playerBlocks = new FakeBlockMap();
-                blocks.put(uuid, playerBlocks);
-            }
+            FakeBlockMap playerBlocks = blocks.computeIfAbsent(uuid, k -> new FakeBlockMap());
             FakeBlock block = playerBlocks.getOrAdd(player, location);
             block.updateBlock(material, duration, sendNow);
         }
@@ -111,6 +117,7 @@ public class FakeBlock {
         }
     }
 
+    // Main thread only: written from cancelBlock/updateBlock and from the scheduled task itself, which the Bukkit scheduler runs on the main thread.
     public static HashMap<ChunkCoordinate, BukkitTask> scheduled = new HashMap<>();
 
     public static void scheduleChunkRefresh(World world, ChunkCoordinate coord) {

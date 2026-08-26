@@ -3,6 +3,7 @@ package com.denizenscript.denizen.paper.utilities;
 import com.denizenscript.denizen.Denizen;
 import com.denizenscript.denizen.nms.NMSHandler;
 import com.denizenscript.denizen.objects.ItemTag;
+import com.denizenscript.denizen.objects.LocationTag;
 import com.denizenscript.denizen.paper.PaperModule;
 import com.denizenscript.denizen.scripts.commands.entity.TeleportCommand;
 import com.denizenscript.denizen.scripts.containers.core.ItemScriptContainer;
@@ -26,6 +27,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
+import io.papermc.paper.world.flag.FeatureDependant;
 import org.bukkit.*;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
@@ -487,8 +489,35 @@ public class PaperAPIToolsImpl extends PaperAPITools {
 
     @Override
     public void spawnParticle(Collection<Player> players, Particle particle, Location location, int count, double offsetX, double offsetY, double offsetZ, double extra, Object data, boolean forced) {
+        // The world is passed to the builder explicitly rather than letting it read one off the location, because ParticleBuilder.spawn() calls
+        // getWorld() on whatever location it holds - and on a LocationTag that is the resolve-through-Bukkit-and-cache-back path, a get on
+        // CraftServer.worlds, which is a plain LinkedHashMap. The location(World, x, y, z) overload builds a plain Bukkit Location instead, so the
+        // getWorld() inside spawn() is only a field read. Taking the world from a receiver is likewise a walk down entity.level().getWorld().
+        // That is what lets 'playeffect ... targets:<player>' run on an async script's own thread - see PlayEffectCommand.isAsyncSafe.
+        // Behaviour is unchanged: the world only picks which level does the sending, and sendParticlesSource still drops any receiver whose own
+        // level differs, so passing the whole list keeps the existing cross-world filtering exactly as it was.
+        String worldName = location instanceof LocationTag locationTag ? locationTag.getWorldName() : location.getWorld() == null ? null : location.getWorld().getName();
+        if (worldName == null) {
+            // A location with no world at all is a script error, and used to surface as an NPE from inside the particle call - so say so rather than going quiet.
+            Debug.echoError("Cannot play an effect at a location with no world: " + location);
+            return;
+        }
+        if (players.isEmpty()) {
+            return;
+        }
+        World world = null;
+        for (Player player : players) {
+            if (player.getWorld().getName().equals(worldName)) {
+                world = player.getWorld();
+                break;
+            }
+        }
+        if (world == null) {
+            // Nobody is in the location's world, so every receiver would have been filtered out anyway.
+            return;
+        }
         particle.builder()
-                .location(location)
+                .location(world, location.getX(), location.getY(), location.getZ())
                 .count(count)
                 .offset(offsetX, offsetY, offsetZ)
                 .extra(extra)
@@ -528,5 +557,13 @@ public class PaperAPIToolsImpl extends PaperAPITools {
         if (mechanism.requireEnum(WeatheringCopperState.class)) {
             copperGolem.setWeatheringState(variant.asEnum(WeatheringCopperState.class));
         }
+    }
+
+    @Override
+    public boolean isEnabledByFeature(Material material, World world) {
+        // Paper has no Material.isEnabledByFeature - the world holds the feature flags and is asked instead.
+        // A material that isn't an item (fire, water, piston heads, ...) only has a block form to ask about, so pick whichever it has.
+        FeatureDependant dependant = material.isItem() ? material.asItemType() : material.asBlockType();
+        return world.isEnabled(dependant);
     }
 }

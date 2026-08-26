@@ -5,6 +5,7 @@ import com.denizenscript.denizen.nms.v26_2.Handler;
 import com.denizenscript.denizen.nms.v26_2.impl.ProfileEditorImpl;
 import com.denizenscript.denizen.nms.v26_2.impl.network.handlers.DenizenNetworkManagerImpl;
 import com.denizenscript.denizen.utilities.PaperAPITools;
+import com.denizenscript.denizencore.DenizenCore;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.google.common.base.Joiner;
@@ -34,6 +35,20 @@ public class TablistUpdateEventPacketHandlers {
     public static Packet<ClientGamePacketListener> processTablistPacket(DenizenNetworkManagerImpl networkManager, Packet<ClientGamePacketListener> packet) {
         if (!PlayerReceivesTablistUpdateScriptEvent.instance.eventData.isEnabled) {
             return packet;
+        }
+        if (!DenizenCore.isMainThread()) {
+            // A packet handler runs on whichever thread sent the packet, and the tablist command is async-safe now, so that can be a script's own thread.
+            // What this does below is fire ordinary scripts through a shared event instance and, when one edits an entry, send replacement packets
+            // in place of the original - none of which belongs off the main thread. So the whole thing goes over and this side waits.
+            // The wait only ever happens on a server that actually handles this event - without one loaded, the check above returns first.
+            Packet<ClientGamePacketListener>[] result = new Packet[] {packet};
+            try {
+                DenizenCore.runOnMainThreadAndWait(() -> result[0] = processTablistPacket(networkManager, packet));
+            }
+            catch (Throwable ex) {
+                Debug.echoError(ex);
+            }
+            return result[0];
         }
         if (packet instanceof ClientboundPlayerInfoUpdatePacket) {
             ClientboundPlayerInfoUpdatePacket infoPacket = (ClientboundPlayerInfoUpdatePacket) packet;

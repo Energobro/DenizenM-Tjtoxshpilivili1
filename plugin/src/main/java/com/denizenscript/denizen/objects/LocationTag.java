@@ -106,10 +106,17 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
             return backupWorld;
         }
         World w = internalWorld == null ? null : internalWorld.get();
-        if (w != null) {
-            backupWorld = w.getName();
+        if (w == null) {
+            return null;
         }
-        return backupWorld;
+        String name = w.getName();
+        if (com.denizenscript.denizencore.DenizenCore.isMainThread()) {
+            // A location can be shared - sitting in a definition, a flag, or a noted area - so a thread that only meant to read it must not write to it.
+            // Skipping the cache off-thread costs a getName() call and nothing else. Note that getWorld() is deliberately left alone;
+            // it does much more than this, and tags that need it stay main-thread-only.
+            backupWorld = name;
+        }
+        return name;
     }
 
     @Override
@@ -234,10 +241,18 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
      * @param location the Bukkit Location to reference
      */
     public LocationTag(Location location) {
-        this(location.getWorld(), location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
+        // Copying a LocationTag takes its world fields as they are rather than resolving the world: the two lines below overwrite them anyway,
+        // so asking for the world here only cost a lookup in the server's world list and a write back into the source object.
+        // Avoiding it is what lets the many tags that return their result through this constructor ('above', 'center', 'points_between', ...)
+        // be read by an async script. See <@link language Async Tag Safety>.
+        this(location instanceof LocationTag ? null : location.getWorld(),
+                location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
         if (location instanceof LocationTag loctag) {
             backupWorld = loctag.backupWorld;
             internalWorld = loctag.internalWorld;
+            // The world reference is normally filled by the constructor above; carry the source's across so the copy isn't left without one.
+            // A source that only knows its world by name leaves this null, and getWorld() resolves it later exactly as it would have.
+            super.setWorld(loctag.internalWorld == null ? null : loctag.internalWorld.get());
         }
     }
 
@@ -266,8 +281,22 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         this(world, x, y, z, 0, 0);
     }
 
+    /**
+     * Builds a location that knows its world only by name, leaving the world itself to be resolved if and when something asks for it.
+     * <p>
+     * The name is all {@link #getWorldName()} ever needs, and {@link #getWorld()} resolves from it on demand and caches the result -
+     * it reads {@code backupWorld}/{@code internalWorld} and ignores the field on the Bukkit {@link Location} entirely, so resolving
+     * eagerly here was work thrown away in every case where nothing went on to ask for the world object.
+     * <p>
+     * That matters for async scripts: {@code Bukkit.getWorld(name)} is a get on CraftServer.worlds, a plain LinkedHashMap.
+     * The area types build locations through this constructor in loops (a polygon's shell is hundreds of them), so an off-thread
+     * read of that map used to happen once per location produced. Now it happens only if the world is actually wanted.
+     * <p>
+     * Note this is safe only because the Bukkit Location methods that read that field directly rather than through the virtual
+     * getWorld() - equals, hashCode, toString - are all overridden here, and by world *name* at that.
+     */
     public LocationTag(double x, double y, double z, String worldName) {
-        super(worldName == null ? null : Bukkit.getWorld(worldName), x, y, z);
+        super(null, x, y, z);
         backupWorld = worldName;
     }
 
@@ -279,8 +308,9 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         }
     }
 
+    /** Same as {@link #LocationTag(double, double, double, String)}, with a yaw and pitch. This is the one LocationTag.valueOf builds through. */
     public LocationTag(String worldName, double x, double y, double z, float yaw, float pitch) {
-        super(worldName == null ? null : Bukkit.getWorld(worldName), x, y, z, EntityHelper.normalizeYaw(yaw), pitch);
+        super(null, x, y, z, EntityHelper.normalizeYaw(yaw), pitch);
         backupWorld = worldName;
     }
 
@@ -1081,7 +1111,9 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // Returns the location at the center of the block this location is on.
         // -->
         tagProcessor.registerTag(LocationTag.class, "center", (attribute, object) -> {
-            return new LocationTag(object.getWorld(), object.getBlockX() + 0.5, object.getBlockY() + 0.5, object.getBlockZ() + 0.5);
+            // By world name rather than by world object: getWorld() resolves through Bukkit and writes the result back into the source
+            // location, which a shared location can't afford off-thread. The result carries the same world either way.
+            return new LocationTag(object.getBlockX() + 0.5, object.getBlockY() + 0.5, object.getBlockZ() + 0.5, object.getWorldName());
         });
 
         // <--[tag]

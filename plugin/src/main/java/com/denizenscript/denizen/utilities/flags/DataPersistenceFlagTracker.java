@@ -80,7 +80,10 @@ public class DataPersistenceFlagTracker extends MapTagBasedFlagTracker {
             }
             ObjectTag subValue = ((MapTag) map).getObject(valueString);
             if (subValue instanceof MapTag) {
-                if (doClean((MapTag) subValue)) {
+                MapTag cleaned = cleanedCopy((MapTag) subValue);
+                if (cleaned != null) {
+                    // This map was just deserialized out of the data container, so nobody else holds it - storing the cleaned copy back is all that is needed.
+                    ((MapTag) map).putObject(valueString, cleaned);
                     holder.getPersistentDataContainer().set(key, DataPersistenceHelper.PERSISTER_TYPE, map);
                 }
                 containsAnyToCheck = true;

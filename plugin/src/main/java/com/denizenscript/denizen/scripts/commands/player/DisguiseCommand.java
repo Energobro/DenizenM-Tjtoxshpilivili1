@@ -27,6 +27,7 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DisguiseCommand extends AbstractCommand {
 
@@ -108,7 +109,8 @@ public class DisguiseCommand extends AbstractCommand {
 
         public EntityTag as;
 
-        public FakeEntity fakeToSelf;
+        // Volatile because <player.disguise_to_self> reads it off the main thread, while startFake/stopFake write it here.
+        public volatile FakeEntity fakeToSelf;
 
         public FakeEntity toOthers;
 
@@ -273,7 +275,17 @@ public class DisguiseCommand extends AbstractCommand {
         }
     }
 
-    public static HashMap<UUID, HashMap<UUID, TrackedDisguise>> disguises = new HashMap<>();
+    // The outer map is concurrent because <entity.is_disguised>, <entity.disguised_type>, <entity.disguise_to_others> and <player.disguise_to_self>
+    // read it, the last of those off the main thread. The inner maps deliberately stay plain HashMaps and are treated as immutable once published:
+    // a global disguise is stored under a *null* key, which a ConcurrentHashMap cannot hold at all. So every write below copies the inner map,
+    // edits the copy, and publishes it whole - the same publish-instead-of-edit shape used for flag writes and the chat history.
+    public static Map<UUID, Map<UUID, TrackedDisguise>> disguises = new ConcurrentHashMap<>();
+
+    /** A writable copy of one entity's disguise map, to be published back with a single put once it has been edited. Main thread only, like every write here. */
+    public static HashMap<UUID, TrackedDisguise> editableCopy(UUID entityId) {
+        Map<UUID, TrackedDisguise> current = disguises.get(entityId);
+        return current == null ? new HashMap<>() : new HashMap<>(current);
+    }
 
     @Override
     public void execute(ScriptEntry scriptEntry) {
@@ -299,7 +311,7 @@ public class DisguiseCommand extends AbstractCommand {
         if (scriptEntry.dbCallShouldDebug()) {
             Debug.report(scriptEntry, getName(), entity, db("cancel", cancel), as, db("global", global), db("self", self), db("players", players));
         }
-        HashMap<UUID, TrackedDisguise> playerMap = disguises.get(entity.getUUID());
+        Map<UUID, TrackedDisguise> playerMap = disguises.get(entity.getUUID());
         if (playerMap != null) {
             if (global) {
                 for (Map.Entry<UUID, TrackedDisguise> entry : playerMap.entrySet()) {
@@ -322,17 +334,25 @@ public class DisguiseCommand extends AbstractCommand {
                 disguises.remove(entity.getUUID());
             }
             else {
+                HashMap<UUID, TrackedDisguise> edited = new HashMap<>(playerMap);
+                boolean anyRemoved = false;
                 for (PlayerTag player : players) {
-                    TrackedDisguise disguise = playerMap.remove(player.getUUID());
+                    TrackedDisguise disguise = edited.remove(player.getUUID());
                     if (disguise != null) {
+                        anyRemoved = true;
                         disguise.isActive = false;
                         disguise.removeFor(player);
                         if (disguise.toOthers != null) {
                             FakeEntity.idsToEntities.remove(disguise.toOthers.overrideUUID);
                         }
-                        if (playerMap.isEmpty()) {
-                            disguises.remove(entity.getUUID());
-                        }
+                    }
+                }
+                if (anyRemoved) {
+                    if (edited.isEmpty()) {
+                        disguises.remove(entity.getUUID());
+                    }
+                    else {
+                        disguises.put(entity.getUUID(), edited);
                     }
                 }
             }
@@ -341,8 +361,9 @@ public class DisguiseCommand extends AbstractCommand {
             TrackedDisguise disguise = new TrackedDisguise(entity, as);
             disguise.as.entity = NMSHandler.playerHelper.sendEntitySpawn(new ArrayList<>(), as.getEntityType(), entity.getLocation(), as.mechanisms == null ? null : new ArrayList<>(as.mechanisms), -1, null, false).entity.getBukkitEntity();
             if (global) {
-                playerMap = disguises.computeIfAbsent(entity.getUUID(), k -> new HashMap<>());
-                playerMap.put(null, disguise);
+                HashMap<UUID, TrackedDisguise> edited = editableCopy(entity.getUUID());
+                edited.put(null, disguise);
+                disguises.put(entity.getUUID(), edited);
                 disguise.isActive = true;
                 ArrayList<PlayerTag> playerSet = players == null ? new ArrayList<>() : new ArrayList<>(players);
                 for (Player player : entity.getWorld().getPlayers()) {
@@ -353,11 +374,12 @@ public class DisguiseCommand extends AbstractCommand {
                 disguise.sendTo(playerSet);
             }
             else {
+                HashMap<UUID, TrackedDisguise> edited = editableCopy(entity.getUUID());
                 for (PlayerTag player : players) {
-                    playerMap = disguises.computeIfAbsent(entity.getUUID(), k -> new HashMap<>());
-                    playerMap.put(player.getUUID(), disguise);
+                    edited.put(player.getUUID(), disguise);
                     disguise.isActive = true;
                 }
+                disguises.put(entity.getUUID(), edited);
                 disguise.sendTo(players);
             }
         }

@@ -24,6 +24,17 @@ public class AnnounceCommand extends AbstractCommand {
         setSyntax("announce [<text>] (to_ops/to_console/to_flagged:<flag_name>/to_permission:<node>) (format:<script>)");
         setRequiredArguments(1, 3);
         isProcedural = true;
+        setAsyncDeferrable(true); // Broadcasts a message and hands nothing back to the script. Its text and format are resolved in parseArgs, so the message is the one the script had at that moment.
+    }
+
+    @Override
+    public boolean isAsyncSafe(ScriptEntry scriptEntry) {
+        // Everything this command does off the main thread is accounted for: it walks Bukkit's online player list (a view over a CopyOnWriteArrayList),
+        // may ask the op list (a concurrent map) or a player's flags (already async-safe), and then sends a chat packet - which Paper explicitly supports
+        // off-thread, since Connection.send treats "am I the main thread" as a condition and queues the packet into a ConcurrentLinkedQueue when it isn't.
+        // 'to_permission' is the exception: it asks a permissions plugin, which may be anything at all, and Bukkit's own permissible rebuilds its
+        // permission map in place. Such a line stays off this path - and since the command is deferrable, it is handed over without the script waiting anyway.
+        return !scriptEntry.hasRawArgumentPrefix("to_permission");
     }
 
     // <--[command]
@@ -110,6 +121,19 @@ public class AnnounceCommand extends AbstractCommand {
             throw new InvalidArgumentsException("Missing text argument!");
         }
         scriptEntry.defaultObject("type", AnnounceType.ALL);
+        // The format is applied here rather than inside execute, so that an async script can hand this announce to the main thread and carry on:
+        // the message is then the one the script had at this moment, rather than whatever the format's tags read whenever the main thread got to it.
+        ElementTag text = scriptEntry.getElement("text");
+        FormatScriptContainer format = (FormatScriptContainer) scriptEntry.getObject("format");
+        String message;
+        if (format != null) {
+            message = format.getFormattedText(text.asString(), scriptEntry);
+        }
+        else {
+            ScriptContainer scriptContainer = scriptEntry.getScriptContainer();
+            message = scriptContainer != null && scriptContainer.getFormattingContext() != null ? scriptContainer.getFormattingContext().format(ANNOUNCE_FORMAT_TYPE, text.asString(), scriptEntry) : text.asString();
+        }
+        scriptEntry.addObject("formatted_text", new ElementTag(message, true));
     }
 
     @Override
@@ -124,14 +148,8 @@ public class AnnounceCommand extends AbstractCommand {
         if (scriptEntry.dbCallShouldDebug()) {
             Debug.report(scriptEntry, getName(), db("message", text), (format != null ? db("format", format.getName()) : ""), db("type", type.name()), flag);
         }
-        String message;
-        if (format != null) {
-            message = format.getFormattedText(text.asString(), scriptEntry);
-        }
-        else {
-            ScriptContainer scriptContainer = scriptEntry.getScriptContainer();
-            message = scriptContainer != null && scriptContainer.getFormattingContext() != null ? scriptContainer.getFormattingContext().format(ANNOUNCE_FORMAT_TYPE, text.asString(), scriptEntry) : text.asString();
-        }
+        // Already formatted, back in parseArgs - see the note there.
+        String message = scriptEntry.getElement("formatted_text").asString();
         // Use Bukkit to broadcast the message to everybody in the server.
         switch (type) {
             case ALL:
@@ -142,6 +160,7 @@ public class AnnounceCommand extends AbstractCommand {
                 break;
             case TO_PERMISSION:
                 PaperAPITools.instance.broadcast(message, player -> player.hasPermission(flag.asString()));
+                break;
             case TO_FLAGGED:
                 PaperAPITools.instance.broadcast(message, player -> new PlayerTag(player).getFlagTracker().hasFlag(flag.asString()));
                 break;

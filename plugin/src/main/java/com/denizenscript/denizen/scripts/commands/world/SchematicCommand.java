@@ -4,6 +4,7 @@ import com.denizenscript.denizen.Denizen;
 import com.denizenscript.denizen.objects.*;
 import com.denizenscript.denizen.utilities.Utilities;
 import com.denizenscript.denizen.utilities.blocks.*;
+import com.denizenscript.denizencore.utilities.CoreUtilities;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.denizenscript.denizencore.exceptions.InvalidArgumentsException;
 import com.denizenscript.denizencore.exceptions.InvalidArgumentsRuntimeException;
@@ -29,10 +30,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.URLDecoder;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class SchematicCommand extends AbstractCommand implements Holdable, Listener {
@@ -47,12 +48,36 @@ public class SchematicCommand extends AbstractCommand implements Holdable, Liste
                 schematicTags(event);
             }
         }, "schematic");
-        schematics = new HashMap<>();
+        // Concurrent because 'schematic save' looks a set up from an async script's own thread, while the main thread may be loading or unloading another - see isAsyncSafe.
+        schematics = new ConcurrentHashMap<>();
         noPhys = false;
         Bukkit.getPluginManager().registerEvents(this, Denizen.getInstance());
         isProcedural = false;
         setBooleansHandled("noair", "delayed", "entities", "flags");
         setPrefixesHandled("angle", "fake_duration", "mask", "name", "filename", "max_delay_ms", "fake_to", "area");
+    }
+
+    @Override
+    public boolean isAsyncSafe(ScriptEntry scriptEntry) {
+        // Only 'save', and only because everything it touches is the plugin's own: it looks up a block set Denizen already holds in memory, walks that
+        // into an NBT tree and gzips it to a file. No world, no entity - SpongeSchematicHelper.saveToSpongeStream reads the block data the set copied when
+        // it was made and asks each one for its string form. Upstream already runs that same body off the main thread when the line says 'delayed'; what it
+        // never covered is a plain save, which ran on the calling thread - so from an async script it crossed over and then held the main thread on the disk write.
+        // The set is claimed through readingProcesses before the write starts, so a rotate or flip refuses rather than rewriting blocks out from under it.
+        // The other types stay where they were: create and paste read and write the live world. 'load' is the same shape as save and its helper already
+        // handles being called off-thread, but nothing here has tested it that way, so it was left alone rather than marked on the strength of the reading.
+        if (!scriptEntry.hasRawArgument("save")) {
+            return false;
+        }
+        // The type is a positional argument, and the first one that matches wins in parseArgs - so '- schematic paste save ...' is a paste with one
+        // unhandled word in it, and would otherwise be sent off-thread on the strength of a word it is never going to act on. A malformed line like that
+        // used to cost a warning; it should not start writing the world from another thread. Refusing anything that names a second type keeps that shut.
+        for (Type otherType : Type.values()) {
+            if (otherType != Type.SAVE && scriptEntry.hasRawArgument(CoreUtilities.toLowerCase(otherType.name()))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     // <--[command]
@@ -205,9 +230,7 @@ public class SchematicCommand extends AbstractCommand implements Holdable, Liste
                 }
             }
             finally {
-                if (delayed) {
-                    Bukkit.getScheduler().runTask(Denizen.instance, () -> schematic.isModifying = false);
-                }
+                schematic.isModifying = false; // The field is volatile, so this releases the set from whatever thread did the rotating, without waiting for a tick.
                 if (callback != null) {
                     if (delayed) {
                         Bukkit.getScheduler().runTask(Denizen.instance, callback);
@@ -218,8 +241,8 @@ public class SchematicCommand extends AbstractCommand implements Holdable, Liste
                 }
             }
         };
+        schematic.isModifying = true; // Marked for the instant form too now, since a save on another thread has no other way to see this coming.
         if (delayed) {
-            schematic.isModifying = true;
             Bukkit.getScheduler().runTaskAsynchronously(Denizen.instance, rotateRunnable);
         }
         else {
@@ -422,8 +445,18 @@ public class SchematicCommand extends AbstractCommand implements Holdable, Liste
                     return;
                 }
                 final CuboidBlockSet schematic = schematics.get(name.asString().toUpperCase());
-                if (schematic.isModifying || schematic.readingProcesses > 0) {
+                if (schematic.isModifying) {
                     Debug.echoError("Cannot rotate schematic: schematic is currently processing another instruction.");
+                    scriptEntry.setFinished(true);
+                    return;
+                }
+                // Claimed before the readers are counted, so a save claiming at the same moment from its own thread makes one of the two back off instead of both going ahead.
+                // Only the main thread ever sets this, so the check above and the claim here can't race each other.
+                schematic.isModifying = true;
+                if (schematic.readingProcesses.get() > 0) {
+                    schematic.isModifying = false;
+                    Debug.echoError("Cannot rotate schematic: schematic is currently processing another instruction.");
+                    scriptEntry.setFinished(true);
                     return;
                 }
                 rotateSchem(schematic, angle.asInt(), delayed, () -> scriptEntry.setFinished(true));
@@ -436,11 +469,24 @@ public class SchematicCommand extends AbstractCommand implements Holdable, Liste
                     return;
                 }
                 final CuboidBlockSet schematic = schematics.get(name.asString().toUpperCase());
-                if (schematic.isModifying || schematic.readingProcesses > 0) {
+                if (schematic.isModifying) {
                     Debug.echoError("Cannot flip schematic: schematic is currently processing another instruction.");
+                    scriptEntry.setFinished(true);
                     return;
                 }
-                schematic.flipX();
+                schematic.isModifying = true; // Claimed before the readers are counted, the same order as rotate - see there for why it is that way round.
+                if (schematic.readingProcesses.get() > 0) {
+                    schematic.isModifying = false;
+                    Debug.echoError("Cannot flip schematic: schematic is currently processing another instruction.");
+                    scriptEntry.setFinished(true);
+                    return;
+                }
+                try {
+                    schematic.flipX();
+                }
+                finally {
+                    schematic.isModifying = false;
+                }
                 scriptEntry.setFinished(true);
                 break;
             }
@@ -451,11 +497,24 @@ public class SchematicCommand extends AbstractCommand implements Holdable, Liste
                     return;
                 }
                 final CuboidBlockSet schematic = schematics.get(name.asString().toUpperCase());
-                if (schematic.isModifying || schematic.readingProcesses > 0) {
+                if (schematic.isModifying) {
                     Debug.echoError("Cannot flip schematic: schematic is currently processing another instruction.");
+                    scriptEntry.setFinished(true);
                     return;
                 }
-                schematic.flipY();
+                schematic.isModifying = true;
+                if (schematic.readingProcesses.get() > 0) {
+                    schematic.isModifying = false;
+                    Debug.echoError("Cannot flip schematic: schematic is currently processing another instruction.");
+                    scriptEntry.setFinished(true);
+                    return;
+                }
+                try {
+                    schematic.flipY();
+                }
+                finally {
+                    schematic.isModifying = false;
+                }
                 scriptEntry.setFinished(true);
                 break;
             }
@@ -466,11 +525,24 @@ public class SchematicCommand extends AbstractCommand implements Holdable, Liste
                     return;
                 }
                 final CuboidBlockSet schematic = schematics.get(name.asString().toUpperCase());
-                if (schematic.isModifying || schematic.readingProcesses > 0) {
+                if (schematic.isModifying) {
                     Debug.echoError("Cannot flip schematic: schematic is currently processing another instruction.");
+                    scriptEntry.setFinished(true);
                     return;
                 }
-                schematic.flipZ();
+                schematic.isModifying = true;
+                if (schematic.readingProcesses.get() > 0) {
+                    schematic.isModifying = false;
+                    Debug.echoError("Cannot flip schematic: schematic is currently processing another instruction.");
+                    scriptEntry.setFinished(true);
+                    return;
+                }
+                try {
+                    schematic.flipZ();
+                }
+                finally {
+                    schematic.isModifying = false;
+                }
                 scriptEntry.setFinished(true);
                 break;
             }
@@ -511,7 +583,7 @@ public class SchematicCommand extends AbstractCommand implements Holdable, Liste
                     }
                     Consumer<CuboidBlockSet> pasteRunnable = (schematic) -> {
                         if (delayed) {
-                            schematic.readingProcesses++;
+                            schematic.readingProcesses.incrementAndGet();
                             schematic.setBlocksDelayed(() -> {
                                 try {
                                     if (copyEntities) {
@@ -520,7 +592,7 @@ public class SchematicCommand extends AbstractCommand implements Holdable, Liste
                                 }
                                 finally {
                                     scriptEntry.setFinished(true);
-                                    schematic.readingProcesses--;
+                                    schematic.readingProcesses.decrementAndGet();
                                 }
                             }, input, maxDelayMs.asLong());
                         }
@@ -554,15 +626,20 @@ public class SchematicCommand extends AbstractCommand implements Holdable, Liste
                     return;
                 }
                 set = schematics.get(name.asString().toUpperCase());
-                if (set.isModifying) {
-                    Debug.echoError("Cannot save schematic: schematic is currently processing another instruction.");
-                    return;
-                }
                 String directory = URLDecoder.decode(System.getProperty("user.dir"));
                 String extension = ".schem";
                 File f = new File(directory + "/plugins/Denizen/schematics/" + fname + extension);
                 if (!Utilities.canWriteToFile(f)) {
                     Debug.echoError("Cannot write to that file path due to security settings in Denizen/config.yml.");
+                    scriptEntry.setFinished(true);
+                    return;
+                }
+                // Claimed before the modification flag is read, the mirror of what rotate and flip do: whichever of the two claims first, the other one backs off.
+                // This is also the claim the instant form was missing - it used to release a count it had never taken, and the counter drifted negative every save.
+                set.readingProcesses.incrementAndGet();
+                if (set.isModifying) {
+                    set.readingProcesses.decrementAndGet();
+                    Debug.echoError("Cannot save schematic: schematic is currently processing another instruction.");
                     scriptEntry.setFinished(true);
                     return;
                 }
@@ -580,18 +657,19 @@ public class SchematicCommand extends AbstractCommand implements Holdable, Liste
                             Debug.echoError(scriptEntry, ex);
                         });
                     }
-                    Bukkit.getScheduler().runTask(Denizen.instance, () -> {
-                        set.readingProcesses--;
+                    set.readingProcesses.decrementAndGet(); // Released here rather than a tick later on the main thread, so the next line of the script can rotate the set it just saved.
+                    if (delayed) {
+                        Bukkit.getScheduler().runTask(Denizen.instance, () -> scriptEntry.setFinished(true));
+                    }
+                    else {
                         scriptEntry.setFinished(true);
-                    });
+                    }
                 };
                 if (delayed) {
-                    set.readingProcesses++;
                     Bukkit.getScheduler().runTaskAsynchronously(Denizen.instance, saveRunnable);
                 }
                 else {
-                    scriptEntry.setFinished(true);
-                    saveRunnable.run();
+                    saveRunnable.run(); // On the main thread for an ordinary script, and on the script's own thread for an async one - see isAsyncSafe.
                 }
                 break;
             }

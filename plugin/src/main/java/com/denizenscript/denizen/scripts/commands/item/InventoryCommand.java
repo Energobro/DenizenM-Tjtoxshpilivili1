@@ -19,6 +19,7 @@ import com.denizenscript.denizencore.objects.Mechanism;
 import com.denizenscript.denizencore.objects.ObjectTag;
 import com.denizenscript.denizencore.objects.core.DurationTag;
 import com.denizenscript.denizencore.objects.core.TimeTag;
+import com.denizenscript.denizencore.objects.notable.Notable;
 import com.denizenscript.denizencore.objects.notable.NoteManager;
 import com.denizenscript.denizencore.objects.properties.PropertyParser;
 import com.denizenscript.denizencore.scripts.ScriptEntry;
@@ -41,7 +42,6 @@ import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.AbstractMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -197,8 +197,8 @@ public class InventoryCommand extends AbstractCommand implements Listener {
                 tab.add("dest:" + s);
                 tab.add("destination:" + s);
             };
-            for (InventoryTag inventory : (HashSet<InventoryTag>) ((HashSet) NoteManager.notesByType.get(InventoryTag.class))) {
-                addAll.accept(inventory.noteName);
+            for (Notable inventory : NoteManager.notesByType.get(InventoryTag.class)) {
+                addAll.accept(((InventoryTag) inventory).noteName);
             }
             for (String script : InventoryScriptHelper.inventoryScripts.keySet()) {
                 addAll.accept(script);

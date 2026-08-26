@@ -22,18 +22,35 @@ public class PlaySoundCommand extends AbstractCommand {
 
     public PlaySoundCommand() {
         setName("playsound");
-        setSyntax("playsound (<location>|...) (<player>|...) [sound:<name>] (volume:<#.#>) (pitch:<#.#>) (custom) (sound_category:<category_name>)");
-        setRequiredArguments(2, 7);
+        setSyntax("playsound (<location>|...) (<player>|...) (targets:<player>|...) [sound:<name>] (volume:<#.#>) (pitch:<#.#>) (custom) (sound_category:<category_name>)");
+        setRequiredArguments(2, 8);
         isProcedural = false;
         setBooleansHandled("custom");
         setPrefixesHandled("sound_category", "pitch", "volume");
+        // Same as playeffect: a sound is sent and forgotten, so an async script needn't stop and wait for the main thread to send it.
+        setAsyncDeferrable(true);
+    }
+
+    @Override
+    public boolean isAsyncSafe(ScriptEntry scriptEntry) {
+        // Safe only when the line names its listeners with an explicit 'targets:'. Checked against the server's own jar:
+        // CraftWorld.playSound opens seven overloads with AsyncCatcher.catchOp("play sound"), while CraftPlayer.playSound has no AsyncCatcher
+        // at all and goes straight to the connection. Off-thread the world form would therefore throw, and execute() catches that into a
+        // debug-level "Unable to play sound" - a silently missing sound rather than an error anyone would see.
+        // A 'targets:' on the line means parseArgs has filled 'entities', so execute cannot reach the branch that goes through the world:
+        // the two branches left both play per player. The plain unprefixed forms cannot be marked, and not for want of trying - locations and
+        // players are told apart by type-matching positional arguments inside parseArgs, and this method is asked before parseArgs runs.
+        // That is what 'targets:' exists for; it was added rather than changing how the old forms are written, so those keep working as before.
+        // The other half of making this true is the sound packet handler, which fires the 'player hears sound' event and resolves an entity
+        // through the live world - it now hands itself to the main thread when it isn't already there, the way the actionbar handler does.
+        return scriptEntry.hasRawArgumentPrefix("targets") || scriptEntry.hasRawArgumentPrefix("target") || scriptEntry.hasRawArgumentPrefix("t");
     }
 
     // <--[command]
     // @Name PlaySound
-    // @Syntax playsound (<location>|...) (<player>|...) [sound:<name>] (volume:<#.#>) (pitch:<#.#>) (custom) (sound_category:<category_name>)
+    // @Syntax playsound (<location>|...) (<player>|...) (targets:<player>|...) [sound:<name>] (volume:<#.#>) (pitch:<#.#>) (custom) (sound_category:<category_name>)
     // @Required 2
-    // @Maximum 7
+    // @Maximum 8
     // @Short Plays a sound at the location or to a list of players.
     // @Synonyms Noise
     // @Group world
@@ -49,6 +66,8 @@ public class PlaySoundCommand extends AbstractCommand {
     // For a list of all valid sound categories, check <@link url https://hub.spigotmc.org/javadocs/spigot/org/bukkit/SoundCategory.html>
     //
     // Specifying a player or list of players will only play the sound for each player, from their own location (but will not follow them if they move).
+    // Those players may be given as a plain unprefixed list, or with the 'targets:' prefix - the two are the same input, but only the prefixed
+    // form can run off the main thread, since it is the only one an async script can recognize as naming its listeners before it parses the line.
     // If a location is specified, it will play the sound for any players that are near the location specified.
     // If both players and locations are specified, will play the sound for only those players at those locations.
     //
@@ -71,6 +90,9 @@ public class PlaySoundCommand extends AbstractCommand {
     // @Usage
     // Use to notify all players with a sound
     // - playsound <server.online_players> sound:ENTITY_PLAYER_LEVELUP volume:0.5 pitch:0.8
+    // @Usage
+    // Use to notify all players with a sound from an async script, without stopping for the main thread
+    // - playsound targets:<server.online_players> sound:ENTITY_PLAYER_LEVELUP volume:0.5 pitch:0.8
     // -->
 
     @Override
@@ -81,7 +103,15 @@ public class PlaySoundCommand extends AbstractCommand {
     @Override
     public void parseArgs(ScriptEntry scriptEntry) throws InvalidArgumentsException {
         for (Argument arg : scriptEntry) {
-            if (!scriptEntry.hasObject("locations")
+            // Checked first so a prefixed 'targets:' always claims its argument, rather than being left to the positional type-matching below.
+            // Same input as the unprefixed player list, stored under the same key - the prefix exists so that the line can be recognized as
+            // naming its listeners before it is parsed. See isAsyncSafe.
+            if (!scriptEntry.hasObject("entities")
+                    && arg.matchesPrefix("targets", "target", "t")
+                    && arg.matchesArgumentList(PlayerTag.class)) {
+                scriptEntry.addObject("entities", arg.asType(ListTag.class).filter(PlayerTag.class, scriptEntry));
+            }
+            else if (!scriptEntry.hasObject("locations")
                     && arg.matchesArgumentList(LocationTag.class)) {
                 scriptEntry.addObject("locations", arg.asType(ListTag.class).filter(LocationTag.class, scriptEntry));
             }

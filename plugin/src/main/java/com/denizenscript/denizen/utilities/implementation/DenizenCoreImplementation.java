@@ -80,6 +80,8 @@ public class DenizenCoreImplementation implements DenizenImplementation {
 
     @Override
     public void onScriptReload() {
+        // First thing here, ahead of the ScriptReloadEvent below: the recipe rebuild listens for that event and iterates this map.
+        ItemScriptHelper.publishScripts();
         Depends.setupEconomy();
         Bukkit.getServer().getPluginManager().callEvent(new ScriptReloadEvent());
     }
@@ -179,8 +181,9 @@ public class DenizenCoreImplementation implements DenizenImplementation {
         CommandScriptHelper.commandScripts.clear();
         InventoryScriptHelper.inventoryScripts.clear();
         EntityScriptHelper.scripts.clear();
-        ItemScriptHelper.item_scripts.clear();
-        ItemScriptHelper.item_scripts_by_hash_id.clear();
+        // Item scripts are published at the end of the reload rather than cleared here, so an async script reading an item's script name
+        // during those few hundred milliseconds gets the old answer instead of none - see ItemScriptHelper.item_scripts.
+        ItemScriptHelper.startScriptLoad();
     }
 
     @Override

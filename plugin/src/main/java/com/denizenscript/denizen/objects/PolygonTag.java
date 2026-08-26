@@ -229,10 +229,12 @@ public class PolygonTag implements ObjectTag, Cloneable, Notable, Adjustable, Ar
     }
 
     public boolean containsPrecise(Location loc) {
-        if (loc.getWorld() == null) {
-            return false;
-        }
-        if (!loc.getWorld().getName().equals(world.getName())) {
+        // Only the world's name is ever compared here, so ask for the name rather than the world - see CuboidTag.isInsideCuboid,
+        // which was changed the same way: LocationTag.getWorld() resolves through Bukkit and writes the result back into the
+        // location, which a shared location can't afford to have happen off the main thread.
+        // It is also asked for twice per call here, and this method runs once per block in generateFlatBlockShell.
+        String worldName = loc instanceof LocationTag locTag ? locTag.getWorldName() : loc.getWorld() == null ? null : loc.getWorld().getName();
+        if (worldName == null || !worldName.equals(world.getName())) {
             return false;
         }
         double x = loc.getX();
@@ -256,10 +258,9 @@ public class PolygonTag implements ObjectTag, Cloneable, Notable, Adjustable, Ar
     }
 
     public boolean containsInclusive(Location loc) {
-        if (loc.getWorld() == null) {
-            return false;
-        }
-        if (!loc.getWorld().getName().equals(world.getName())) {
+        // Same as containsPrecise above - compared by name, never resolved.
+        String worldName = loc instanceof LocationTag locTag ? locTag.getWorldName() : loc.getWorld() == null ? null : loc.getWorld().getName();
+        if (worldName == null || !worldName.equals(world.getName())) {
             return false;
         }
         int targetY = loc.getBlockY();
@@ -582,6 +583,12 @@ public class PolygonTag implements ObjectTag, Cloneable, Notable, Adjustable, Ar
         if (noteName != null) {
             this.flagTracker = tracker;
         }
+    }
+
+    @Override
+    public boolean isFlagTrackerAsyncSafe() {
+        // A noted area carries its tracker in a field of the noted object itself, so fetching it reads nothing but that field.
+        return true;
     }
 
     @Override

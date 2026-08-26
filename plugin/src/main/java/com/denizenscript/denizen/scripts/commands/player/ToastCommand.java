@@ -29,6 +29,11 @@ public class ToastCommand extends AbstractCommand {
         setSyntax("toast [<text>] (targets:<player>|...) (icon:<item>) (frame:{task}/challenge/goal)");
         setRequiredArguments(1, 4);
         isProcedural = false;
+        // The toast is a throwaway advancement that is never registered with the server: 'temporary' sends the client a pair of packets and touches
+        // nothing on the server side. Building them copies the icon's own item handle and turns the text into a component through frozen registries.
+        // There is no per-target reparse to exclude, so this is the plain flag rather than an isAsyncSafe(ScriptEntry) override.
+        // Note this makes 'asyncDeferrable' unreachable - being async-safe is strictly better, and it is checked first.
+        setAsyncSafe(true);
     }
 
     // <--[command]

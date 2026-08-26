@@ -46,7 +46,7 @@ public class SidebarImpl extends Sidebar {
 
     public SidebarImpl(Player player) {
         super(player);
-        Component chatComponentTitle = Handler.parseNMSComponent(title, PaperAPITools.BaseColor.WHITE);
+        Component chatComponentTitle = Handler.parseNMSComponent(getTitle(), PaperAPITools.BaseColor.WHITE);
         this.obj1 = new Objective(dummyScoreboard, "dummy_1", dummyCriteria, chatComponentTitle, ObjectiveCriteria.RenderType.INTEGER, false, StyledFormat.SIDEBAR_DEFAULT);
         this.obj2 = new Objective(dummyScoreboard, "dummy_2", dummyCriteria, chatComponentTitle, ObjectiveCriteria.RenderType.INTEGER, false, StyledFormat.SIDEBAR_DEFAULT);
     }
@@ -64,22 +64,20 @@ public class SidebarImpl extends Sidebar {
 
     @Override
     public void sendUpdate() {
+        // Read once, so the lines and the scores sent below come from the same set even if another thread publishes a new one mid-update.
+        Display display = getDisplay();
         List<PlayerTeam> oldTeams = generatedTeams;
         generatedTeams = new ArrayList<>();
         PacketHelperImpl.send(player, new ClientboundSetObjectivePacket(this.obj1, 0));
         String[] ids = getIds();
-        for (int i = 0; i < this.lines.length; i++) {
-            String line = this.lines[i];
-            if (line == null) {
-                break;
-            }
+        for (int i = 0; i < display.count; i++) {
             String lineId = ids[i];
             PlayerTeam team = new PlayerTeam(dummyScoreboard, lineId);
             team.getPlayers().add(lineId);
-            team.setPlayerPrefix(Handler.parseNMSComponent(line, PaperAPITools.BaseColor.WHITE));
+            team.setPlayerPrefix(Handler.parseNMSComponent(display.lines[i], PaperAPITools.BaseColor.WHITE));
             generatedTeams.add(team);
             PacketHelperImpl.send(player, ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team, true));
-            PacketHelperImpl.send(player, new ClientboundSetScorePacket(lineId, obj1.getName(), this.scores[i], Optional.empty(), Optional.of(StyledFormat.SIDEBAR_DEFAULT)));
+            PacketHelperImpl.send(player, new ClientboundSetScorePacket(lineId, obj1.getName(), display.scores[i], Optional.empty(), Optional.of(StyledFormat.SIDEBAR_DEFAULT)));
         }
         PacketHelperImpl.send(player, new ClientboundSetDisplayObjectivePacket(DisplaySlot.SIDEBAR, this.obj1));
         PacketHelperImpl.send(player, new ClientboundSetObjectivePacket(this.obj2, 1));

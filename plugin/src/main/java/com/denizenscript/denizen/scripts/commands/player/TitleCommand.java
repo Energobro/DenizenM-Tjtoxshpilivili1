@@ -25,6 +25,20 @@ public class TitleCommand extends AbstractCommand {
         autoCompile();
     }
 
+    @Override
+    public boolean isAsyncSafe(ScriptEntry scriptEntry) {
+        // Same family as narrate and actionbar: the title is three packets handed to the player's connection, which takes them from any
+        // thread - off the main one they go into the connection's own concurrent queue instead of being written straight out.
+        // Building them is just as clean: the text becomes a component through a static Gson and a read of the registry field,
+        // and both the online check and the player lookup are the thread-aware ones.
+        // Deferring it was never an option - autoCompile fuses reading the arguments with sending, and the tags in 'title:' are parsed
+        // inside execution, so a deferred line would read them at the moment the main thread got round to it rather than when the script asked.
+        // Running it async instead parses them on the script's own thread, which is the same moment as before.
+        // 'per_player' is excluded for cost, not safety: it reparses the text per target, and such text is usually written out of
+        // main-thread-only tags, so it would buy one crossing per player where handing the whole line over buys one in total.
+        return !scriptEntry.hasRawArgument("per_player");
+    }
+
     // <--[command]
     // @Name Title
     // @Syntax title (title:<text>) (subtitle:<text>) (fade_in:<duration>/{1s}) (stay:<duration>/{3s}) (fade_out:<duration>/{1s}) (targets:<player>|...) (per_player)

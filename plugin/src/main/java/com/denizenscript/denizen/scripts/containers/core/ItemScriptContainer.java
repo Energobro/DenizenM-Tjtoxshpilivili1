@@ -215,8 +215,7 @@ public class ItemScriptContainer extends ScriptContainer {
         super(configurationSection, scriptContainerName);
         canRunScripts = false;
         allowInMaterialRecipes = getString("allow in material recipes", "false").equalsIgnoreCase("true");
-        ItemScriptHelper.item_scripts.put(CoreUtilities.toLowerCase(getName()), this);
-        ItemScriptHelper.item_scripts_by_hash_id.put(ItemScriptHelper.createItemScriptID(this), this);
+        ItemScriptHelper.registerScript(this); // Into the set the reload is building, not the published one - see ItemScriptHelper.item_scripts.
     }
 
     private ItemTag cleanReference;

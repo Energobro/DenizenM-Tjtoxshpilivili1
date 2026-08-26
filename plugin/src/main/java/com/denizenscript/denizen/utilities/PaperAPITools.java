@@ -231,6 +231,14 @@ public class PaperAPITools {
         return meta.hasCustomName();
     }
 
+    /**
+     * Whether the material is enabled by the world's feature flags.
+     * Spigot asks the material; Paper dropped that method and asks the world instead, so the Paper implementation overrides this.
+     */
+    public boolean isEnabledByFeature(Material material, World world) {
+        return material.isEnabledByFeature(world);
+    }
+
     public void setMaterialTags(Material type, Set<NamespacedKey> tags) {
         NMSHandler.blockHelper.setVanillaTags(type, tags);
     }

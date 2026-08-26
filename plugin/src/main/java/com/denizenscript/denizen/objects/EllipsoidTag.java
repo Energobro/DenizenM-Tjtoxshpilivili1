@@ -197,7 +197,11 @@ public class EllipsoidTag implements ObjectTag, Notable, Cloneable, AreaContainm
     }
 
     public boolean contains(Location test) {
-        if (test.getWorld() == null || !test.getWorld().getName().equals(center.getWorld().getName())) {
+        // Only the world's name is ever compared here, so ask for the name rather than the world - see CuboidTag.isInsideCuboid,
+        // which was changed the same way: LocationTag.getWorld() resolves through Bukkit and writes the result back into the
+        // location, which a shared location can't afford to have happen off the main thread.
+        String worldName = test instanceof LocationTag locTag ? locTag.getWorldName() : test.getWorld() == null ? null : test.getWorld().getName();
+        if (worldName == null || !worldName.equals(center.getWorldName())) {
             return false;
         }
         double xbase = test.getX() - center.getX();
@@ -374,6 +378,12 @@ public class EllipsoidTag implements ObjectTag, Notable, Cloneable, AreaContainm
         if (noteName != null) {
             this.flagTracker = tracker;
         }
+    }
+
+    @Override
+    public boolean isFlagTrackerAsyncSafe() {
+        // A noted area carries its tracker in a field of the noted object itself, so fetching it reads nothing but that field.
+        return true;
     }
 
     @Override

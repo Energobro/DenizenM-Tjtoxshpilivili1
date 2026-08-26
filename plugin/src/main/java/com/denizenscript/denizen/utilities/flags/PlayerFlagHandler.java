@@ -6,6 +6,7 @@ import com.denizenscript.denizencore.utilities.CoreConfiguration;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.denizenscript.denizencore.flags.AbstractFlagTracker;
 import com.denizenscript.denizencore.flags.SavableMapFlagTracker;
+import com.denizenscript.denizencore.scripts.queues.ScriptQueue;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -21,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -54,9 +56,14 @@ public class PlayerFlagHandler implements Listener {
 
     public static File dataFolder;
 
-    public static HashMap<UUID, CachedPlayerFlag> playerFlagTrackerCache = new HashMap<>();
+    /**
+     * Flag data per player.
+     * Concurrent, as async scripts read player flags off the main thread while the main thread loads/expires cache entries.
+     * Note that only plain lookups are safe off-thread - all the cache bookkeeping below stays on the main thread, see getTrackerFor.
+     */
+    public static Map<UUID, CachedPlayerFlag> playerFlagTrackerCache = new ConcurrentHashMap<>();
 
-    public static HashMap<UUID, SoftReference<CachedPlayerFlag>> secondaryPlayerFlagTrackerCache = new HashMap<>();
+    public static Map<UUID, SoftReference<CachedPlayerFlag>> secondaryPlayerFlagTrackerCache = new ConcurrentHashMap<>();
 
     private static ArrayList<UUID> toClearCache = new ArrayList<>();
 
@@ -84,9 +91,10 @@ public class PlayerFlagHandler implements Listener {
         }
         long timeNow = CoreUtilities.monotonicMillis();
         for (Map.Entry<UUID, CachedPlayerFlag> entry : playerFlagTrackerCache.entrySet()) {
-            if (cacheTimeoutSeconds > 0 && entry.getValue().lastAccessed + (cacheTimeoutSeconds * 1000) < timeNow) {
-                continue;
-            }
+            // There used to be a skip here for entries whose timeout had passed - the exact expression of shouldExpire(), but used to 'continue'.
+            // So stale entries were the ones passed over and nothing was ever dropped from the cache while a timeout was set, ie it only grew.
+            // Fresh entries still reach saveThenExpire below and are still saved every cycle; its own expireTask re-checks shouldExpire() and
+            // removes only the ones that really are stale, which is the check this loop was duplicating backwards.
             if (Bukkit.getPlayer(entry.getKey()) != null) {
                 entry.getValue().lastAccessed = timeNow;
                 continue;
@@ -102,7 +110,10 @@ public class PlayerFlagHandler implements Listener {
         BukkitRunnable expireTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (cache.shouldExpire()) {
+                // 'modified' is re-checked because the save below works from a snapshot taken before it ran: a flag written in between is on no disk
+                // copy, and dropping the entry here would leave it living only in a SoftReference, ie lost as soon as the GC wants the memory.
+                // Leaving it for the next cycle costs one more minute in the cache and saves the write first.
+                if (cache.shouldExpire() && !cache.tracker.modified) {
                     playerFlagTrackerCache.remove(id);
                     secondaryPlayerFlagTrackerCache.put(id, new SoftReference<>(cache));
                 }
@@ -153,6 +164,24 @@ public class PlayerFlagHandler implements Listener {
 
     public static AbstractFlagTracker getTrackerFor(UUID id) {
         CachedPlayerFlag cache = playerFlagTrackerCache.get(id);
+        if (cache != null && !cache.loadingNow.get()) {
+            // Fast path: already loaded. Safe from any thread - the map is concurrent, and the tracker's own data is too.
+            if (CoreConfiguration.debugVerbose) {
+                Debug.echoError("Verbose - (getTrackerFor) flag tracker was cached for " + id);
+            }
+            return cache.tracker;
+        }
+        if (!DenizenCore.isMainThread()) {
+            // Cache miss (or still loading) from an async script: all the loading/expiry bookkeeping below assumes the main thread, so let it do the work.
+            AbstractFlagTracker[] result = new AbstractFlagTracker[1];
+            long waitStart = System.nanoTime();
+            DenizenCore.runOnMainThreadAndWait(() -> result[0] = getTrackerFor(id));
+            // Report the wait, or <QueueTag.async_stats> reads zero for a queue that really did stop for a tick. This is the flag read that costs
+            // one: it is why a tag looping over players and reading their flags has to stay main-thread-only - marking it would buy a crossing per
+            // uncached player instead of one for the whole tag. Passing null lets the queue be taken from the thread's current one.
+            ScriptQueue.recordMainThreadWait(null, System.nanoTime() - waitStart);
+            return result[0];
+        }
         if (cache == null) {
             SoftReference<CachedPlayerFlag> softRef = secondaryPlayerFlagTrackerCache.get(id);
             if (softRef != null) {

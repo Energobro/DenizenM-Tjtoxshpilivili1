@@ -22,6 +22,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SidebarCommand extends AbstractCommand {
 
@@ -32,6 +33,23 @@ public class SidebarCommand extends AbstractCommand {
         setParseArgs(false);
         Denizen.getInstance().getServer().getPluginManager().registerEvents(new SidebarEvents(), Denizen.getInstance());
         isProcedural = false;
+        setAsyncDeferrable(true);
+    }
+
+    @Override
+    public boolean isAsyncDeferrable(ScriptEntry scriptEntry) {
+        // 'per_player' parses every input once per target, inside execute - handing that over would move the parsing away from the moment the script asked for it.
+        return asyncDeferrable && !scriptEntry.hasRawArgument("per_player");
+    }
+
+    @Override
+    public boolean isAsyncSafe(ScriptEntry scriptEntry) {
+        // Every input is settled in parseArgs, the store of sidebars is concurrent, one sidebar's contents are published whole rather than edited
+        // in place, and each player's read-edit-set-send sequence is taken under that sidebar's own lock. What is left is scoreboard packets built
+        // out of a dummy scoreboard that no other thread touches, handed to the player's connection - which queues them when the caller isn't the main thread.
+        // 'per_player' is excluded for cost rather than safety: it reparses every input once per target, and those tags are usually main-thread-only
+        // (the command's own documented example uses <player.ping>), so 100 players would buy 100 crossings where going over once buys exactly one.
+        return !scriptEntry.hasRawArgument("per_player");
     }
 
     // <--[command]
@@ -156,6 +174,33 @@ public class SidebarCommand extends AbstractCommand {
         scriptEntry.addObject("action", new ElementTag(action));
         scriptEntry.defaultObject("per_player", new ElementTag(false));
         scriptEntry.defaultObject("players", new ElementTag(Utilities.entryHasPlayer(scriptEntry) ? Utilities.getEntryPlayer(scriptEntry).identify() : "li@"));
+        // The tags below are resolved here rather than inside execute, so that an async script can hand this sidebar to the main thread and carry on:
+        // the lines displayed are then the ones the script had at this moment, rather than whatever the tags read whenever the main thread got to it.
+        BukkitTagContext context = (BukkitTagContext) scriptEntry.getContext();
+        scriptEntry.addObject("parsed_players", ListTag.valueOf(TagManager.tag(scriptEntry.getElement("players").asString(), context), context));
+        // 'per_player' is the exception - it deliberately reparses every input once per target, so those keep their parsing in execute.
+        if (!scriptEntry.getElement("per_player").asBoolean()) {
+            ElementTag elTitle = scriptEntry.getElement("title");
+            if (elTitle != null) {
+                scriptEntry.addObject("parsed_title", new ElementTag(TagManager.tag(elTitle.asString(), context)));
+            }
+            ElementTag elScores = scriptEntry.getElement("scores");
+            if (elScores != null) {
+                scriptEntry.addObject("parsed_scores", ListTag.getListFor(TagManager.tagObject(elScores.asString(), context), context));
+            }
+            ElementTag elValue = scriptEntry.getElement("value");
+            if (elValue != null) {
+                scriptEntry.addObject("parsed_value", ListTag.getListFor(TagManager.tagObject(elValue.asString(), context), context));
+            }
+            ElementTag elIncrement = scriptEntry.getElement("increment");
+            if (elIncrement != null) {
+                scriptEntry.addObject("parsed_increment", new ElementTag(TagManager.tag(elIncrement.asString(), context)));
+            }
+            ElementTag elStart = scriptEntry.getElement("start");
+            if (elStart != null) {
+                scriptEntry.addObject("parsed_start", new ElementTag(TagManager.tag(elStart.asString(), context)));
+            }
+        }
     }
 
     public static boolean hasScoreAlready(List<Sidebar.SidebarLine> lines, int score) {
@@ -175,9 +220,9 @@ public class SidebarCommand extends AbstractCommand {
         ElementTag elValue = scriptEntry.getElement("value");
         ElementTag elIncrement = scriptEntry.getElement("increment");
         ElementTag elStart = scriptEntry.getElement("start");
-        ElementTag elPlayers = scriptEntry.getElement("players");
         ElementTag elPerPlayer = scriptEntry.getElement("per_player");
-        ListTag players = ListTag.valueOf(TagManager.tag(elPlayers.asString(), scriptEntry.getContext()), scriptEntry.getContext());
+        // Parsed in parseArgs, along with everything below that isn't 'per_player' - see there for why.
+        ListTag players = scriptEntry.getObjectTag("parsed_players");
         boolean per_player = elPerPlayer.asBoolean();
         String perTitle = null;
         String perScores = null;
@@ -210,22 +255,11 @@ public class SidebarCommand extends AbstractCommand {
             }
         }
         else {
-            BukkitTagContext context = (BukkitTagContext) scriptEntry.getContext();
-            if (elTitle != null) {
-                title = new ElementTag(TagManager.tag(elTitle.asString(), context));
-            }
-            if (elScores != null) {
-                scores = ListTag.getListFor(TagManager.tagObject(elScores.asString(), context), context);
-            }
-            if (elValue != null) {
-                value = ListTag.getListFor(TagManager.tagObject(elValue.asString(), context), context);
-            }
-            if (elIncrement != null) {
-                increment = new ElementTag(TagManager.tag(elIncrement.asString(), context));
-            }
-            if (elStart != null) {
-                start = new ElementTag(TagManager.tag(elStart.asString(), context));
-            }
+            title = scriptEntry.getObjectTag("parsed_title");
+            scores = scriptEntry.getObjectTag("parsed_scores");
+            value = scriptEntry.getObjectTag("parsed_value");
+            increment = scriptEntry.getObjectTag("parsed_increment");
+            start = scriptEntry.getObjectTag("parsed_start");
             if (scriptEntry.dbCallShouldDebug()) {
                 Debug.report(scriptEntry, getName(), action, title, scores, value, increment, start, db("players", players));
             }
@@ -241,32 +275,35 @@ public class SidebarCommand extends AbstractCommand {
                     if (sidebar == null) {
                         continue;
                     }
-                    List<Sidebar.SidebarLine> current = sidebar.getLines();
-                    if (per_player) {
-                        TagContext context = new BukkitTagContext(player, Utilities.getEntryNPC(scriptEntry),
-                                scriptEntry, scriptEntry.shouldDebug(), scriptEntry.getScript());
-                        value = ListTag.getListFor(TagManager.tagObject(perValue, context), context);
-                        if (perScores != null) {
-                            scores = ListTag.getListFor(TagManager.tagObject(perScores, context), context);
-                        }
-                    }
-                    try {
-                        int index = start != null ? start.asInt() : (current.size() > 0 ? current.get(current.size() - 1).score : value.size());
-                        int incr = increment != null ? increment.asInt() : -1;
-                        for (int i = 0; i < value.size(); i++, index += incr) {
-                            int score = (scores != null && i < scores.size()) ? Integer.parseInt(scores.get(i)) : index;
-                            while (hasScoreAlready(current, score)) {
-                                score += (incr == 0 ? 1 : incr);
+                    // One lock for the whole read-edit-set-send sequence, per sidebar - see Sidebar.updateLock for why it has to sit out here.
+                    synchronized (sidebar.updateLock) {
+                        List<Sidebar.SidebarLine> current = sidebar.getLines();
+                        if (per_player) {
+                            TagContext context = new BukkitTagContext(player, Utilities.getEntryNPC(scriptEntry),
+                                    scriptEntry, scriptEntry.shouldDebug(), scriptEntry.getScript());
+                            value = ListTag.getListFor(TagManager.tagObject(perValue, context), context);
+                            if (perScores != null) {
+                                scores = ListTag.getListFor(TagManager.tagObject(perScores, context), context);
                             }
-                            current.add(new Sidebar.SidebarLine(value.get(i), score));
                         }
+                        try {
+                            int index = start != null ? start.asInt() : (current.size() > 0 ? current.get(current.size() - 1).score : value.size());
+                            int incr = increment != null ? increment.asInt() : -1;
+                            for (int i = 0; i < value.size(); i++, index += incr) {
+                                int score = (scores != null && i < scores.size()) ? Integer.parseInt(scores.get(i)) : index;
+                                while (hasScoreAlready(current, score)) {
+                                    score += (incr == 0 ? 1 : incr);
+                                }
+                                current.add(new Sidebar.SidebarLine(value.get(i), score));
+                            }
+                        }
+                        catch (Exception e) {
+                            Debug.echoError(e);
+                            continue;
+                        }
+                        sidebar.setLines(current);
+                        sidebar.sendUpdate();
                     }
-                    catch (Exception e) {
-                        Debug.echoError(e);
-                        continue;
-                    }
-                    sidebar.setLines(current);
-                    sidebar.sendUpdate();
                 }
                 break;
             case REMOVE:
@@ -279,52 +316,55 @@ public class SidebarCommand extends AbstractCommand {
                     if (sidebar == null) {
                         continue;
                     }
-                    List<Sidebar.SidebarLine> current = sidebar.getLines();
-                    if (per_player) {
-                        TagContext context = new BukkitTagContext(player, Utilities.getEntryNPC(scriptEntry),
-                                scriptEntry, scriptEntry.shouldDebug(), scriptEntry.getScript());
-                        if (perValue != null) {
-                            value = ListTag.getListFor(TagManager.tagObject(perValue, context), context);
+                    // One lock for the whole read-edit-set-send sequence, per sidebar - see Sidebar.updateLock for why it has to sit out here.
+                    synchronized (sidebar.updateLock) {
+                        List<Sidebar.SidebarLine> current = sidebar.getLines();
+                        if (per_player) {
+                            TagContext context = new BukkitTagContext(player, Utilities.getEntryNPC(scriptEntry),
+                                    scriptEntry, scriptEntry.shouldDebug(), scriptEntry.getScript());
+                            if (perValue != null) {
+                                value = ListTag.getListFor(TagManager.tagObject(perValue, context), context);
+                            }
+                            if (perScores != null) {
+                                scores = ListTag.getListFor(TagManager.tagObject(perScores, context), context);
+                            }
                         }
-                        if (perScores != null) {
-                            scores = ListTag.getListFor(TagManager.tagObject(perScores, context), context);
+                        boolean removedAny = false;
+                        if (scores != null) {
+                            try {
+                                for (String scoreString : scores) {
+                                    int score = Integer.parseInt(scoreString);
+                                    for (int i = 0; i < current.size(); i++) {
+                                        if (current.get(i).score == score) {
+                                            current.remove(i--);
+                                        }
+                                    }
+                                }
+                            }
+                            catch (Exception e) {
+                                Debug.echoError(e);
+                                continue;
+                            }
+                            sidebar.setLines(current);
+                            sidebar.sendUpdate();
+                            removedAny = true;
                         }
-                    }
-                    boolean removedAny = false;
-                    if (scores != null) {
-                        try {
-                            for (String scoreString : scores) {
-                                int score = Integer.parseInt(scoreString);
+                        if (value != null) {
+                            for (String line : value) {
                                 for (int i = 0; i < current.size(); i++) {
-                                    if (current.get(i).score == score) {
+                                    if (current.get(i).text.equalsIgnoreCase(line)) {
                                         current.remove(i--);
                                     }
                                 }
                             }
+                            sidebar.setLines(current);
+                            sidebar.sendUpdate();
+                            removedAny = true;
                         }
-                        catch (Exception e) {
-                            Debug.echoError(e);
-                            continue;
+                        if (!removedAny) {
+                            sidebar.remove();
+                            sidebars.remove(player.getPlayerEntity().getUniqueId());
                         }
-                        sidebar.setLines(current);
-                        sidebar.sendUpdate();
-                        removedAny = true;
-                    }
-                    if (value != null) {
-                        for (String line : value) {
-                            for (int i = 0; i < current.size(); i++) {
-                                if (current.get(i).text.equalsIgnoreCase(line)) {
-                                    current.remove(i--);
-                                }
-                            }
-                        }
-                        sidebar.setLines(current);
-                        sidebar.sendUpdate();
-                        removedAny = true;
-                    }
-                    if (!removedAny) {
-                        sidebar.remove();
-                        sidebars.remove(player.getPlayerEntity().getUniqueId());
                     }
                 }
                 break;
@@ -346,43 +386,46 @@ public class SidebarCommand extends AbstractCommand {
                     if (sidebar == null) {
                         continue;
                     }
-                    List<Sidebar.SidebarLine> current = sidebar.getLines();
-                    if (per_player) {
-                        TagContext context = new BukkitTagContext(player, Utilities.getEntryNPC(scriptEntry),
-                                scriptEntry, scriptEntry.shouldDebug(), scriptEntry.getScript());
-                        if (perValue != null) {
-                            value = ListTag.getListFor(TagManager.tagObject(perValue, context), context);
-                        }
-                        if (perScores != null) {
-                            scores = ListTag.getListFor(TagManager.tagObject(perScores, context), context);
-                        }
-                    }
-                    try {
-                        for (int i = 0; i < value.size(); i++) {
-                            if (!ArgumentHelper.matchesInteger(scores.get(i))) {
-                                Debug.echoError("Sidebar command scores input contains not-a-valid-number: " + scores.get(i));
-                                return;
+                    // One lock for the whole read-edit-set-send sequence, per sidebar - see Sidebar.updateLock for why it has to sit out here.
+                    synchronized (sidebar.updateLock) {
+                        List<Sidebar.SidebarLine> current = sidebar.getLines();
+                        if (per_player) {
+                            TagContext context = new BukkitTagContext(player, Utilities.getEntryNPC(scriptEntry),
+                                    scriptEntry, scriptEntry.shouldDebug(), scriptEntry.getScript());
+                            if (perValue != null) {
+                                value = ListTag.getListFor(TagManager.tagObject(perValue, context), context);
                             }
-                            int score = Integer.parseInt(scores.get(i));
-                            if (hasScoreAlready(current, score)) {
-                                for (Sidebar.SidebarLine line : current) {
-                                    if (line.score == score) {
-                                        line.text = value.get(i);
-                                        break;
+                            if (perScores != null) {
+                                scores = ListTag.getListFor(TagManager.tagObject(perScores, context), context);
+                            }
+                        }
+                        try {
+                            for (int i = 0; i < value.size(); i++) {
+                                if (!ArgumentHelper.matchesInteger(scores.get(i))) {
+                                    Debug.echoError("Sidebar command scores input contains not-a-valid-number: " + scores.get(i));
+                                    return;
+                                }
+                                int score = Integer.parseInt(scores.get(i));
+                                if (hasScoreAlready(current, score)) {
+                                    for (Sidebar.SidebarLine line : current) {
+                                        if (line.score == score) {
+                                            line.text = value.get(i);
+                                            break;
+                                        }
                                     }
                                 }
-                            }
-                            else {
-                                current.add(new Sidebar.SidebarLine(value.get(i), score));
+                                else {
+                                    current.add(new Sidebar.SidebarLine(value.get(i), score));
+                                }
                             }
                         }
+                        catch (Exception e) {
+                            Debug.echoError(e);
+                            continue;
+                        }
+                        sidebar.setLines(current);
+                        sidebar.sendUpdate();
                     }
-                    catch (Exception e) {
-                        Debug.echoError(e);
-                        continue;
-                    }
-                    sidebar.setLines(current);
-                    sidebar.sendUpdate();
                 }
                 break;
             case SET:
@@ -395,62 +438,64 @@ public class SidebarCommand extends AbstractCommand {
                     if (sidebar == null) {
                         continue;
                     }
-                    List<Sidebar.SidebarLine> current = new ArrayList<>();
-                    if (per_player) {
-                        TagContext context = new BukkitTagContext(player, Utilities.getEntryNPC(scriptEntry),
-                                scriptEntry, scriptEntry.shouldDebug(), scriptEntry.getScript());
-                        if (perValue != null) {
-                            value = ListTag.getListFor(TagManager.tagObject(perValue, context), context);
-                        }
-                        if (perScores != null) {
-                            scores = ListTag.getListFor(TagManager.tagObject(perScores, context), context);
-                        }
-                        if (perStart != null) {
-                            start = new ElementTag(TagManager.tag(perStart, context));
-                        }
-                        if (perIncrement != null) {
-                            increment = new ElementTag(TagManager.tag(perIncrement, context));
-                        }
-                        if (perTitle != null) {
-                            title = new ElementTag(TagManager.tag(perTitle, context));
-                        }
-                    }
-                    if (value != null) {
-                        try {
-                            int index = start != null ? start.asInt() : value.size();
-                            int incr = increment != null ? increment.asInt() : -1;
-                            for (int i = 0; i < value.size(); i++, index += incr) {
-                                int score = (scores != null && i < scores.size()) ? Integer.parseInt(scores.get(i)) : index;
-                                current.add(new Sidebar.SidebarLine(value.get(i), score));
+                    // One lock for the whole read-edit-set-send sequence, per sidebar - see Sidebar.updateLock for why it has to sit out here.
+                    synchronized (sidebar.updateLock) {
+                        List<Sidebar.SidebarLine> current = new ArrayList<>();
+                        if (per_player) {
+                            TagContext context = new BukkitTagContext(player, Utilities.getEntryNPC(scriptEntry),
+                                    scriptEntry, scriptEntry.shouldDebug(), scriptEntry.getScript());
+                            if (perValue != null) {
+                                value = ListTag.getListFor(TagManager.tagObject(perValue, context), context);
+                            }
+                            if (perScores != null) {
+                                scores = ListTag.getListFor(TagManager.tagObject(perScores, context), context);
+                            }
+                            if (perStart != null) {
+                                start = new ElementTag(TagManager.tag(perStart, context));
+                            }
+                            if (perIncrement != null) {
+                                increment = new ElementTag(TagManager.tag(perIncrement, context));
+                            }
+                            if (perTitle != null) {
+                                title = new ElementTag(TagManager.tag(perTitle, context));
                             }
                         }
-                        catch (Exception e) {
-                            Debug.echoError(e);
-                            continue;
+                        if (value != null) {
+                            try {
+                                int index = start != null ? start.asInt() : value.size();
+                                int incr = increment != null ? increment.asInt() : -1;
+                                for (int i = 0; i < value.size(); i++, index += incr) {
+                                    int score = (scores != null && i < scores.size()) ? Integer.parseInt(scores.get(i)) : index;
+                                    current.add(new Sidebar.SidebarLine(value.get(i), score));
+                                }
+                            }
+                            catch (Exception e) {
+                                Debug.echoError(e);
+                                continue;
+                            }
+                            sidebar.setLines(current);
                         }
-                        sidebar.setLines(current);
+                        if (title != null) {
+                            sidebar.setTitle(title.asString());
+                        }
+                        sidebar.sendUpdate();
                     }
-                    if (title != null) {
-                        sidebar.setTitle(title.asString());
-                    }
-                    sidebar.sendUpdate();
                 }
                 break;
         }
     }
 
-    private static final Map<UUID, Sidebar> sidebars = new HashMap<>();
+    // Concurrent because an async script writes here while the three '<player.sidebar_...>' tags read here, and because two async scripts
+    // can reach this line for two different players at once - the containsKey-then-put below would otherwise be able to hand them two
+    // different Sidebar objects for one player, and one of the two would then be updating a sidebar the client is no longer being told about.
+    private static final Map<UUID, Sidebar> sidebars = new ConcurrentHashMap<>();
 
     private static Sidebar createSidebar(PlayerTag denizenPlayer) {
         if (!denizenPlayer.isOnline()) {
             return null;
         }
         Player player = denizenPlayer.getPlayerEntity();
-        UUID uuid = player.getUniqueId();
-        if (!sidebars.containsKey(uuid)) {
-            sidebars.put(uuid, NMSHandler.instance.createSidebar(player));
-        }
-        return sidebars.get(player.getUniqueId());
+        return sidebars.computeIfAbsent(player.getUniqueId(), uuid -> NMSHandler.instance.createSidebar(player));
     }
 
     public static Sidebar getSidebar(PlayerTag denizenPlayer) {

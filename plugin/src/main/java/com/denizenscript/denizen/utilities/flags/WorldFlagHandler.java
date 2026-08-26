@@ -10,12 +10,13 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class WorldFlagHandler implements Listener {
 
-    public static HashMap<String, SavableMapFlagTracker> worldFlagTrackers = new HashMap<>();
+    /** Flag data per world. Concurrent, as async scripts read world flags off the main thread while worlds load/unload on it. */
+    public static Map<String, SavableMapFlagTracker> worldFlagTrackers = new ConcurrentHashMap<>();
 
     public WorldFlagHandler() {
         Bukkit.getPluginManager().registerEvents(this, Denizen.getInstance());

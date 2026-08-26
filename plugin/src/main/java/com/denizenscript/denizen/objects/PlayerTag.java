@@ -55,6 +55,7 @@ import org.bukkit.scoreboard.Team;
 import org.bukkit.util.RayTraceResult;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, FlaggableObject {
 
@@ -96,7 +97,12 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         }
     }
 
-    static Map<String, UUID> playerNames = new HashMap<>();
+    /**
+     * Every player name the server has seen, mapped to their UUID.
+     * Concurrent, because the main thread writes it on every join (see {@link #notePlayer}) while async queues read it:
+     * "<player[bob].flag[x]>" resolves that name through {@link #valueOfInternal} on the async script's own thread.
+     */
+    static Map<String, UUID> playerNames = new ConcurrentHashMap<>();
 
     /**
      * Notes that the player exists, for easy PlayerTag valueOf handling.
@@ -107,12 +113,21 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         notePlayer(onlinePlayer != null ? onlinePlayer.getName() : NMSHandler.playerHelper.getOfflineData(uuid).getName(), uuid);
     }
 
+    /**
+     * The same names the other way around, in the case they were actually written in - this is where {@link #getName()} reads from.
+     * <p>
+     * Unlike {@link #playerNames}, a later note overwrites an earlier one: a player who changes name keeps one entry here, the current one,
+     * while the name-to-UUID map deliberately remembers both so that either name still finds them.
+     */
+    static Map<UUID, String> playerNamesById = new ConcurrentHashMap<>();
+
     public static void notePlayer(String name, UUID uuid) {
         if (name == null) {
             Debug.echoError("Null named player " + uuid + " - may be file corruption, or player data imported from non-bukkit server?");
             return;
         }
         playerNames.putIfAbsent(CoreUtilities.toLowerCase(name), uuid);
+        playerNamesById.put(uuid, name);
     }
 
     public static boolean isNoted(OfflinePlayer player) {
@@ -139,18 +154,20 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
             return null;
         }
         boolean announce = context == null ? defaultAnnounce : context.showErrors();
+        String asWritten = string;
         string = CoreUtilities.toLowerCase(string);
         if (string.startsWith("p@")) {
             string = string.substring("p@".length());
+            asWritten = asWritten.substring("p@".length());
         }
         if (string.length() == 36 && string.indexOf('-') >= 0) {
             try {
                 UUID uuid = UUID.fromString(string);
                 if (uuid != null) {
-                    OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
-                    if (player != null) {
-                        return new PlayerTag(player);
-                    }
+                    // Built straight from the UUID. A PlayerTag holds nothing else, and Bukkit.getOfflinePlayer(uuid) only ever
+                    // handed back an object whose getUniqueId() is the uuid that went in - so asking the server was a lookup
+                    // whose answer was already in hand, and it went through the online-player map to do it.
+                    return new PlayerTag(uuid);
                 }
             }
             catch (IllegalArgumentException e) {
@@ -158,13 +175,19 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
             }
         }
         // Match as a player name
-        if (string.length() <= 16 && playerNames.containsKey(string)) {
-            OfflinePlayer player = Bukkit.getOfflinePlayer(playerNames.get(string));
-            if (announce && (context == null || context.script != null)) { // 'script != null' check is to allow ex command usage silently
-                BukkitImplDeprecations.playerByNameWarning.message = playerByNameMessage + " Player named '" + player.getName() + "' has UUID: " + player.getUniqueId();
-                BukkitImplDeprecations.playerByNameWarning.warn(context);
+        if (string.length() <= 16) {
+            UUID uuid = playerNames.get(string);
+            if (uuid != null) {
+                if (announce && (context == null || context.script != null)) { // 'script != null' check is to allow ex command usage silently
+                    // The name comes from what the script wrote rather than from OfflinePlayer.getName(): that call goes to the
+                    // online-player map and, for a player who is offline, reads their NBT off disk - all to name a player in a
+                    // warning whose entire content is already known here. It ran on every lookup by name, main thread included.
+                    // Reported through warnWith rather than by assigning to the warning's shared message field, which is not
+                    // something to be writing from an async queue's thread.
+                    BukkitImplDeprecations.playerByNameWarning.warnWith(context, playerByNameMessage + " Player named '" + asWritten + "' has UUID: " + uuid);
+                }
+                return new PlayerTag(uuid);
             }
-            return new PlayerTag(player);
         }
         if (announce) {
             Debug.log("Minor: Invalid Player! '" + string + "' could not be found.");
@@ -234,6 +257,13 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // Nothing to do.
     }
 
+    @Override
+    public boolean isFlagTrackerAsyncSafe() {
+        // A player's flags live in Denizen's own cache, keyed by the UUID this object already holds - no Bukkit lookup anywhere on the way.
+        // A player who is not in the cache still costs one crossing inside PlayerFlagHandler.getTrackerFor, exactly as reading their flags does.
+        return true;
+    }
+
     UUID uuid;
 
     public boolean isValid() {
@@ -241,11 +271,30 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         if (pl != null && pl.hasPlayedBefore()) {
             return true;
         }
-        return getPlayerEntity() != null;
+        // Through isOnline rather than getPlayerEntity() != null - the same question, but this one is answerable off the main thread.
+        // It matters because this branch decides the answer: a player who has joined but whose data file does not exist yet is valid
+        // only by being online, and a racing read of PlayerList.playersByUUID would say otherwise. See isOnline.
+        return isOnline();
     }
 
     public Player getPlayerEntity() {
-        return Bukkit.getPlayer(uuid);
+        if (DenizenCore.isMainThread()) {
+            return Bukkit.getPlayer(uuid);
+        }
+        // Off the main thread, the usual route is not safe to read: Bukkit.getPlayer(UUID) is a plain 'get' on
+        // PlayerList.playersByUUID, which is a Maps.newHashMap() the main thread rewrites on every join and quit.
+        // A read racing a resize of that map can hand back null for a player who is in fact online, and a caller
+        // cannot tell that apart from a player who really has left - so a message would quietly go missing, or a
+        // null would travel on into the server.
+        // The online player list itself is a CopyOnWriteArrayList, and Bukkit.getOnlinePlayers() is an unmodifiable
+        // view straight over it, so walking it has nothing to race against. It costs a scan rather than a lookup,
+        // which is why the main thread keeps the map route above.
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (uuid.equals(player.getUniqueId())) {
+                return player;
+            }
+        }
+        return null;
     }
 
     public UUID getUUID() {
@@ -283,6 +332,16 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
     }
 
     public String getName() {
+        // Denizen notes every player's name itself - the whole of Bukkit.getOfflinePlayers() at startup (see Denizen.java) and again
+        // on every login - so the answer is already in memory and needn't be fetched.
+        // What it replaces is worth knowing: OfflinePlayer.getName() first goes to CraftServer.getPlayer(UUID), a get on the plain
+        // HashMap PlayerList.playersByUUID, and for a player who is offline falls through to reading their NBT off disk, every call
+        // (the CraftOfflinePlayer that getOfflinePlayer(UUID) builds carries an empty name, so that fallback is the normal path, not a rare one).
+        String noted = playerNamesById.get(uuid);
+        if (noted != null) {
+            return noted;
+        }
+        // Only for a UUID that was never noted - one invented by a script, or a player whose data appeared without a login.
         return getOfflinePlayer().getName();
     }
 
@@ -463,6 +522,8 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
     }
 
     public boolean isOnline() {
+        // Both threads answer this the same way - getPlayerEntity holds the rule about which route is safe on which thread.
+        // (Every Bukkit route would end up in the same racy place: CraftPlayer.isOnline and CraftOfflinePlayer.isOnline both call CraftServer.getPlayer(UUID).)
         return getPlayerEntity() != null;
     }
 
@@ -1490,17 +1551,12 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         });
 
         // Documented in EntityTag
+        // The long-deprecated sub-forms 'name.list' and 'name.display' used to be handled here. They were exact aliases of the
+        // 'list_name' and 'display_name' tags below, and they read the live player - which is what kept this whole tag main-thread-only,
+        // since a tag is marked safe by name and 'name' could not be freed without freeing them too.
+        // Removed, so that '<player.name>' can be read off-thread: it now answers out of Denizen's own noted names, see getName().
+        // Scripts still using them must switch to <player.list_name> and <player.display_name>.
         tagProcessor.registerTag(ElementTag.class, "name", (attribute, object) -> {
-            if (attribute.startsWith("list", 2) && object.isOnline()) {
-                BukkitImplDeprecations.playerNameTags.warn(attribute.context);
-                attribute.fulfill(1);
-                return new ElementTag(object.getPlayerEntity().getPlayerListName(), true);
-            }
-            if (attribute.startsWith("display", 2) && object.isOnline()) {
-                BukkitImplDeprecations.playerNameTags.warn(attribute.context);
-                attribute.fulfill(1);
-                return new ElementTag(object.getPlayerEntity().getDisplayName(), true);
-            }
             return new ElementTag(object.getName(), true);
         });
 
@@ -2379,7 +2435,7 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // Relates to <@link command disguise>.
         // -->
         tagProcessor.registerTag(EntityTag.class, "disguise_to_self", (attribute, object) -> {
-            HashMap<UUID, DisguiseCommand.TrackedDisguise> map = DisguiseCommand.disguises.get(object.getUUID());
+            Map<UUID, DisguiseCommand.TrackedDisguise> map = DisguiseCommand.disguises.get(object.getUUID());
             if (map == null) {
                 return null;
             }
@@ -4065,7 +4121,7 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
             }
             else {
                 NetworkInterceptHelper.enable();
-                HashSet<Particle> particles = HideParticles.hidden.computeIfAbsent(object.getUUID(), k -> new HashSet<>());
+                Set<Particle> particles = HideParticles.hidden.computeIfAbsent(object.getUUID(), k -> ConcurrentHashMap.newKeySet());
                 Particle particle = Particle.valueOf(mechanism.getValue().asString().toUpperCase());
                 particles.add(particle);
             }

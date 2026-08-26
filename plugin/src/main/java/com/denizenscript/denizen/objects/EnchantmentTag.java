@@ -151,6 +151,12 @@ public class EnchantmentTag implements ObjectTag, FlaggableObject {
         // Nothing to do.
     }
 
+    @Override
+    public boolean isFlagTrackerAsyncSafe() {
+        // A corner of the server flag map, named by the enchantment's own stored key.
+        return true;
+    }
+
     public static void register() {
 
         AbstractFlagTracker.registerFlagHandlers(tagProcessor);

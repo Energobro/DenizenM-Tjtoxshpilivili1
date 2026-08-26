@@ -22,6 +22,7 @@ import com.denizenscript.denizencore.tags.ObjectTagProcessor;
 import com.denizenscript.denizencore.tags.TagContext;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
 import com.denizenscript.denizencore.utilities.PropertyMatchHelper;
+import com.denizenscript.denizen.utilities.PaperAPITools;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -256,6 +257,12 @@ public class MaterialTag implements ObjectTag, Adjustable, FlaggableObject {
     @Override
     public void reapplyTracker(AbstractFlagTracker tracker) {
         // Nothing to do.
+    }
+
+    @Override
+    public boolean isFlagTrackerAsyncSafe() {
+        // A material's flags are a corner of the server flag map, named after an enum constant this object already holds.
+        return true;
     }
 
     public static void register() {
@@ -678,7 +685,7 @@ public class MaterialTag implements ObjectTag, Adjustable, FlaggableObject {
         // If experimental features are disabled in the given world, and the MaterialTag is an item or block that is only enabled by experimental features, this will return false.
         // -->
         tagProcessor.registerTag(ElementTag.class, WorldTag.class, "is_enabled", (attribute, object, world) -> {
-            return new ElementTag(object.getMaterial().isEnabledByFeature(world.getWorld()));
+            return new ElementTag(PaperAPITools.instance.isEnabledByFeature(object.getMaterial(), world.getWorld()));
         });
     }
 

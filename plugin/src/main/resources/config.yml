@@ -65,6 +65,32 @@ Scripts:
         Queue speed: instant
     # Default speed for new queues (via run command usually)
     Queue speed: instant
+    Async:
+        # Whether scripts are allowed to run off the main server thread.
+        # Controls the 'async' argument of the run command and the off-thread execution of '~waited' commands like '~define'.
+        # When disabled those run on the main thread as normal - scripts keep working, they just don't gain anything.
+        Allow: true
+        # How long an async script may wait for the main thread to run a command that isn't safe off-thread, before giving up with an error.
+        # Raise this only if you have a good reason - hitting this limit means the server was frozen for that long.
+        Main thread wait timeout: 15s
+        # How long the server shutdown will wait for async scripts to finish their current command before abandoning them.
+        Shutdown timeout: 3s
+        # Milliseconds per tick spent on work async scripts handed over WITHOUT waiting - deferred commands, debug output.
+        # The rest runs next tick, in order. Scripts never wait on this, so the budget only spreads delivery; it stops a runaway
+        # loop flooding the main thread. Requests a script IS waiting on are never budgeted. 0 runs all of it every tick.
+        Main thread task budget ms: 5
+        # After answering an async script's request, keep watching this many microseconds for the next one. Requests come back to back,
+        # so without this the next one misses the drain by nothing and waits a whole tick. 0 for the old behaviour.
+        # 500 was measured both ways: 100 cost 23x the waiting for the same work, while 2000 saved a third of what remained but
+        # quadrupled what the window costs when nothing follows (2ms per drain instead of 0.5ms, up to twice a tick).
+        # Raise it only with headroom to spare, and check the cost with <util.linger_stats> - TPS cannot see a few ms a tick.
+        Main thread wait linger us: 500
+        # Warn once when this many async queues are running at the same time. 0 to never warn.
+        Warn at queue count: 50
+        # Never run more than this many async queues at once - anything past it runs on the main thread instead. 0 for no limit.
+        # Each queue owns a thread for its whole life, so this is the backstop against a script starting them in a loop; queues are
+        # counted as they are dispatched, so a burst inside one tick cannot slip past. Set far above what a healthy server reaches.
+        Max queue count: 256
     # What character encoding to use. 'default' indicates system default, 'utf8' is suggested as a preferred encoding in most cases.
     Encoding: utf8
     Command:

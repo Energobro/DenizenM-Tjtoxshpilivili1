@@ -12,6 +12,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerTagBase implements Listener {
 
@@ -45,18 +46,25 @@ public class PlayerTagBase implements Listener {
     // Player Chat History
     /////////
 
-    public static Map<UUID, List<String>> playerChatHistory = new HashMap<>();
+    /**
+     * The last few things each player said.
+     * <p>
+     * Concurrent, and the lists in it are replaced rather than edited, because async queues read this through
+     * "<player.chat_history>" while the main thread adds to it on every chat message.
+     */
+    public static Map<UUID, List<String>> playerChatHistory = new ConcurrentHashMap<>();
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void addMessage(final AsyncPlayerChatEvent event) {
         final int maxSize = Settings.chatHistoryMaxMessages();
         if (maxSize > 0) {
             Bukkit.getScheduler().runTaskLater(Denizen.getInstance(), () -> {
-                List<String> history = playerChatHistory.get(event.getPlayer().getUniqueId());
-                // If history hasn't been started for this player, initialize a new ArrayList
-                if (history == null) {
-                    history = new ArrayList<>();
-                }
+                List<String> old = playerChatHistory.get(event.getPlayer().getUniqueId());
+                // Copied first, then edited, rather than editing the stored list in place: a script reading this player's history off an
+                // async queue's thread would otherwise be walking a list being added to and removed from underneath it.
+                // This way a reader holds either the whole old history or the whole new one. It is at most a handful of strings.
+                // The trimming below is exactly what it was before - deliberately unchanged, odd as it looks.
+                List<String> history = old == null ? new ArrayList<>() : new ArrayList<>(old);
                 // Maximum history size is specified by config.yml
                 if (history.size() > maxSize) {
                     history.remove(maxSize - 1);

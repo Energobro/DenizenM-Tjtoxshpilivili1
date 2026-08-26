@@ -48,6 +48,7 @@ import com.denizenscript.denizencore.objects.core.TimeTag;
 import com.denizenscript.denizencore.objects.notable.NoteManager;
 import com.denizenscript.denizencore.scripts.ScriptHelper;
 import com.denizenscript.denizencore.scripts.commands.queue.RunLaterCommand;
+import com.denizenscript.denizencore.tags.TagManager;
 import com.denizenscript.denizencore.utilities.CoreConfiguration;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
@@ -372,6 +373,10 @@ public class Denizen extends JavaPlugin {
                         ScriptEventRegistry.registerCitizensEvents();
                         new NPCTagBase();
                         ObjectFetcher.registerWithObjectFetcher(NPCTag.class, NPCTag.tagProcessor);
+                        // The npc base and type were registered late, so they missed the normal async-safety pass.
+                        TagManager.markMainThreadOnly("npc");
+                        TagManager.markBareBaseAsyncSafe("npc");
+                        TagManager.markObjectTypeMainThreadOnly(NPCTag.class);
                     }
                 }
             }

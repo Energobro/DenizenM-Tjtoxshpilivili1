@@ -57,6 +57,7 @@ import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -126,7 +127,10 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
     ));
     // Definitely not valid: "item"
 
-    private static final Map<UUID, Entity> rememberedEntities = new HashMap<>();
+    // Concurrent because it is read off the main thread: an entity that has despawned reaches this map through the validity check inside
+    // debug and error formatting, which is exactly the moment an async script gets told its tag failed. Written only on the main thread, as
+    // entities come and go, so the swap costs nothing and no value is ever null.
+    private static final Map<UUID, Entity> rememberedEntities = new ConcurrentHashMap<>();
 
     public static void rememberEntity(Entity entity) {
         if (entity == null) {
@@ -572,7 +576,12 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
     }
 
     public Entity getBukkitEntity() {
-        if (uuid != null && (entity == null || !entity.isValid())) {
+        // The re-fetch below is a live world read: Bukkit.getEntity walks the world entity lists, and AsyncCatcher refuses that off the main
+        // thread outright. Every tag that genuinely needs the entity has already been handed over by the EntityTag type marking, so what reaches
+        // here off-thread is the incidental paths - debug and error formatting above all, which asks a despawned entity whether it is still valid
+        // while building the very message that says the tag failed. Answering those from what is already held is the right trade: a stale
+        // reference or a null is a fine answer there, an exception thrown out of an error message is not.
+        if (DenizenCore.isMainThread() && uuid != null && (entity == null || !entity.isValid())) {
             if (!isFake) {
                 Entity backup = Bukkit.getEntity(uuid);
                 if (backup != null) {
@@ -2538,7 +2547,7 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // Relates to <@link command disguise>.
         // -->
         registerSpawnedOnlyTag(ElementTag.class, "is_disguised", (attribute, object) -> {
-            HashMap<UUID, DisguiseCommand.TrackedDisguise> map = DisguiseCommand.disguises.get(object.getUUID());
+            Map<UUID, DisguiseCommand.TrackedDisguise> map = DisguiseCommand.disguises.get(object.getUUID());
             if (map == null) {
                 return new ElementTag(false);
             }
@@ -2564,7 +2573,7 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // Relates to <@link command disguise>.
         // -->
         registerSpawnedOnlyTag(EntityTag.class, "disguised_type", (attribute, object) -> {
-            HashMap<UUID, DisguiseCommand.TrackedDisguise> map = DisguiseCommand.disguises.get(object.getUUID());
+            Map<UUID, DisguiseCommand.TrackedDisguise> map = DisguiseCommand.disguises.get(object.getUUID());
             if (map == null) {
                 return null;
             }
@@ -2598,7 +2607,7 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // Relates to <@link command disguise>.
         // -->
         registerSpawnedOnlyTag(EntityTag.class, "disguise_to_others", (attribute, object) -> {
-            HashMap<UUID, DisguiseCommand.TrackedDisguise> map = DisguiseCommand.disguises.get(object.getUUID());
+            Map<UUID, DisguiseCommand.TrackedDisguise> map = DisguiseCommand.disguises.get(object.getUUID());
             if (map == null) {
                 return null;
             }

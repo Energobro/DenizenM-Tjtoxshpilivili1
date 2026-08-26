@@ -18,6 +18,17 @@ public class CompassCommand extends AbstractCommand {
         setSyntax("compass [<location>/reset]");
         setRequiredArguments(1, 1);
         isProcedural = false;
+        setAsyncDeferrable(true); // Points a player's compass and hands nothing back to the script.
+        // Deliberately not async-safe. CraftPlayer.setCompassTarget reads the world off the location it is handed, and on a LocationTag
+        // that is the resolve-through-Bukkit-and-cache-back path - a get on CraftServer.worlds, a plain LinkedHashMap - which is exactly
+        // what the location constructors were made lazy to stop doing. The 'reset' form is worse still: it reads the player's bed spawn
+        // and the world's spawn point. Being deferred already means the script never waits, so there is nothing to gain by pushing it.
+        // Deliberately NOT async-safe, unlike the rest of the packet-sending family. Two reasons, either one enough:
+        // - 'reset' reads the player's respawn point and the world's spawn, which is live world state.
+        // - the location form ends at Bukkit's setCompassTarget, which calls getWorld() on the location it is given. On a LocationTag that
+        //   resolves the world through Bukkit and caches it back into an object other queues may be holding - the one rewrite of that shape
+        //   that shipped here broke a live server. It also writes ServerPlayer.compassTarget, which <PlayerTag.compass_target> reads.
+        // Deferral already costs the script nothing, and this command does too little work for running it here to buy anything.
     }
 
     // <--[command]

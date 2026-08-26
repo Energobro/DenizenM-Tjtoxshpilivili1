@@ -331,11 +331,15 @@ public class CuboidTag implements ObjectTag, Cloneable, Notable, Adjustable, Are
     }
 
     public boolean isInsideCuboid(Location location) {
-        if (location.getWorld() == null) {
+        // Only the world's name is ever compared here, so ask for the name rather than the world.
+        // That matters twice over: LocationTag.getWorld() resolves through Bukkit and writes the result back into the location
+        // (which a shared location can't afford off-thread), and this used to do it once per pair rather than once per call.
+        String worldName = location instanceof LocationTag locTag ? locTag.getWorldName() : location.getWorld() == null ? null : location.getWorld().getName();
+        if (worldName == null) {
             return false;
         }
         for (LocationPair pair : pairs) {
-            if (location.getWorld().getName().equals(pair.low.getWorldName())
+            if (worldName.equals(pair.low.getWorldName())
                 && isBetween(pair.low.getBlockX(), pair.high.getBlockX(), location.getBlockX())
                 && isBetween(pair.low.getBlockY(), pair.high.getBlockY(), location.getBlockY())
                 && isBetween(pair.low.getBlockZ(), pair.high.getBlockZ(), location.getBlockZ())) {
@@ -357,16 +361,16 @@ public class CuboidTag implements ObjectTag, Cloneable, Notable, Adjustable, Are
             int x_distance = pair.xDistance();
             for (int y = 0; y <= y_distance; y++) {
                 for (int x = 0; x <= x_distance; x++) {
-                    list.addObject(new LocationTag(low.getWorld(), low.getBlockX() + x, low.getBlockY() + y, low.getBlockZ()));
-                    list.addObject(new LocationTag(low.getWorld(), low.getBlockX() + x, low.getBlockY() + y, high.getBlockZ()));
+                    list.addObject(new LocationTag(low.getBlockX() + x, low.getBlockY() + y, low.getBlockZ(), low.getWorldName()));
+                    list.addObject(new LocationTag(low.getBlockX() + x, low.getBlockY() + y, high.getBlockZ(), low.getWorldName()));
                     index++;
                     if (index > max) {
                         return list;
                     }
                 }
                 for (int z = 1; z < z_distance; z++) {
-                    list.addObject(new LocationTag(low.getWorld(), low.getBlockX(), low.getBlockY() + y, low.getBlockZ() + z));
-                    list.addObject(new LocationTag(low.getWorld(), high.getBlockX(), low.getBlockY() + y, low.getBlockZ() + z));
+                    list.addObject(new LocationTag(low.getBlockX(), low.getBlockY() + y, low.getBlockZ() + z, low.getWorldName()));
+                    list.addObject(new LocationTag(high.getBlockX(), low.getBlockY() + y, low.getBlockZ() + z, low.getWorldName()));
                     index++;
                     if (index > max) {
                         return list;
@@ -389,8 +393,8 @@ public class CuboidTag implements ObjectTag, Cloneable, Notable, Adjustable, Are
             int x_distance = pair.xDistance();
             for (int x = 1; x < x_distance; x++) {
                 for (int z = 1; z < z_distance; z++) {
-                    list.addObject(new LocationTag(low.getWorld(), low.getBlockX() + x, low.getBlockY(), low.getBlockZ() + z));
-                    list.addObject(new LocationTag(low.getWorld(), low.getBlockX() + x, high.getBlockY(), low.getBlockZ() + z));
+                    list.addObject(new LocationTag(low.getBlockX() + x, low.getBlockY(), low.getBlockZ() + z, low.getWorldName()));
+                    list.addObject(new LocationTag(low.getBlockX() + x, high.getBlockY(), low.getBlockZ() + z, low.getWorldName()));
                     index++;
                     if (index > max) {
                         return list;
@@ -410,18 +414,18 @@ public class CuboidTag implements ObjectTag, Cloneable, Notable, Adjustable, Are
             LocationTag loc_2 = pair.high;
             int z_distance = pair.zDistance();
             int x_distance = pair.xDistance();
-            list.addObject(new LocationTag(loc_2.getWorld(), loc_2.getBlockX(), y, loc_2.getBlockZ()));
+            list.addObject(new LocationTag(loc_2.getBlockX(), y, loc_2.getBlockZ(), loc_2.getWorldName()));
             for (int x = loc_1.getBlockX(); x < loc_1.getBlockX() + x_distance; x++) {
-                list.addObject(new LocationTag(loc_1.getWorld(), x, y, loc_2.getBlockZ()));
-                list.addObject(new LocationTag(loc_1.getWorld(), x, y, loc_1.getBlockZ()));
+                list.addObject(new LocationTag(x, y, loc_2.getBlockZ(), loc_1.getWorldName()));
+                list.addObject(new LocationTag(x, y, loc_1.getBlockZ(), loc_1.getWorldName()));
                 index++;
                 if (index > max) {
                     return list;
                 }
             }
             for (int z = loc_1.getBlockZ(); z < loc_1.getBlockZ() + z_distance; z++) {
-                list.addObject(new LocationTag(loc_1.getWorld(), loc_2.getBlockX(), y, z));
-                list.addObject(new LocationTag(loc_1.getWorld(), loc_1.getBlockX(), y, z));
+                list.addObject(new LocationTag(loc_2.getBlockX(), y, z, loc_1.getWorldName()));
+                list.addObject(new LocationTag(loc_1.getBlockX(), y, z, loc_1.getWorldName()));
                 index++;
                 if (index > max) {
                     return list;
@@ -442,30 +446,30 @@ public class CuboidTag implements ObjectTag, Cloneable, Notable, Adjustable, Are
             int z_distance = pair.zDistance();
             int x_distance = pair.xDistance();
             for (int y = loc_1.getBlockY(); y < loc_1.getBlockY() + y_distance; y++) {
-                list.addObject(new LocationTag(loc_1.getWorld(), loc_1.getBlockX(), y, loc_1.getBlockZ()));
-                list.addObject(new LocationTag(loc_1.getWorld(), loc_2.getBlockX(), y, loc_2.getBlockZ()));
-                list.addObject(new LocationTag(loc_1.getWorld(), loc_1.getBlockX(), y, loc_2.getBlockZ()));
-                list.addObject(new LocationTag(loc_1.getWorld(), loc_2.getBlockX(), y, loc_1.getBlockZ()));
+                list.addObject(new LocationTag(loc_1.getBlockX(), y, loc_1.getBlockZ(), loc_1.getWorldName()));
+                list.addObject(new LocationTag(loc_2.getBlockX(), y, loc_2.getBlockZ(), loc_1.getWorldName()));
+                list.addObject(new LocationTag(loc_1.getBlockX(), y, loc_2.getBlockZ(), loc_1.getWorldName()));
+                list.addObject(new LocationTag(loc_2.getBlockX(), y, loc_1.getBlockZ(), loc_1.getWorldName()));
                 index++;
                 if (index > max) {
                     return list;
                 }
             }
             for (int x = loc_1.getBlockX(); x < loc_1.getBlockX() + x_distance; x++) {
-                list.addObject(new LocationTag(loc_1.getWorld(), x, loc_1.getBlockY(), loc_1.getBlockZ()));
-                list.addObject(new LocationTag(loc_1.getWorld(), x, loc_1.getBlockY(), loc_2.getBlockZ()));
-                list.addObject(new LocationTag(loc_1.getWorld(), x, loc_2.getBlockY(), loc_2.getBlockZ()));
-                list.addObject(new LocationTag(loc_1.getWorld(), x, loc_2.getBlockY(), loc_1.getBlockZ()));
+                list.addObject(new LocationTag(x, loc_1.getBlockY(), loc_1.getBlockZ(), loc_1.getWorldName()));
+                list.addObject(new LocationTag(x, loc_1.getBlockY(), loc_2.getBlockZ(), loc_1.getWorldName()));
+                list.addObject(new LocationTag(x, loc_2.getBlockY(), loc_2.getBlockZ(), loc_1.getWorldName()));
+                list.addObject(new LocationTag(x, loc_2.getBlockY(), loc_1.getBlockZ(), loc_1.getWorldName()));
                 index++;
                 if (index > max) {
                     return list;
                 }
             }
             for (int z = loc_1.getBlockZ(); z < loc_1.getBlockZ() + z_distance; z++) {
-                list.addObject(new LocationTag(loc_1.getWorld(), loc_1.getBlockX(), loc_1.getBlockY(), z));
-                list.addObject(new LocationTag(loc_1.getWorld(), loc_2.getBlockX(), loc_2.getBlockY(), z));
-                list.addObject(new LocationTag(loc_1.getWorld(), loc_1.getBlockX(), loc_2.getBlockY(), z));
-                list.addObject(new LocationTag(loc_1.getWorld(), loc_2.getBlockX(), loc_1.getBlockY(), z));
+                list.addObject(new LocationTag(loc_1.getBlockX(), loc_1.getBlockY(), z, loc_1.getWorldName()));
+                list.addObject(new LocationTag(loc_2.getBlockX(), loc_2.getBlockY(), z, loc_1.getWorldName()));
+                list.addObject(new LocationTag(loc_1.getBlockX(), loc_2.getBlockY(), z, loc_1.getWorldName()));
+                list.addObject(new LocationTag(loc_2.getBlockX(), loc_1.getBlockY(), z, loc_1.getWorldName()));
                 index++;
                 if (index > max) {
                     return list;
@@ -702,6 +706,12 @@ public class CuboidTag implements ObjectTag, Cloneable, Notable, Adjustable, Are
         if (noteName != null) {
             this.flagTracker = tracker;
         }
+    }
+
+    @Override
+    public boolean isFlagTrackerAsyncSafe() {
+        // A noted area carries its tracker in a field of the noted object itself, so fetching it reads nothing but that field.
+        return true;
     }
 
     @Override
@@ -1068,7 +1078,9 @@ public class CuboidTag implements ObjectTag, Cloneable, Notable, Adjustable, Are
                 }
                 pair = cuboid.pairs.get(member - 1);
             }
-            LocationTag base = pair.high.clone().add(pair.low).add(1.0, 1.0, 1.0);
+            // Added as a vector rather than as a location: the two are numerically identical, but the location overload compares worlds,
+            // which resolves them through Bukkit. Both ends of a pair carry the same world by construction anyway - see LocationPair.regenerate.
+            LocationTag base = pair.high.clone().add(pair.low.toVector()).add(1.0, 1.0, 1.0);
             base.setX(base.getX() / 2.0);
             base.setY(base.getY() / 2.0);
             base.setZ(base.getZ() / 2.0);
@@ -1088,7 +1100,8 @@ public class CuboidTag implements ObjectTag, Cloneable, Notable, Adjustable, Are
         // -->
         tagProcessor.registerTag(ElementTag.class, "volume", (attribute, cuboid) -> {
             LocationPair pair = cuboid.pairs.get(0);
-            Location base = pair.high.clone().subtract(pair.low.clone()).add(1, 1, 1);
+            // Subtracted as a vector rather than as a location - see the note on 'center' below.
+            Location base = pair.high.clone().subtract(pair.low.toVector()).add(1, 1, 1);
             return new ElementTag(base.getX() * base.getY() * base.getZ());
         });
 
@@ -1118,7 +1131,8 @@ public class CuboidTag implements ObjectTag, Cloneable, Notable, Adjustable, Are
                 }
                 pair = cuboid.pairs.get(member - 1);
             }
-            Location base = pair.high.clone().subtract(pair.low.clone()).add(1, 1, 1);
+            // Subtracted as a vector rather than as a location - see the note on 'center' above.
+            Location base = pair.high.clone().subtract(pair.low.toVector()).add(1, 1, 1);
             return new LocationTag(base);
         });
 
@@ -1709,22 +1723,22 @@ public class CuboidTag implements ObjectTag, Cloneable, Notable, Adjustable, Are
         LocationTag low = cuboid.pairs.get(0).low;
         LocationTag high = cuboid.pairs.get(0).high;
         if (loc.getX() < low.getX()) {
-            low = new LocationTag(low.getWorld(), loc.getX(), low.getY(), low.getZ());
+            low = new LocationTag(loc.getX(), low.getY(), low.getZ(), low.getWorldName());
         }
         if (loc.getY() < low.getY()) {
-            low = new LocationTag(low.getWorld(), low.getX(), loc.getY(), low.getZ());
+            low = new LocationTag(low.getX(), loc.getY(), low.getZ(), low.getWorldName());
         }
         if (loc.getZ() < low.getZ()) {
-            low = new LocationTag(low.getWorld(), low.getX(), low.getY(), loc.getZ());
+            low = new LocationTag(low.getX(), low.getY(), loc.getZ(), low.getWorldName());
         }
         if (loc.getX() > high.getX()) {
-            high = new LocationTag(high.getWorld(), loc.getX(), high.getY(), high.getZ());
+            high = new LocationTag(loc.getX(), high.getY(), high.getZ(), high.getWorldName());
         }
         if (loc.getY() > high.getY()) {
-            high = new LocationTag(high.getWorld(), high.getX(), loc.getY(), high.getZ());
+            high = new LocationTag(high.getX(), loc.getY(), high.getZ(), high.getWorldName());
         }
         if (loc.getZ() > high.getZ()) {
-            high = new LocationTag(high.getWorld(), high.getX(), high.getY(), loc.getZ());
+            high = new LocationTag(high.getX(), high.getY(), loc.getZ(), high.getWorldName());
         }
         cuboid.pairs.get(0).regenerate(low, high);
         return cuboid;

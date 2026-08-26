@@ -10,6 +10,7 @@ import com.denizenscript.denizen.nms.v26_1.impl.network.handlers.DenizenNetworkM
 import com.denizenscript.denizen.scripts.commands.entity.RenameCommand;
 import com.denizenscript.denizen.utilities.PaperAPITools;
 import com.denizenscript.denizencore.utilities.ReflectionHelper;
+import com.denizenscript.denizencore.DenizenCore;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.google.common.collect.ImmutableMultimap;
 import com.mojang.authlib.GameProfile;
@@ -69,6 +70,21 @@ public class ProfileEditorImpl extends ProfileEditor {
         EnumSet<ClientboundPlayerInfoUpdatePacket.Action> actions = playerInfoUpdatePacket.actions();
         if (!actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER) && !actions.contains(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME)) {
             return playerInfoUpdatePacket;
+        }
+        if (!DenizenCore.isMainThread()) {
+            // This is the second handler on the tablist packet, and that command is async-safe now, so this can run on a script's own thread.
+            // Everything past this point walks ProfileEditor.mirrorUUIDs, ProfileEditor.fakeProfiles and RenameCommand.customNames, all of which are
+            // plain maps edited in place by main-thread commands, so it goes over and this side waits.
+            // The two checks above are what keep that rare: a server using none of the rename or fake-profile features never reaches here, and the
+            // emptiness check ahead of them reads nothing but a size field - stale at worst, which costs a rename one packet, never a wrong answer.
+            ClientboundPlayerInfoUpdatePacket[] result = new ClientboundPlayerInfoUpdatePacket[] {playerInfoUpdatePacket};
+            try {
+                DenizenCore.runOnMainThreadAndWait(() -> result[0] = processPlayerInfoUpdatePacket(networkManager, playerInfoUpdatePacket));
+            }
+            catch (Throwable ex) {
+                Debug.echoError(ex);
+            }
+            return result[0];
         }
         boolean any = false;
         for (ClientboundPlayerInfoUpdatePacket.Entry entry : playerInfoUpdatePacket.entries()) {

@@ -11,21 +11,25 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class FakeEntity {
 
     public static class FakeEntityMap {
 
-        public Map<Integer, FakeEntity> byId = new HashMap<>();
+        // Walked off the main thread by <player.fake_entities> while fakespawn and the expiry tasks write it from the main thread.
+        public Map<Integer, FakeEntity> byId = new ConcurrentHashMap<>();
 
         public void remove(FakeEntity entity) {
             byId.remove(entity.id);
         }
     }
 
-    public final static Map<UUID, FakeEntityMap> playersToEntities = new HashMap<>();
-    public final static Map<UUID, FakeEntity> idsToEntities = new HashMap<>();
+    // Both concurrent for the same reason: read off the main thread (playersToEntities by <player.fake_entities>, idsToEntities by EntityTag's
+    // fake-entity lookup in valueOf), written on the main thread by fakespawn, disguise, and the expiry tasks.
+    public final static Map<UUID, FakeEntityMap> playersToEntities = new ConcurrentHashMap<>();
+    public final static Map<UUID, FakeEntity> idsToEntities = new ConcurrentHashMap<>();
 
     public static FakeEntity getFakeEntityFor(UUID uuid, int id) {
         FakeEntityMap map = playersToEntities.get(uuid);
@@ -37,7 +41,9 @@ public class FakeEntity {
 
     public List<PlayerTag> players;
     public int id;
-    public EntityTag entity;
+    // Volatile because <player.fake_entities> and <player.disguise_to_self> hand this field back off the main thread, and updateEntity writes it
+    // after the FakeEntity is already in the maps above - the same reason FakeBlock.material is volatile.
+    public volatile EntityTag entity;
     public LocationTag location;
     public BukkitTask currentTask = null;
     public Consumer<PlayerTag> triggerSpawnPacket;
@@ -60,11 +66,7 @@ public class FakeEntity {
         idsToEntities.put(fakeEntity.overrideUUID == null ? fakeEntity.entity.getUUID() : fakeEntity.overrideUUID, fakeEntity);
         for (PlayerTag player : players) {
             UUID uuid = player.getPlayerEntity().getUniqueId();
-            FakeEntity.FakeEntityMap playerEntities = playersToEntities.get(uuid);
-            if (playerEntities == null) {
-                playerEntities = new FakeEntity.FakeEntityMap();
-                playersToEntities.put(uuid, playerEntities);
-            }
+            FakeEntity.FakeEntityMap playerEntities = playersToEntities.computeIfAbsent(uuid, k -> new FakeEntity.FakeEntityMap());
             playerEntities.byId.put(fakeEntity.id, fakeEntity);
         }
         fakeEntity.updateEntity(fakeEntity.entity, duration);

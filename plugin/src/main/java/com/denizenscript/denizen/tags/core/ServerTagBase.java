@@ -1420,9 +1420,10 @@ public class ServerTagBase extends PseudoObjectTagBase<ServerTagBase> {
         // -->
         tagProcessor.registerTag(ListTag.class, "offline_players", (attribute, object) -> {
             listDeprecateWarn(attribute);
+            Set<UUID> online = onlinePlayerIds();
             ListTag players = new ListTag();
             for (OfflinePlayer player : Bukkit.getOfflinePlayers()) {
-                if (!player.isOnline()) {
+                if (!online.contains(player.getUniqueId())) {
                     players.addObject(PlayerTag.mirrorBukkitPlayer(player));
                 }
             }
@@ -1560,9 +1561,10 @@ public class ServerTagBase extends PseudoObjectTagBase<ServerTagBase> {
         // -->
         tagProcessor.registerTag(ListTag.class, "online_ops", (attribute, object) -> {
             listDeprecateWarn(attribute);
+            Set<UUID> online = onlinePlayerIds();
             ListTag onlineOps = new ListTag();
             for (OfflinePlayer player : Bukkit.getOperators()) {
-                if (player.isOnline()) {
+                if (online.contains(player.getUniqueId())) {
                     onlineOps.addObject(PlayerTag.mirrorBukkitPlayer(player));
                 }
             }
@@ -1577,9 +1579,10 @@ public class ServerTagBase extends PseudoObjectTagBase<ServerTagBase> {
         // -->
         tagProcessor.registerTag(ListTag.class, "offline_ops", (attribute, object) -> {
             listDeprecateWarn(attribute);
+            Set<UUID> online = onlinePlayerIds();
             ListTag offlineOps = new ListTag();
             for (OfflinePlayer player : Bukkit.getOperators()) {
-                if (!player.isOnline()) {
+                if (!online.contains(player.getUniqueId())) {
                     offlineOps.addObject(PlayerTag.mirrorBukkitPlayer(player));
                 }
             }
@@ -2496,6 +2499,23 @@ public class ServerTagBase extends PseudoObjectTagBase<ServerTagBase> {
             out.putObject(String.valueOf(pair.getIntKey()), new ListTag(pair.getValue().list, trackedArea -> trackedArea.area));
         }
         return out;
+    }
+
+    /**
+     * The UUIDs of everyone currently online, taken in one pass off Bukkit.getOnlinePlayers().
+     * <p>
+     * Used in place of OfflinePlayer.isOnline() by the tags that split a player list into online and offline halves. isOnline() ends in
+     * CraftServer.getPlayer(UUID), which is a get on PlayerList's 'playersByUUID' - the one plain HashMap in that area of the server, and
+     * one the main thread rewrites on every join and quit. Reading it from an async script's own thread can miss an entry while the map is
+     * resizing, which would silently put an online player in an offline list. The list behind getOnlinePlayers() is a CopyOnWriteArrayList,
+     * so taking the ids from there instead gives the same answer with nothing to race against - and one pass rather than a lookup per player.
+     */
+    private static Set<UUID> onlinePlayerIds() {
+        Set<UUID> ids = new HashSet<>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            ids.add(player.getUniqueId());
+        }
+        return ids;
     }
 
     public static void listDeprecateWarn(Attribute attribute) {

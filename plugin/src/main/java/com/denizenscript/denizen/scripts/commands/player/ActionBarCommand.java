@@ -28,6 +28,22 @@ public class ActionBarCommand extends AbstractCommand {
         setRequiredArguments(1, 4);
         setParseArgs(false);
         isProcedural = false;
+        setAsyncDeferrable(true);
+    }
+
+    @Override
+    public boolean isAsyncDeferrable(ScriptEntry scriptEntry) {
+        // 'per_player' parses the text once per target, inside execute - handing that over would move the parsing away from the moment the script asked for it.
+        return asyncDeferrable && !scriptEntry.hasRawArgument("per_player");
+    }
+
+    @Override
+    public boolean isAsyncSafe(ScriptEntry scriptEntry) {
+        // The text and format are settled in parseArgs, the targets are already PlayerTags, and what is left is looking each one up and sending them an
+        // action bar packet - which Paper supports off-thread, queueing it when the sender is not the main thread.
+        // 'per_player' is excluded for cost rather than safety: it reparses the text per target, and those tags are typically main-thread-only,
+        // so running it here would buy one hand-off per target where going over once buys exactly one.
+        return !scriptEntry.hasRawArgument("per_player");
     }
 
     // <--[command]
@@ -105,35 +121,50 @@ public class ActionBarCommand extends AbstractCommand {
                 scriptEntry.addObject("targets", Collections.singletonList(Utilities.getEntryPlayer(scriptEntry)));
             }
         }
+        // The text and the format are resolved here rather than inside execute, so that an async script can hand this actionbar to the main thread
+        // and carry on: the message is then the one the script had at this moment, rather than whatever the tags read whenever the main thread got to it.
+        // 'per_player' is the exception - it deliberately reparses the text for each target, so it keeps its parsing in execute.
+        if (!scriptEntry.hasObject("per_player")) {
+            String text = TagManager.tag(scriptEntry.getElement("text").asString(), scriptEntry.getContext());
+            ElementTag parsedText = new ElementTag(text, true);
+            scriptEntry.addObject("parsed_text", parsedText);
+            ScriptTag formatObj = scriptEntry.getObjectTag("format");
+            FormatScriptContainer format = formatObj == null ? null : (FormatScriptContainer) formatObj.getContainer();
+            // Formatting once here also saves repeating it per target below - the format only varies per target when 'per_player' is used.
+            scriptEntry.addObject("formatted_text", format != null ? new ElementTag(format.getFormattedText(text, scriptEntry), true) : parsedText);
+        }
     }
 
     @Override
     public void execute(ScriptEntry scriptEntry) {
         List<PlayerTag> targets = (List<PlayerTag>) scriptEntry.getObject("targets");
         String text = scriptEntry.getElement("text").asString();
+        // Set unless this is a 'per_player' actionbar - see parseArgs.
+        ElementTag parsedText = scriptEntry.getElement("parsed_text");
+        ElementTag formattedText = scriptEntry.getElement("formatted_text");
         ScriptTag formatObj = scriptEntry.getObjectTag("format");
         ElementTag perPlayerObj = scriptEntry.getElement("per_player");
-        boolean perPlayer = perPlayerObj != null && perPlayerObj.asBoolean();
         BukkitTagContext context = (BukkitTagContext) scriptEntry.getContext();
-        if (!perPlayer) {
-            text = TagManager.tag(text, context);
-        }
         if (scriptEntry.dbCallShouldDebug()) {
-            Debug.report(scriptEntry, getName(), db("message", text), db("targets", targets), formatObj, perPlayerObj);
+            Debug.report(scriptEntry, getName(), db("message", parsedText != null ? parsedText.asString() : text), db("targets", targets), formatObj, perPlayerObj);
         }
-        FormatScriptContainer format = formatObj == null ? null : (FormatScriptContainer) formatObj.getContainer();
+        FormatScriptContainer format = formattedText != null || formatObj == null ? null : (FormatScriptContainer) formatObj.getContainer();
         for (PlayerTag player : targets) {
             if (player != null) {
                 if (!player.isOnline()) {
                     Debug.echoDebug(scriptEntry, "Player is offline, can't send actionbar to them. Skipping.");
                     continue;
                 }
-                String personalText = text;
-                if (perPlayer) {
-                    context.player = player;
-                    personalText = TagManager.tag(personalText, context);
+                String personalText;
+                if (formattedText != null) {
+                    personalText = formattedText.asString();
                 }
-                PaperAPITools.instance.sendActionBar(player.getPlayerEntity(), format != null ? format.getFormattedText(personalText, scriptEntry) : personalText);
+                else {
+                    context.player = player;
+                    personalText = TagManager.tag(text, context);
+                    personalText = format != null ? format.getFormattedText(personalText, scriptEntry) : personalText;
+                }
+                PaperAPITools.instance.sendActionBar(player.getPlayerEntity(), personalText);
             }
             else {
                 Debug.echoError("Sent actionbar to non-existent player!?");

@@ -25,6 +25,11 @@ public class DebugBlockCommand extends AbstractCommand {
         setSyntax("debugblock [<location>|.../clear] (color:<color>) (name:<name>) (players:<player>|...) (d:<duration>{10s})");
         setRequiredArguments(1, 6);
         isProcedural = false;
+        // Sends debug marker packets and hands nothing back to the script - and it's typically used a whole region at a time, which is exactly
+        // the case where running here rather than being handed over is worth something: the marker packet is built per location per player.
+        // The whole path is arithmetic on the location's own coordinates plus a packet, on every NMS version - nothing reads a world or a block.
+        // Note this makes 'asyncDeferrable' unreachable - being async-safe is strictly better, and it is checked first.
+        setAsyncSafe(true);
     }
 
     // <--[command]

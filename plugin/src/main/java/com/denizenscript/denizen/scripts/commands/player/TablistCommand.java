@@ -26,6 +26,12 @@ public class TablistCommand extends AbstractCommand {
         setSyntax("tablist [add/remove/update] (name:<name>) (display:<display>) (uuid:<uuid>) (skin_blob:<blob>) (latency:<#>) (gamemode:creative/survival/adventure/spectator) (listed:true/false)");
         setRequiredArguments(2, 8);
         isProcedural = false;
+        // Everything this does is validate its own inputs and build one player-info packet out of them, then hand it to the linked player's
+        // connection, which queues it when the caller isn't the main thread. The one live read on the way is 'player.getPlayerListOrder()',
+        // which is a plain int field on ServerPlayer. The tablist packet's two handlers - the 'player receives tablist update' event and the
+        // profile editor - now hand themselves to the main thread when they aren't already there, which is what let this be marked at all.
+        // There is no per-target reparse to exclude, so this is the plain flag rather than an isAsyncSafe(ScriptEntry) override.
+        setAsyncSafe(true);
         autoCompile();
     }
 

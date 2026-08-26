@@ -22,6 +22,7 @@ import org.bukkit.event.server.ServerCommandEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ExecuteCommand extends AbstractCommand {
 
@@ -73,7 +74,9 @@ public class ExecuteCommand extends AbstractCommand {
     enum Type {AS_SERVER, AS_NPC, AS_PLAYER, AS_OP}
 
     public DenizenCommandSender dcs = new DenizenCommandSender();
-    public static final List<UUID> silencedPlayers = new ArrayList<>();
+    // Copy-on-write, as the chat packet handler reads this on whatever thread sent the message - which an async script's own thread now can be -
+    // while this command adds and removes on the main thread. Silencing is rare and reading is not, which is exactly what this list type is for.
+    public static final List<UUID> silencedPlayers = new CopyOnWriteArrayList<>();
 
     @Override
     public void parseArgs(ScriptEntry scriptEntry) throws InvalidArgumentsException {

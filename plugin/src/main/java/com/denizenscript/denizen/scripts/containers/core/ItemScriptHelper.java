@@ -44,10 +44,42 @@ import java.util.function.Function;
 
 public class ItemScriptHelper implements Listener {
 
-    public static final Map<String, ItemScriptContainer> item_scripts = new HashMap<>();
-    public static final Map<String, ItemScriptContainer> item_scripts_by_hash_id = new HashMap<>();
+    /**
+     * Item scripts by name, and the same by the legacy hashed id.
+     * <p>
+     * Replaced whole by {@link #publishScripts()} rather than cleared and refilled, so that a reader on another thread sees either the old set
+     * or the new one and never the gap in between - the same publish {@link com.denizenscript.denizencore.scripts.ScriptRegistry#scriptContainers}
+     * does, and what lets "<ItemTag.script>" be read off the main thread. Nothing writes to either map after it is published,
+     * so a plain HashMap read through the volatile field is safe.
+     */
+    public static volatile Map<String, ItemScriptContainer> item_scripts = new HashMap<>();
+    public static volatile Map<String, ItemScriptContainer> item_scripts_by_hash_id = new HashMap<>();
+    /** The pair a reload is filling right now. Only ever touched on the main thread, and only between the load starting and it being published. */
+    private static Map<String, ItemScriptContainer> loadingScripts = new HashMap<>(), loadingScriptsByHashId = new HashMap<>();
     public static final Map<String, ItemScriptContainer> recipeIdToItemScript = new HashMap<>();
     public static HashMap<String, String[]> smithingRetain = new HashMap<>();
+
+    /** Starts an empty set for a reload to fill, leaving the published one in place for anything reading it meanwhile. */
+    public static void startScriptLoad() {
+        loadingScripts = new HashMap<>();
+        loadingScriptsByHashId = new HashMap<>();
+    }
+
+    /** Adds one item script to the set a reload is building. */
+    public static void registerScript(ItemScriptContainer container) {
+        loadingScripts.put(CoreUtilities.toLowerCase(container.getName()), container);
+        loadingScriptsByHashId.put(createItemScriptID(container), container);
+    }
+
+    /**
+     * Points the live maps at what the reload built, one write each.
+     * Called before anything downstream of a reload reads them - the recipe rebuild runs off ScriptReloadEvent and iterates this very map.
+     * If a reload dies before reaching here the old set stays published, which is the same promise as the rest of this: old or new, never half.
+     */
+    public static void publishScripts() {
+        item_scripts = loadingScripts;
+        item_scripts_by_hash_id = loadingScriptsByHashId;
+    }
 
     public ItemScriptHelper() {
         Denizen.getInstance().getServer().getPluginManager().registerEvents(this, Denizen.getInstance());

@@ -21,7 +21,7 @@
         <dependency>
             <groupId>com.denizenscript</groupId>
             <artifactId>denizencore</artifactId>
-            <version>1.91.0-SNAPSHOT</version>
+            <version>1.92.0-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
         <dependency>

@@ -112,6 +112,10 @@ public class WorldTag implements ObjectTag, Adjustable, FlaggableObject {
         return WorldFlagHandler.worldFlagTrackers.get(getName());
     }
 
+    // Deliberately not marked isFlagTrackerAsyncSafe, though the lookup itself would allow it: the map is concurrent and the name is a stored field.
+    // What stops it is unloading - the handler pulls the tracker out of the map and then saves it, so a write that arrives off-thread after that
+    // save lands in a tracker nobody will ever write to disk. On the main thread an unload cannot interleave with a flag write at all.
+
     @Override
     public void reapplyTracker(AbstractFlagTracker tracker) {
         // Nothing to do.

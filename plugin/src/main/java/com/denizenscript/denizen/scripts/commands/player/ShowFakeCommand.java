@@ -26,6 +26,14 @@ public class ShowFakeCommand extends AbstractCommand {
         setSyntax("showfake [<material>|.../cancel] [<location>|...] (players:<player>|...) (d:<duration>{10s})");
         setRequiredArguments(2, 4);
         isProcedural = false;
+        // Fake blocks are sent to players and tracked by the engine, never handed back to the script, so this needn't be waited for.
+        setAsyncDeferrable(true);
+        // Deliberately not async-safe, and deferral already means the script does not wait, so there is nothing left to win here.
+        // FakeBlock's own stores were made concurrent for the sake of the PlayerTag fake-block tags, but the command's path is what blocks it:
+        // updateBlock asks player.hasChunkLoaded(location.getChunk()), which reads live chunk state, and scheduleChunkRefresh takes
+        // location.getWorld() - the resolve-through-Bukkit-and-cache-back path that also keeps 'compass' off the async lane.
+        // On top of that, FakeBlockMap.byChunk and the FakeBlock.scheduled map are plain and are read by the chunk packet handler on the
+        // main thread; writing them from another thread would need them made safe first. See the notes in FakeBlock.
     }
 
     // <--[command]
