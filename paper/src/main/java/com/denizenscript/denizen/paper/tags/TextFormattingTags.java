@@ -15,6 +15,7 @@ import com.denizenscript.denizencore.tags.core.EscapeTagUtil;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.object.SpriteObjectContents;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -329,18 +330,29 @@ public class TextFormattingTags {
         });
 
         // <--[tag]
-        // @attribute <&head[<path>]>
+        // @attribute <&head[<head>]>
         // @returns ElementTag
         // @Plugin Paper
         // @description
-        // Returns a chat code that displays a player head texture in text.
-        // The path parameter specifies the texture path (defaults to "entity/player/wide/steve").
-        // Prefix the path with "!" to disable the outer layer.
+        // Returns a chat code that displays a player head in text, as the vanilla 'player_head' object component (requires Minecraft 1.21.9+).
+        // The input can be any of:
+        // - A player's name, eg "Notch" - the client looks the skin up itself.
+        // - A player's UUID, or a PlayerTag directly (the "p@" prefix is accepted and stripped).
+        // - A texture path, eg "entity/player/wide/steve" - recognized by containing a "/".
+        // - A skin blob as "<value>;<signature>", or just the base64 value on its own.
+        // Defaults to "entity/player/wide/steve" when given no input, or input it can't make sense of.
+        // Prefix the input with "!" to drop the outer (hat) layer.
         // Note that this is a magic Denizen tool - refer to <@link language Denizen Text Formatting>.
+        // @example
+        // - narrate "<&head[<player>]>that's you"
+        // @example
+        // - narrate "<&head[Notch]>Notch's head"
         // @example
         // - narrate "<&head[entity/player/wide/steve]>Steve's head"
         // @example
-        // - narrate "<&head[!entity/player/wide/alex]>Alex's head without outer layer"
+        // - narrate "<&head[!entity/player/wide/alex]>Alex's head without the outer layer"
+        // @example
+        // - narrate "<&head[<[skin_value]>;<[skin_signature]>]>a head from a stored skin"
         // -->
         TagManager.registerStaticTagBaseHandler(ElementTag.class, "&head", (attribute) -> {
             String input = attribute.hasParam() ? attribute.getParam() : "entity/player/wide/steve";
@@ -388,7 +400,32 @@ public class TextFormattingTags {
             }
 
             String innard = type + "," + input + "," + outerLayer;
-            return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[head=" + innard + "]", true);
+            return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[head=" + FormattedTextHelper.escape(innard) + "]", true);
+        });
+
+        // <--[tag]
+        // @attribute <&sprite[(<atlas>:)<sprite>]>
+        // @returns ElementTag
+        // @Plugin Paper
+        // @description
+        // Returns a chat code that displays a texture atlas sprite in text, as the vanilla 'atlas_sprite' object component (requires Minecraft 1.21.9+).
+        // Give just a sprite key to use the default "minecraft:blocks" atlas, or "<atlas>:<sprite>" to name the atlas as well.
+        // Note that this is a magic Denizen tool - refer to <@link language Denizen Text Formatting>.
+        // @example
+        // - narrate "<&sprite[block/stone]>that's stone"
+        // @example
+        // - narrate "<&sprite[minecraft:items:item/apple]>that's an apple"
+        // -->
+        TagManager.registerStaticTagBaseHandler(ElementTag.class, ElementTag.class, "&sprite", (attribute, spriteElement) -> {
+            String input = spriteElement.asString();
+            String atlas = SpriteObjectContents.DEFAULT_ATLAS.asString();
+            String sprite = input;
+            int lastColon = input.lastIndexOf(':');
+            if (lastColon != -1 && input.indexOf(':') != lastColon) {
+                atlas = input.substring(0, lastColon);
+                sprite = input.substring(lastColon + 1);
+            }
+            return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[sprite=" + FormattedTextHelper.escape(atlas) + "|" + FormattedTextHelper.escape(sprite) + "]", true);
         });
 
         // <--[tag]

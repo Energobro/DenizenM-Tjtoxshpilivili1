@@ -19,6 +19,7 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.*;
 import net.kyori.adventure.text.object.ObjectContents;
 import net.kyori.adventure.text.object.PlayerHeadObjectContents;
+import net.kyori.adventure.text.object.SpriteObjectContents;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import java.net.URI;
@@ -227,6 +228,34 @@ public class FormattedTextHelper {
         return stringifySub(component, null);
     }
 
+    public static String stringifyHead(PlayerHeadObjectContents head) {
+        String type, value;
+        if (head.id() != null) {
+            type = "uuid";
+            value = head.id().toString();
+        }
+        else if (head.texture() != null) {
+            type = "texture";
+            value = head.texture().asString();
+        }
+        else if (!head.profileProperties().isEmpty()) {
+            PlayerHeadObjectContents.ProfileProperty property = head.profileProperties().get(0);
+            for (PlayerHeadObjectContents.ProfileProperty other : head.profileProperties()) {
+                if (other.name().equals("textures")) {
+                    property = other;
+                    break;
+                }
+            }
+            type = "skin_blob";
+            value = property.value() + '\u0001' + (property.signature() == null ? "" : property.signature());
+        }
+        else {
+            type = "name";
+            value = head.name() == null ? "" : head.name();
+        }
+        return type + "," + value + "," + head.hat();
+    }
+
     public static String stringifySub(Component component, TextColor parentColor) {
         if (component == null) {
             return null;
@@ -321,6 +350,15 @@ public class FormattedTextHelper {
             builder.append(LEGACY_SECTION).append("[score=").append(escape(((ScoreComponent) component).name()))
                     .append(";").append(escape(((ScoreComponent) component).objective()))
                     .append(";").append(escape(((ScoreComponent) component).value())).append("]");
+        }
+        else if (component instanceof ObjectComponent objectComponent) {
+            ObjectContents contents = objectComponent.contents();
+            if (contents instanceof PlayerHeadObjectContents head) {
+                builder.append(LEGACY_SECTION).append("[head=").append(escape(stringifyHead(head))).append(']');
+            }
+            else if (contents instanceof SpriteObjectContents sprite) {
+                builder.append(LEGACY_SECTION).append("[sprite=").append(escape(sprite.atlas().asString())).append('|').append(escape(sprite.sprite().asString())).append(']');
+            }
         }
         for (Component afterComponent : component.children()) {
             builder.append(stringifySub(afterComponent, color));
@@ -425,6 +463,16 @@ public class FormattedTextHelper {
     public static AsciiMatcher colorCodesOrReset = new AsciiMatcher(HEX + "rR"); // Any color code that can be invalidated
 
     public static AsciiMatcher colorCodeInvalidator = new AsciiMatcher(HEX + "rRxX"); // Any code that can invalidate the colors above
+
+    public static final Set<String> CONTENT_CODES = Set.of("head", "sprite", "translate", "score", "keybind", "selector");
+
+    public static boolean isContentCode(String block) {
+        int equals = block.indexOf('=');
+        if (equals <= 2) {
+            return false;
+        }
+        return CONTENT_CODES.contains(CoreUtilities.toLowerCase(block.substring(2, equals)));
+    }
 
     public static final char[] HEX_LOWER = "0123456789abcdef".toCharArray();
 
@@ -823,16 +871,17 @@ public class FormattedTextHelper {
                         else if (innardType.equals("head")) {
                             String[] parts = innardBase.get(1).split(",", 3);
                             try {
+                                String value = unescape(parts[1]);
                                 PlayerHeadObjectContents.Builder builder = ObjectContents.playerHead();
                                 switch (parts[0]) {
-                                    case "uuid" -> builder.id(UUID.fromString(parts[1]));
-                                    case "texture" -> builder.texture(Key.key(parts[1]));
+                                    case "uuid" -> builder.id(UUID.fromString(value));
+                                    case "texture" -> builder.texture(Key.key(value));
                                     case "skin_blob" -> {
-                                        String[] blob = parts[1].split("\u0001", 2);
+                                        String[] blob = value.split("\u0001", 2);
                                         String signature = (blob.length > 1 && !blob[1].isEmpty()) ? blob[1] : null;
                                         builder.profileProperty(PlayerHeadObjectContents.property("textures", blob[0], signature));
                                     }
-                                    default -> builder.name(parts[1]);
+                                    default -> builder.name(value);
                                 }
                                 builder.hat(Boolean.parseBoolean(parts[2]));
                                 Component headComp = Component.object(objBuilder -> objBuilder.contents(builder.build()));
@@ -844,23 +893,22 @@ public class FormattedTextHelper {
                         }
                         else if (innardType.equals("sprite")) {
                             String data = innardBase.get(1);
-                            String atlasKey = "minecraft:items";
+                            String atlasKey = null;
                             String spriteKey = data;
-
-                            if (data.contains("|")) {
-                                String[] parts = data.split("\\|", 2);
-                                atlasKey = parts[0];
-                                spriteKey = parts[1];
+                            int pipe = data.indexOf('|');
+                            if (pipe != -1) {
+                                atlasKey = data.substring(0, pipe);
+                                spriteKey = data.substring(pipe + 1);
                             }
-
                             try {
+                                Key atlas = atlasKey == null ? SpriteObjectContents.DEFAULT_ATLAS : Key.key(CoreUtilities.toLowerCase(unescape(atlasKey)));
                                 Component spriteComp = Component.object()
-                                        .contents(ObjectContents.sprite(Key.key(atlasKey.toLowerCase()), Key.key(spriteKey.toLowerCase())))
+                                        .contents(ObjectContents.sprite(atlas, Key.key(CoreUtilities.toLowerCase(unescape(spriteKey)))))
                                         .build();
-
                                 lastText.append(spriteComp);
-                            } catch (Exception ex) {
-                                Debug.echoError("Error creating sprite: " + atlasKey + ":" + spriteKey);
+                            }
+                            catch (Exception ex) {
+                                Debug.echoError("Error creating sprite: " + data);
                             }
                         }
                         else if (innardType.equals("translate")) {
@@ -1207,7 +1255,13 @@ public class FormattedTextHelper {
                 else if (c2 == '[') {
                     int endBracket = text.indexOf(']', i);
                     if (endBracket != -1) {
-                        addedFormat += text.substring(i, endBracket + 1);
+                        String block = text.substring(i, endBracket + 1);
+                        if (FormattedTextHelper.isContentCode(block)) {
+                            result.append(block);
+                        }
+                        else {
+                            addedFormat += block;
+                        }
                         i = endBracket - 1;
                     }
                 }
@@ -1336,7 +1390,13 @@ public class FormattedTextHelper {
                 else if (c2 == '[') {
                     int endBracket = text.indexOf(']', i);
                     if (endBracket != -1) {
-                        addedFormat += text.substring(i, endBracket + 1);
+                        String block = text.substring(i, endBracket + 1);
+                        if (FormattedTextHelper.isContentCode(block)) {
+                            result.append(block);
+                        }
+                        else {
+                            addedFormat += block;
+                        }
                         i = endBracket - 1;
                     }
                 }

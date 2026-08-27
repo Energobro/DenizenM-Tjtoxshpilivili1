@@ -269,28 +269,6 @@ public class PaperElementExtensions {
             return null;
         });
 
-        TagManager.registerStaticTagBaseHandler(ElementTag.class, "&sprite", (attribute) -> {
-            if (!attribute.hasContext(1)) {
-                return null;
-            }
-
-            String input = attribute.getContext(1);
-            String atlas = "minecraft:blocks";
-            String sprite = input;
-            int lastColon = input.lastIndexOf(':');
-            if (lastColon != -1) {
-                // Если двоеточий больше одного (например minecraft:items:item/apple)
-                if (input.indexOf(':') != lastColon) {
-                    atlas = input.substring(0, lastColon);
-                    sprite = input.substring(lastColon + 1);
-                } else {
-                    atlas = "minecraft:blocks";
-                    sprite = input;
-                }
-            }
-            return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[sprite=" + atlas + "|" + sprite + "]");
-        });
-
         // <--[tag]
         // @attribute <ElementTag.shadow_color[<color>]>
         // @returns ElementTag
@@ -586,6 +564,24 @@ public class PaperElementExtensions {
             return new ElementTag(res, true);
         });
 
+        // <--[tag]
+        // @attribute <ElementTag.shadow_gradient[from=<color>;to=<color>;(style={RGB}/HSB)]>
+        // @returns ElementTag
+        // @Plugin Paper
+        // @group text manipulation
+        // @description
+        // Makes the input text carry a shadow color that fades from one color to another across its characters.
+        // Works like <@link tag ElementTag.color_gradient>, but applies the gradient to the text shadow instead of the text color.
+        // You can also choose a style (defaults to RGB):
+        // "style=RGB" tends to produce smooth gradients,
+        // "style=HSB" tends to produce bright rainbow-like color patterns.
+        // A color that doesn't give an alpha gets 0x64 (~39% opacity), matching <@link tag ElementTag.shadow_color>.
+        // Note that this is a magic Denizen tool - refer to <@link language Denizen Text Formatting>.
+        // @example
+        // - narrate "<element[this text fades from a black shadow to a white one].shadow_gradient[from=black;to=white]>"
+        // @example
+        // - narrate "<element[and this one's shadow fades out as it goes].shadow_gradient[from=co@255,0,0,200;to=co@255,0,0,20]>"
+        // -->
         ElementTag.tagProcessor.registerStaticTag(ElementTag.class, MapTag.class, "shadow_gradient", (attribute, object, inputMap) -> {
             ColorTag fromColor = inputMap.getRequiredObjectAs("from", ColorTag.class, attribute);
             ColorTag toColor = inputMap.getRequiredObjectAs("to", ColorTag.class, attribute);
@@ -609,6 +605,23 @@ public class PaperElementExtensions {
             return new ElementTag(res, true);
         });
 
+        // <--[tag]
+        // @attribute <ElementTag.dual_gradient[from=<color>;to=<color>;s_from=<color>;s_to=<color>;(style={RGB}/HSB)]>
+        // @returns ElementTag
+        // @Plugin Paper
+        // @group text manipulation
+        // @description
+        // Makes the input text carry a text color gradient and a shadow color gradient at once.
+        // Combines <@link tag ElementTag.color_gradient> and <@link tag ElementTag.shadow_gradient> into one pass over the text.
+        // "from" and "to" define the text color gradient, "s_from" and "s_to" define the shadow color gradient.
+        // You can also choose a style (defaults to RGB), which applies to both gradients:
+        // "style=RGB" tends to produce smooth gradients,
+        // "style=HSB" tends to produce bright rainbow-like color patterns.
+        // A shadow color that doesn't give an alpha gets 0x64 (~39% opacity), matching <@link tag ElementTag.shadow_color>.
+        // Note that this is a magic Denizen tool - refer to <@link language Denizen Text Formatting>.
+        // @example
+        // - narrate "<element[red to blue text over a black to white shadow].dual_gradient[from=red;to=blue;s_from=black;s_to=white]>"
+        // -->
         ElementTag.tagProcessor.registerStaticTag(ElementTag.class, MapTag.class, "dual_gradient", (attribute, object, inputMap) -> {
             ColorTag fromColor = inputMap.getRequiredObjectAs("from", ColorTag.class, attribute);
             ColorTag toColor = inputMap.getRequiredObjectAs("to", ColorTag.class, attribute);
@@ -731,7 +744,13 @@ public class PaperElementExtensions {
                 else if (c2 == '[') {
                     int endBracket = str.indexOf(']', i);
                     if (endBracket != -1) {
-                        addedFormat += str.substring(i, endBracket + 1);
+                        String block = str.substring(i, endBracket + 1);
+                        if (FormattedTextHelper.isContentCode(block)) {
+                            output.append(block);
+                        }
+                        else {
+                            addedFormat += block;
+                        }
                         i = endBracket - 1;
                     }
                 }
