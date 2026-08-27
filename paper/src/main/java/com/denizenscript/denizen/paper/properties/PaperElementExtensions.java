@@ -297,51 +297,22 @@ public class PaperElementExtensions {
         // @Plugin Paper
         // @group text manipulation
         // @description
-        // Applies a shadow color to the text.
-        // Color can be a hex code (with optional alpha), or ColorTag... that is: ".shadow_color[#AABB00]", ".shadow_color[#AABB00FF]", and ".shadow_color[co@255,128,0,100]" are all valid.
-        // When alpha is not specified, defaults to 0x64 (~39% opacity).
-        // The ColorTag input option can be used for dynamic shadow color effects with full RGBA support.
+        // Makes the input text carry the input shadow color, the way <@link tag ElementTag.color> carries a text color.
+        // Color can be a color name, hex code (with optional alpha), or ColorTag... that is: ".shadow_color[red]", ".shadow_color[#AABB00]", ".shadow_color[#AABB00FF]", and ".shadow_color[co@255,128,0,100]" are all valid.
+        // When the input doesn't give an alpha, it defaults to 0x64 (~39% opacity).
+        // Note that this is a magic Denizen tool - refer to <@link language Denizen Text Formatting>.
         // @example
         // - narrate <element[test].shadow_color[#FF0000]>
         // @example
         // - narrate <element[text].shadow_color[co@255,0,0,100]>
         // -->
-        ElementTag.tagProcessor.registerStaticTag(ElementTag.class, ElementTag.class, "shadow_color", (attribute, object, shadowElement) -> {
-            if (!attribute.hasParam()) {
-                attribute.echoError("The tag '.shadow_color' requires a color parameter.");
+        ElementTag.tagProcessor.registerStaticTag(ElementTag.class, ElementTag.class, "shadow_color", (attribute, object, colorElement) -> {
+            String shadowCode = FormattedTextHelper.shadowColorCode(colorElement.asString(), attribute.context);
+            if (shadowCode == null) {
+                attribute.echoError("Color '" + colorElement + "' doesn't exist (for ElementTag.shadow_color[...]).");
                 return null;
             }
-
-            String colorInput = attribute.getParam();
-            if (colorInput.startsWith("co@") || colorInput.lastIndexOf(',') > colorInput.indexOf(',')) {
-                ColorTag color = ColorTag.valueOf(colorInput, attribute.context);
-                if (color == null) {
-                    return null;
-                }
-
-                int argb = color.asARGB();
-                int a = (argb >> 24) & 0xFF;
-                int r = (argb >> 16) & 0xFF;
-                int g = (argb >> 8) & 0xFF;
-                int b = argb & 0xFF;
-                if (a == 255) {
-                    a = 0x64;
-                }
-
-                String hexRGBA = String.format("#%02x%02x%02x%02x", r, g, b, a);
-                return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[shadow=" + hexRGBA + "]" + object.asString() + FormattedTextHelper.LEGACY_SECTION + "[reset=color]", true);
-            }
-
-            if (colorInput.length() == 7 && colorInput.startsWith("#")) {
-                return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[shadow=" + colorInput + "64]" + object.asString() + FormattedTextHelper.LEGACY_SECTION + "[reset=color]", true);
-            }
-
-            if ((colorInput.length() == 9 || colorInput.length() == 8) && colorInput.startsWith("#")) {
-                return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[shadow=" + colorInput + "]" + object.asString() + FormattedTextHelper.LEGACY_SECTION + "[reset=color]", true);
-            }
-
-            attribute.echoError("Invalid color format '" + colorInput + "' for '.shadow_color'. Expected hex color (#RRGGBB or #RRGGBBAA) or ColorTag.");
-            return null;
+            return new ElementTag(shadowCode + object.asString() + FormattedTextHelper.LEGACY_SECTION + FormattedTextHelper.SHADOW_RESET, true);
         });
 
         // <--[tag]
@@ -628,6 +599,9 @@ public class PaperElementExtensions {
                 return null;
             }
 
+            MapTag rawInput = FormattedTextHelper.rawMapInput(attribute);
+            fromColor = FormattedTextHelper.withShadowAlpha(fromColor, rawInput, "from");
+            toColor = FormattedTextHelper.withShadowAlpha(toColor, rawInput, "to");
             String res = FormattedTextHelper.doSdwGradient(object.asString(), fromColor, toColor, style.asEnum(GradientStyle.class));
             if (res == null) {
                 return null;
@@ -649,6 +623,9 @@ public class PaperElementExtensions {
                 return null;
             }
 
+            MapTag rawInput = FormattedTextHelper.rawMapInput(attribute);
+            sFrom = FormattedTextHelper.withShadowAlpha(sFrom, rawInput, "s_from");
+            sTo = FormattedTextHelper.withShadowAlpha(sTo, rawInput, "s_to");
             String res = FormattedTextHelper.doDualGradient(object.asString(), fromColor, toColor, sFrom, sTo, style.asEnum(GradientStyle.class));
             if (res == null) {
                 return null;

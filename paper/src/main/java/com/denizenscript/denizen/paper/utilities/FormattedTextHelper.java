@@ -6,6 +6,8 @@ import com.denizenscript.denizencore.objects.core.ColorTag;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.objects.core.ListTag;
 import com.denizenscript.denizencore.objects.core.MapTag;
+import com.denizenscript.denizencore.tags.Attribute;
+import com.denizenscript.denizencore.tags.TagContext;
 import com.denizenscript.denizencore.utilities.AsciiMatcher;
 import com.denizenscript.denizencore.utilities.CoreConfiguration;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
@@ -246,12 +248,12 @@ public class FormattedTextHelper {
         ShadowColor shadow = component.shadowColor();
         if (shadow != null) {
             int argb = shadow.value();
-            int a = (argb >> 24) & 0xFF;
-            int r = (argb >> 16) & 0xFF;
-            int g = (argb >> 8) & 0xFF;
-            int b = argb & 0xFF;
-            String hexRGBA = String.format("%02x%02x%02x%02x", r, g, b, a);
-            builder.append(LEGACY_SECTION).append("[shadow=#").append(hexRGBA).append("]");
+            builder.append(LEGACY_SECTION).append("[shadow=#");
+            appendHexByte(builder, argb >> 16);
+            appendHexByte(builder, argb >> 8);
+            appendHexByte(builder, argb);
+            appendHexByte(builder, argb >> 24);
+            builder.append(']');
         }
         if (component.hasDecoration(TextDecoration.BOLD)) {
             builder.append(LegacyFormatting.BOLD);
@@ -423,6 +425,65 @@ public class FormattedTextHelper {
     public static AsciiMatcher colorCodesOrReset = new AsciiMatcher(HEX + "rR"); // Any color code that can be invalidated
 
     public static AsciiMatcher colorCodeInvalidator = new AsciiMatcher(HEX + "rRxX"); // Any code that can invalidate the colors above
+
+    public static final char[] HEX_LOWER = "0123456789abcdef".toCharArray();
+
+    public static final String SHADOW_RESET = "[reset=shadow]";
+
+    public static final int DEFAULT_SHADOW_ALPHA = 0x64;
+
+    public static void appendHexByte(StringBuilder builder, int value) {
+        builder.append(HEX_LOWER[(value >> 4) & 0xF]).append(HEX_LOWER[value & 0xF]);
+    }
+
+    public static String shadowColorCode(String input, TagContext context) {
+        ColorTag color = ColorTag.valueOf(input, context);
+        if (color == null) {
+            return null;
+        }
+        StringBuilder result = new StringBuilder(20);
+        result.append(LEGACY_SECTION).append("[shadow=#");
+        appendHexByte(result, color.red);
+        appendHexByte(result, color.green);
+        appendHexByte(result, color.blue);
+        appendHexByte(result, hasExplicitAlpha(input) ? color.alpha : DEFAULT_SHADOW_ALPHA);
+        result.append(']');
+        return result.toString();
+    }
+
+    public static ColorTag withShadowAlpha(ColorTag color, String input) {
+        if (hasExplicitAlpha(input)) {
+            return color;
+        }
+        ColorTag result = new ColorTag(color);
+        result.alpha = DEFAULT_SHADOW_ALPHA;
+        return result;
+    }
+
+    public static MapTag rawMapInput(Attribute attribute) {
+        return MapTag.valueOf(attribute.getParam(), attribute.context, false);
+    }
+
+    public static ColorTag withShadowAlpha(ColorTag color, MapTag rawInput, String key) {
+        ElementTag raw = rawInput == null ? null : rawInput.getElement(key);
+        return withShadowAlpha(color, raw == null ? "" : raw.asString());
+    }
+
+    public static boolean hasExplicitAlpha(String input) {
+        if (input.startsWith("co@")) {
+            input = input.substring("co@".length());
+        }
+        if (input.startsWith("#")) {
+            return input.length() == 9;
+        }
+        int commas = 0;
+        for (int i = 0; i < input.length(); i++) {
+            if (input.charAt(i) == ',') {
+                commas++;
+            }
+        }
+        return commas == 3;
+    }
 
     public static String cleanRedundantCodes(String str) {
         int index = str.indexOf(LEGACY_SECTION);
@@ -690,22 +751,27 @@ public class FormattedTextHelper {
                             }
 
                             try {
-                                long rawVal = Long.parseLong(hex, 16);
                                 int finalColor;
-
                                 if (hex.length() == 8) {
-                                    int alpha = (int) (rawVal & 0xFF);
-                                    int rgb = (int) (rawVal >> 8);
-                                    finalColor = (alpha << 24) | (rgb & 0xFFFFFF);
+                                    finalColor = Integer.rotateRight(Integer.parseUnsignedInt(hex, 16), 8);
                                 }
                                 else {
-                                    finalColor = 0x64000000 | ((int) rawVal & 0xFFFFFF);
+                                    finalColor = (DEFAULT_SHADOW_ALPHA << 24) | (Integer.parseUnsignedInt(hex, 16) & 0xFFFFFF);
                                 }
-
-                                nextText.shadowColor(ShadowColor.shadowColor(finalColor));
+                                int endIndex = findEndIndexFor(str, "[shadow=", SHADOW_RESET, endBracket);
+                                if (endIndex == -1) {
+                                    nextText.shadowColor(ShadowColor.shadowColor(finalColor));
+                                }
+                                else {
+                                    TextComponent.Builder shadowText = Component.text();
+                                    shadowText.shadowColor(ShadowColor.shadowColor(finalColor));
+                                    shadowText.append(parseInternal(str.substring(endBracket + 1, endIndex), baseColor, false, optimize));
+                                    lastText.append(shadowText);
+                                    endBracket = endIndex + "&[reset=shadow".length();
+                                }
                             }
                             catch (NumberFormatException ex) {
-                                Debug.echoError("Invalid shadow color hex format '" + hex + "'. Expected format: #RRGGBB, #RRGGBBAA, or ColorTag.");
+                                Debug.echoError("Invalid shadow color hex format '" + hex + "'. Expected format: #RRGGBB or #RRGGBBAA.");
                             }
                         }
                         else if (innardType.equals("sdw_gradient") && innardParts.size() == 2) {
@@ -866,6 +932,9 @@ public class FormattedTextHelper {
                             else if (innardBase.get(1).equals("font")) {
                                 // TODO builder
                                 nextText.font(base.build().font());
+                            }
+                            else if (innardBase.get(1).equals("shadow")) {
+                                nextText.shadowColor(base.build().shadowColor());
                             }
                             else {
                                 // TODO builder
@@ -1065,9 +1134,9 @@ public class FormattedTextHelper {
     }
 
     public static String doDualGradient(String text, ColorTag fromC, ColorTag toC, ColorTag fromS, ColorTag toS, PaperElementExtensions.GradientStyle style) {
-        StringBuilder result = new StringBuilder();
         int length = text.length();
         if (length == 0) return "";
+        StringBuilder result = new StringBuilder(length * 32);
 
         float rC, gC, bC, xC = 0, rCMove, gCMove, bCMove, xCMove = 0, toCR, toCG, toCB;
         int[] hsbHelperC = null;
@@ -1097,8 +1166,8 @@ public class FormattedTextHelper {
         gCMove = (toCG - gC) / length;
         bCMove = (toCB - bC) / length;
         float rS, gS, bS, xS = 0, rSMove, gSMove, bSMove, xSMove = 0, toSR, toSG, toSB;
-        float fromSA = fromS.alpha == 255 ? 0x64 : fromS.alpha;
-        float toSA = toS.alpha == 255 ? 0x64 : toS.alpha;
+        float fromSA = fromS.alpha;
+        float toSA = toS.alpha;
         float aSMove = (toSA - fromSA) / length;
         int[] hsbHelperS = null;
 
@@ -1199,13 +1268,16 @@ public class FormattedTextHelper {
                 blueS = currentColorS.blue;
             }
 
-            int alphaS = (int) fromSA;
-            String hexColor = String.format("#%02x%02x%02x", redC, greenC, blueC);
-            String hexShadow = String.format("#%02x%02x%02x%02x", redS, greenS, blueS, alphaS);
-            result.append(LEGACY_SECTION).append("[color=").append(hexColor).append("]")
-                    .append(LEGACY_SECTION).append("[shadow=").append(hexShadow).append("]")
-                    .append(addedFormat)
-                    .append(c);
+            result.append(LEGACY_SECTION).append("[color=#");
+            appendHexByte(result, redC);
+            appendHexByte(result, greenC);
+            appendHexByte(result, blueC);
+            result.append(']').append(LEGACY_SECTION).append("[shadow=#");
+            appendHexByte(result, redS);
+            appendHexByte(result, greenS);
+            appendHexByte(result, blueS);
+            appendHexByte(result, (int) fromSA);
+            result.append(']').append(addedFormat).append(c);
 
             rC += rCMove;
             gC += gCMove;
@@ -1219,13 +1291,13 @@ public class FormattedTextHelper {
     }
 
     public static String doSdwGradient(String text, ColorTag from, ColorTag to, PaperElementExtensions.GradientStyle style) {
-        StringBuilder result = new StringBuilder();
         int length = text.length();
         if (length == 0) return "";
+        StringBuilder result = new StringBuilder(length * 24);
 
         float r, g, b, x = 0, rMove, gMove, bMove, xMove = 0, toR, toG, toB;
-        float fromA = from.alpha == 255 ? 0x64 : from.alpha;
-        float toA = to.alpha == 255 ? 0x64 : to.alpha;
+        float fromA = from.alpha;
+        float toA = to.alpha;
         float aMove = (toA - fromA) / length;
         int[] hsbHelper = null;
         if (style == PaperElementExtensions.GradientStyle.RGB) {
@@ -1300,14 +1372,12 @@ public class FormattedTextHelper {
                 blue = currentColor.blue;
             }
 
-            int alpha = (int) fromA;
-            String hexRgba = String.format("#%02x%02x%02x%02x", red, green, blue, alpha);
-            result.append(LEGACY_SECTION)
-                    .append("[shadow=")
-                    .append(hexRgba)
-                    .append("]")
-                    .append(addedFormat)
-                    .append(c);
+            result.append(LEGACY_SECTION).append("[shadow=#");
+            appendHexByte(result, red);
+            appendHexByte(result, green);
+            appendHexByte(result, blue);
+            appendHexByte(result, (int) fromA);
+            result.append(']').append(addedFormat).append(c);
 
             r += rMove;
             g += gMove;

@@ -310,50 +310,22 @@ public class TextFormattingTags {
         // @Plugin Paper
         // @description
         // Returns a chat code that applies a shadow color to the following text.
-        // Color can be a hex code (with optional alpha), or ColorTag... that is: "&shadow_color[#AABB00]", "&shadow_color[#AABB00FF]", and "&shadow_color[co@255,128,0,100]" are all valid.
-        // When alpha is not specified, defaults to 0x64 (~39% opacity).
-        // The ColorTag input option can be used for dynamic shadow color effects with full RGBA support.
+        // Color can be a color name, hex code (with optional alpha), or ColorTag... that is: "&shadow_color[red]", "&shadow_color[#AABB00]", "&shadow_color[#AABB00FF]", and "&shadow_color[co@255,128,0,100]" are all valid.
+        // When the input doesn't give an alpha, it defaults to 0x64 (~39% opacity).
+        // Like a color code, this applies to everything that follows it. Use <@link tag ElementTag.shadow_color> to shadow just one piece of text.
         // Note that this is a magic Denizen tool - refer to <@link language Denizen Text Formatting>.
         // @example
         // - narrate "<&shadow_color[#FF0000]>This text has a red shadow"
         // @example
         // - narrate "<&shadow_color[#00FF0080]>This text has a semi-transparent green shadow"
         // -->
-        TagManager.registerStaticTagBaseHandler(ElementTag.class, "&shadow_color", (attribute) -> {
-            if (!attribute.hasParam()) {
+        TagManager.registerStaticTagBaseHandler(ElementTag.class, ElementTag.class, "&shadow_color", (attribute, colorElement) -> {
+            String shadowCode = FormattedTextHelper.shadowColorCode(colorElement.asString(), attribute.context);
+            if (shadowCode == null) {
+                attribute.echoError("Color '" + colorElement + "' doesn't exist (for &shadow_color[...]).");
                 return null;
             }
-
-            String colorInput = attribute.getParam();
-            if (colorInput.startsWith("co@") || colorInput.lastIndexOf(',') > colorInput.indexOf(',')) {
-                ColorTag color = ColorTag.valueOf(colorInput, attribute.context);
-                if (color == null) {
-                    return null;
-                }
-
-                int argb = color.asARGB();
-                int a = (argb >> 24) & 0xFF;
-                int r = (argb >> 16) & 0xFF;
-                int g = (argb >> 8) & 0xFF;
-                int b = argb & 0xFF;
-                if (a == 255) {
-                    a = 0x64;
-                }
-
-                String hexRGBA = String.format("#%02x%02x%02x%02x", r, g, b, a);
-                return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[shadow=" + hexRGBA + "]", true);
-            }
-
-            if (colorInput.length() == 7 && colorInput.startsWith("#")) {
-                return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[shadow=" + colorInput + "64]", true);
-            }
-
-            if ((colorInput.length() == 9 || colorInput.length() == 8) && colorInput.startsWith("#")) {
-                return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[shadow=" + colorInput + "]", true);
-            }
-
-            attribute.echoError("Invalid color format '" + colorInput + "' for '&shadow_color'. Expected hex color (#RRGGBB or #RRGGBBAA) or ColorTag.");
-            return null;
+            return new ElementTag(shadowCode, true);
         });
 
         // <--[tag]
@@ -455,6 +427,7 @@ public class TextFormattingTags {
         // The gradient runs from whatever text is after this tag, until the next color tag (0-9, a-f, 'r' reset, or an RGB code).
         // Supports RGB (default) or HSB color interpolation styles.
         // The ColorTag input supports full RGBA for transparency control throughout the gradient.
+        // A color that doesn't give an alpha gets 0x64 (~39% opacity), matching <@link tag &shadow_color>.
         // Note that this is a magic Denizen tool - refer to <@link language Denizen Text Formatting>.
         // @example
         // - narrate "<&shadow_gradient[from=black;to=white]>gradient shadow from black to white"
@@ -472,6 +445,9 @@ public class TextFormattingTags {
                 attribute.echoError("Invalid gradient style '" + style + "'");
                 return null;
             }
+            MapTag rawInput = FormattedTextHelper.rawMapInput(attribute);
+            fromColor = FormattedTextHelper.withShadowAlpha(fromColor, rawInput, "from");
+            toColor = FormattedTextHelper.withShadowAlpha(toColor, rawInput, "to");
             return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[sdw_gradient=" + fromColor + ";" + toColor + ";" + style + "]", true);
         });
 
@@ -486,6 +462,7 @@ public class TextFormattingTags {
         // The gradient runs from whatever text is after this tag, until the next color tag (0-9, a-f, 'r' reset, or an RGB code).
         // Supports RGB (default) or HSB color interpolation styles.
         // All ColorTag inputs support full RGBA for transparency control.
+        // A shadow color that doesn't give an alpha gets 0x64 (~39% opacity), matching <@link tag &shadow_color>.
         // Note that this is a magic Denizen tool - refer to <@link language Denizen Text Formatting>.
         // @example
         // - narrate "<&dual_gradient[from=red;to=blue;s_from=black;s_to=white]>dual gradient text with shadow"
@@ -506,6 +483,9 @@ public class TextFormattingTags {
                 attribute.echoError("Invalid gradient style '" + style + "'");
                 return null;
             }
+            MapTag rawInput = FormattedTextHelper.rawMapInput(attribute);
+            sFrom = FormattedTextHelper.withShadowAlpha(sFrom, rawInput, "s_from");
+            sTo = FormattedTextHelper.withShadowAlpha(sTo, rawInput, "s_to");
             return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[dual_gradient=" + fromColor + ";" + toColor + ";" + sFrom + ";" + sTo + ";" + style + "]", true);
         });
 
