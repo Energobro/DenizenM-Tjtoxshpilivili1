@@ -2,9 +2,11 @@ package com.denizenscript.denizen.scripts.commands.world;
 
 import com.denizenscript.denizen.nms.NMSHandler;
 import com.denizenscript.denizen.nms.NMSVersion;
+import com.denizenscript.denizen.objects.EntityTag;
 import com.denizenscript.denizen.objects.LocationTag;
 import com.denizenscript.denizen.objects.PlayerTag;
 import com.denizenscript.denizen.utilities.Utilities;
+import com.denizenscript.denizen.utilities.entity.FakeEntity;
 import com.denizenscript.denizencore.exceptions.InvalidArgumentsException;
 import com.denizenscript.denizencore.objects.Argument;
 import com.denizenscript.denizencore.objects.core.ElementTag;
@@ -15,18 +17,20 @@ import com.denizenscript.denizencore.utilities.CoreConfiguration;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
+import org.bukkit.entity.Entity;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class PlaySoundCommand extends AbstractCommand {
 
     public PlaySoundCommand() {
         setName("playsound");
-        setSyntax("playsound (<location>|...) (<player>|...) (targets:<player>|...) [sound:<name>] (volume:<#.#>) (pitch:<#.#>) (custom) (sound_category:<category_name>)");
-        setRequiredArguments(2, 8);
+        setSyntax("playsound (<location>|...) (<player>|...) (targets:<player>|...) (source:<entity>) [sound:<name>] (volume:<#.#>) (pitch:<#.#>) (custom) (sound_category:<category_name>)");
+        setRequiredArguments(2, 9);
         isProcedural = false;
         setBooleansHandled("custom");
-        setPrefixesHandled("sound_category", "pitch", "volume");
+        setPrefixesHandled("sound_category", "pitch", "volume", "source");
         // Same as playeffect: a sound is sent and forgotten, so an async script needn't stop and wait for the main thread to send it.
         setAsyncDeferrable(true);
     }
@@ -38,7 +42,8 @@ public class PlaySoundCommand extends AbstractCommand {
         // at all and goes straight to the connection. Off-thread the world form would therefore throw, and execute() catches that into a
         // debug-level "Unable to play sound" - a silently missing sound rather than an error anyone would see.
         // A 'targets:' on the line means parseArgs has filled 'entities', so execute cannot reach the branch that goes through the world:
-        // the two branches left both play per player. The plain unprefixed forms cannot be marked, and not for want of trying - locations and
+        // the branches left all play per player, 'source:' included - CraftPlayer's entity overloads have no AsyncCatcher either, while
+        // CraftWorld's reach one through the timed form they delegate to. The plain unprefixed forms cannot be marked, and not for want of trying - locations and
         // players are told apart by type-matching positional arguments inside parseArgs, and this method is asked before parseArgs runs.
         // That is what 'targets:' exists for; it was added rather than changing how the old forms are written, so those keep working as before.
         // The other half of making this true is the sound packet handler, which fires the 'player hears sound' event and resolves an entity
@@ -48,10 +53,10 @@ public class PlaySoundCommand extends AbstractCommand {
 
     // <--[command]
     // @Name PlaySound
-    // @Syntax playsound (<location>|...) (<player>|...) (targets:<player>|...) [sound:<name>] (volume:<#.#>) (pitch:<#.#>) (custom) (sound_category:<category_name>)
+    // @Syntax playsound (<location>|...) (<player>|...) (targets:<player>|...) (source:<entity>) [sound:<name>] (volume:<#.#>) (pitch:<#.#>) (custom) (sound_category:<category_name>)
     // @Required 2
-    // @Maximum 8
-    // @Short Plays a sound at the location or to a list of players.
+    // @Maximum 9
+    // @Short Plays a sound at the location, from an entity, or to a list of players.
     // @Synonyms Noise
     // @Group world
     //
@@ -70,6 +75,13 @@ public class PlaySoundCommand extends AbstractCommand {
     // form can run off the main thread, since it is the only one an async script can recognize as naming its listeners before it parses the line.
     // If a location is specified, it will play the sound for any players that are near the location specified.
     // If both players and locations are specified, will play the sound for only those players at those locations.
+    //
+    // Optionally specify 'source:<entity>' to play the sound from that entity instead of from a fixed point, which makes the sound follow it
+    // as it moves, and makes it stop early if the entity dies or unloads - this is how vanilla mob sounds work.
+    // With no players given, everyone in range of the entity hears it. With players given, only they hear it.
+    // A fake entity from <@link command fakespawn> works as a source, but only for the players it was faked to, as nobody else knows it exists:
+    // with no players given the sound goes to exactly those players, and a 'targets:' player who cannot see the entity hears nothing.
+    // A 'source:' cannot be combined with a location, as the two both say where the sound comes from.
     //
     // Optionally, specify 'custom' to play a custom sound added by a resource pack, changing the sound name to something like 'random.click'
     //
@@ -93,6 +105,12 @@ public class PlaySoundCommand extends AbstractCommand {
     // @Usage
     // Use to notify all players with a sound from an async script, without stopping for the main thread
     // - playsound targets:<server.online_players> sound:ENTITY_PLAYER_LEVELUP volume:0.5 pitch:0.8
+    // @Usage
+    // Use to play a sound that follows an entity as it moves, for everyone nearby
+    // - playsound source:<[npc]> sound:ENTITY_ENDER_DRAGON_GROWL volume:2
+    // @Usage
+    // Use to play a sound that follows an entity, heard by one player only
+    // - playsound source:<[npc]> targets:<player> sound:ENTITY_WARDEN_HEARTBEAT
     // -->
 
     @Override
@@ -130,7 +148,11 @@ public class PlaySoundCommand extends AbstractCommand {
         if (!scriptEntry.hasObject("sound")) {
             throw new InvalidArgumentsException("Missing sound argument!");
         }
-        if (!scriptEntry.hasObject("locations") && !scriptEntry.hasObject("entities")) {
+        boolean hasSource = scriptEntry.hasRawArgumentPrefix("source");
+        if (hasSource && scriptEntry.hasObject("locations")) {
+            throw new InvalidArgumentsException("Cannot specify both a location and a 'source:' entity - the sound comes from one or the other.");
+        }
+        if (!hasSource && !scriptEntry.hasObject("locations") && !scriptEntry.hasObject("entities")) {
             throw new InvalidArgumentsException("Missing location argument!");
         }
     }
@@ -139,13 +161,14 @@ public class PlaySoundCommand extends AbstractCommand {
     public void execute(ScriptEntry scriptEntry) {
         List<LocationTag> locations = (List<LocationTag>) scriptEntry.getObject("locations");
         List<PlayerTag> players = (List<PlayerTag>) scriptEntry.getObject("entities");
+        EntityTag source = scriptEntry.argForPrefix("source", EntityTag.class, true);
         ElementTag soundElement = scriptEntry.getElement("sound");
         ElementTag volumeElement = scriptEntry.argForPrefixAsElement("volume", "1");
         ElementTag pitchElement = scriptEntry.argForPrefixAsElement("pitch", "1");
         boolean custom = scriptEntry.argAsBoolean("custom");
         ElementTag sound_category = scriptEntry.argForPrefixAsElement("sound_category", "MASTER");
         if (scriptEntry.dbCallShouldDebug()) {
-            Debug.report(scriptEntry, getName(), db("locations", locations), db("entities", players), soundElement, volumeElement, pitchElement, db("custom", custom));
+            Debug.report(scriptEntry, getName(), db("locations", locations), db("entities", players), db("source", source), soundElement, volumeElement, pitchElement, db("custom", custom));
         }
         String sound = soundElement.asString();
         float volume = volumeElement.asFloat();
@@ -156,7 +179,46 @@ public class PlaySoundCommand extends AbstractCommand {
             categoryEnum = SoundCategory.MASTER;
         }
         try {
-            if (players == null) {
+            if (source != null) {
+                Entity sourceEntity = source.getBukkitEntity();
+                if (sourceEntity == null) {
+                    Debug.echoError(scriptEntry, "Cannot play a sound from entity '" + source.identify() + "': it is not spawned.");
+                    return;
+                }
+                List<PlayerTag> hearers = players;
+                if (hearers == null && source.isFake) {
+                    FakeEntity fake = FakeEntity.idsToEntities.get(source.getUUID());
+                    if (fake == null) {
+                        Debug.echoError(scriptEntry, "Cannot play a sound from entity '" + source.identify() + "': not listed in fake-entity map.");
+                        return;
+                    }
+                    hearers = new ArrayList<>(fake.players.size());
+                    for (PlayerTag player : fake.players) {
+                        if (player.isOnline()) {
+                            hearers.add(player);
+                        }
+                    }
+                }
+                if (hearers == null) {
+                    if (custom) {
+                        sourceEntity.getWorld().playSound(sourceEntity, sound, categoryEnum, volume, pitch);
+                    }
+                    else {
+                        sourceEntity.getWorld().playSound(sourceEntity, Utilities.elementToEnumlike(soundElement, Sound.class), categoryEnum, volume, pitch);
+                    }
+                }
+                else {
+                    for (PlayerTag player : hearers) {
+                        if (custom) {
+                            player.getPlayerEntity().playSound(sourceEntity, sound, categoryEnum, volume, pitch);
+                        }
+                        else {
+                            player.getPlayerEntity().playSound(sourceEntity, Utilities.elementToEnumlike(soundElement, Sound.class), categoryEnum, volume, pitch);
+                        }
+                    }
+                }
+            }
+            else if (players == null) {
                 if (custom) {
                     for (LocationTag location : locations) {
                         location.getWorld().playSound(location, sound, categoryEnum, volume, pitch);
