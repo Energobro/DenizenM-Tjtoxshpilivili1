@@ -46,7 +46,7 @@ public class Settings {
         // Milliseconds rather than a DurationTag: the useful values here are a few thousandths of a tick, which durations don't express.
         CoreConfiguration.mainThreadTaskBudgetMillis = config.getInt("Scripts.Async.Main thread task budget ms", 5);
         CoreConfiguration.mainThreadWaitLingerMicros = config.getInt("Scripts.Async.Main thread wait linger us", 500);
-        CoreConfiguration.asyncQueueCountWarning = config.getInt("Scripts.Async.Warn at queue count", 50);
+        CoreConfiguration.asyncQueueCountWarning = config.getInt("Scripts.Async.Warn at queue count", 128);
         CoreConfiguration.asyncQueueCountLimit = config.getInt("Scripts.Async.Max queue count", 256);
         CoreConfiguration.allowConsoleRedirection = config.getBoolean("Debug.Allow console redirection", false);
         CoreConfiguration.allowStrangeFileSaves = config.getBoolean("Commands.Yaml.Allow saving outside folder", false);

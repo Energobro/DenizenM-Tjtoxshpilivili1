@@ -81,12 +81,15 @@ Scripts:
         Main thread task budget ms: 5
         # After answering an async script's request, keep watching this many microseconds for the next one. Requests come back to back,
         # so without this the next one misses the drain by nothing and waits a whole tick. 0 for the old behaviour.
-        # 500 was measured both ways: 100 cost 23x the waiting for the same work, while 2000 saved a third of what remained but
+        # This is the floor, not a fixed length: a window that catches a follow-up doubles the next one and one that waits in vain halves it
+        # back, between this and four times it. A chain therefore earns the long window, where it is nearly free because answers end it early,
+        # while a script that asks once settles back here. Read the current length from the 'window' key of <util.linger_stats>.
+        # 500 was measured both ways: 100 cost 23x the waiting for the same work, while a fixed 2000 saved a third of what remained but
         # quadrupled what the window costs when nothing follows (2ms per drain instead of 0.5ms, up to twice a tick).
         # Raise it only with headroom to spare, and check the cost with <util.linger_stats> - TPS cannot see a few ms a tick.
         Main thread wait linger us: 500
         # Warn once when this many async queues are running at the same time. 0 to never warn.
-        Warn at queue count: 50
+        Warn at queue count: 128
         # Never run more than this many async queues at once - anything past it runs on the main thread instead. 0 for no limit.
         # Each queue owns a thread for its whole life, so this is the backstop against a script starting them in a loop; queues are
         # counted as they are dispatched, so a burst inside one tick cannot slip past. Set far above what a healthy server reaches.

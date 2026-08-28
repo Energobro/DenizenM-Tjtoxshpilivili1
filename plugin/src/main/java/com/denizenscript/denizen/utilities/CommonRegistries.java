@@ -207,8 +207,11 @@ public class CommonRegistries {
             // 'ban_info' is left out only because its sub-tags weren't read, not because anything about it looked wrong.
             "has_whitelist", "whitelisted_players", "banned_players", "banned_addresses", "is_banned",
             // 'match_player' is the online-player loop again, comparing names off the profile; the PlayerTag it builds is a UUID.
-            // Its sibling 'match_offline_player' is not here - it falls through to the offline list, and so to getPlayer(UUID).
-            "match_player", "potion_effect_types"
+            // 'match_offline_player' walks PlayerTag.playerNames instead - Denizen's own ConcurrentHashMap, never Bukkit - and asks
+            // nothing of the server but which of those UUIDs are online, which it now takes in one pass off the CopyOnWriteArrayList
+            // exactly as 'offline_players' does. It used to ask that per candidate through PlayerTag.isOnline(), which is safe off-thread
+            // but costs a scan of the online list each time, so a loose input like 'a' meant a scan per matching name.
+            "match_player", "match_offline_player", "potion_effect_types"
     };
 
     /**

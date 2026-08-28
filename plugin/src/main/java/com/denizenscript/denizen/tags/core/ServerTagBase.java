@@ -1277,6 +1277,8 @@ public class ServerTagBase extends PseudoObjectTagBase<ServerTagBase> {
             if (matchInput.isEmpty()) {
                 return null;
             }
+            Set<UUID> online = onlinePlayerIds();
+            boolean matchOnline = false;
             for (Map.Entry<String, UUID> entry : PlayerTag.getAllPlayers().entrySet()) {
                 String nameLow = CoreUtilities.toLowerCase(entry.getKey());
                 if (nameLow.equals(matchInput)) {
@@ -1284,15 +1286,12 @@ public class ServerTagBase extends PseudoObjectTagBase<ServerTagBase> {
                     break;
                 }
                 else if (nameLow.contains(matchInput)) {
-                    PlayerTag newMatch = new PlayerTag(entry.getValue());
-                    if (matchPlayer == null) {
-                        matchPlayer = newMatch;
-                    }
-                    else if (newMatch.isOnline() && !matchPlayer.isOnline()) {
-                        matchPlayer = newMatch;
-                    }
-                    else if (nameLow.startsWith(matchInput) && (newMatch.isOnline() == matchPlayer.isOnline())) {
-                        matchPlayer = newMatch;
+                    boolean newOnline = online.contains(entry.getValue());
+                    if (matchPlayer == null
+                            || (newOnline && !matchOnline)
+                            || (nameLow.startsWith(matchInput) && newOnline == matchOnline)) {
+                        matchPlayer = new PlayerTag(entry.getValue());
+                        matchOnline = newOnline;
                     }
                 }
             }
