@@ -58,16 +58,7 @@ public class GameRuleReflect {
         }
     }
 
-    // TODO 1.21.11: certain gamemodes (e.g. max_minecart_speed) behave badly for some reason
     public static <T> T getValue(World world, GameRule<T> gameRule) {
-        try {
-            return world.getGameRuleValue(gameRule);
-        }
-        catch (IllegalArgumentException e) {
-            if (e.getMessage().equals("Tried to access invalid game rule")) {
-                return null;
-            }
-            throw e;
-        }
+        return world.isGameRule(getName(gameRule)) ? world.getGameRuleValue(gameRule) : null;
     }
 }

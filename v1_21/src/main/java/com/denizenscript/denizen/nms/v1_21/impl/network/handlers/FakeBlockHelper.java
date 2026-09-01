@@ -126,7 +126,7 @@ public class FakeBlockHelper {
                             }
                         } else {
                             // Если это обычный блок или ВОЗДУХ — просто удаляем запись о BlockEntity из этого слота чанка
-                            blockEntities.remove(i);
+                            blockEntities.remove(i--);
                         }
                         break;
                     }

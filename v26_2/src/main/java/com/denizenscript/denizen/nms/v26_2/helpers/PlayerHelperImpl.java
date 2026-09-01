@@ -526,7 +526,7 @@ public class PlayerHelperImpl extends PlayerHelper {
         if (!cooldownsMap.isEmpty()) {
             int tickCount = getCooldownsTickCount(nmsPlayer.getCooldowns());
             for (Map.Entry<Identifier, ItemCooldowns.CooldownInstance> entry : cooldownsMap.entrySet()) {
-                nmsPlayer.connection.send(new ClientboundCooldownPacket(entry.getKey(), entry.getValue().endTime - tickCount));
+                nmsPlayer.connection.send(new ClientboundCooldownPacket(entry.getKey(), entry.getValue().endTime() - tickCount));
             }
         }
 

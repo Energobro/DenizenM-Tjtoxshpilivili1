@@ -124,7 +124,7 @@ public class FakeBlockHelper {
                                 }
                             }
                         } else {
-                            blockEntities.remove(i);
+                            blockEntities.remove(i--);
                         }
                         break;
                     }

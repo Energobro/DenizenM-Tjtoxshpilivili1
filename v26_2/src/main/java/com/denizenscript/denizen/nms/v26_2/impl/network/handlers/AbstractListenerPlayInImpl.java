@@ -186,8 +186,8 @@ public class AbstractListenerPlayInImpl extends ServerGamePacketListenerImpl {
             if (packet instanceof ServerboundMovePlayerPacket) {
                 ServerboundMovePlayerPacket movePacket = (ServerboundMovePlayerPacket) packet;
                 DenizenNetworkManagerImpl.doPacketOutput("Packet ServerboundMovePlayerPacket sent from " + player.getScoreboardName() + " with XYZ="
-                        + movePacket.x + ", " + movePacket.y + ", " + movePacket.z + ", yRot=" + movePacket.yRot + ", xRot=" + movePacket.xRot
-                        + ", onGround=" + movePacket.isOnGround() + ", hasPos=" + movePacket.hasPos + ", hasRot=" + movePacket.hasRot);
+                        + movePacket.getX(0) + ", " + movePacket.getY(0) + ", " + movePacket.getZ(0) + ", yRot=" + movePacket.getYRot(0) + ", xRot=" + movePacket.getXRot(0)
+                        + ", onGround=" + movePacket.isOnGround() + ", hasPos=" + movePacket.hasPosition() + ", hasRot=" + movePacket.hasRotation());
             }
             else if (packet instanceof ServerboundAcceptTeleportationPacket) {
                 Vec3 awaitPos = (Vec3) AWAITING_POS_FIELD.get(oldListener);

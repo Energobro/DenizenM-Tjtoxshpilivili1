@@ -857,6 +857,7 @@ public class WorldTag implements ObjectTag, Adjustable, FlaggableObject {
         // @returns ElementTag
         // @description
         // Returns the current value of the specified gamerule in the world.
+        // Errors if the gamerule isn't enabled in that world, as some are gated behind experimental features.
         // -->
         registerTag(ElementTag.class, "gamerule", (attribute, object) -> {
             if (!attribute.hasParam()) {
@@ -869,7 +870,11 @@ public class WorldTag implements ObjectTag, Adjustable, FlaggableObject {
                 return null;
             }
             Object result = GameRuleReflect.getValue(object.getWorld(), rule);
-            return new ElementTag(String.valueOf(result), true);
+            if (result == null) {
+                attribute.echoError("Game rule '" + attribute.getParam() + "' is not enabled in world '" + object.getName() + "'.");
+                return null;
+            }
+            return new ElementTag(result.toString(), true);
         });
 
         // <--[tag]

@@ -79,9 +79,15 @@ public class DenizenCoreImplementation implements DenizenImplementation {
     }
 
     @Override
-    public void onScriptReload() {
-        // First thing here, ahead of the ScriptReloadEvent below: the recipe rebuild listens for that event and iterates this map.
+    public void onScriptsBuilt() {
+        // Publishing has to happen before event paths are re-checked, not in onScriptReload: couldMatchItem reads item_scripts to
+        // validate an item script name used as an event label, and on a first server start the unpublished map is still empty,
+        // which made every such event report as unmatched. The recipe rebuild downstream of ScriptReloadEvent still sees it in time.
         ItemScriptHelper.publishScripts();
+    }
+
+    @Override
+    public void onScriptReload() {
         Depends.setupEconomy();
         Bukkit.getServer().getPluginManager().callEvent(new ScriptReloadEvent());
     }
