@@ -381,9 +381,7 @@ public class DenizenCoreImplementation implements DenizenImplementation {
             if (queue.getLastEntryExecuted() != null) {
                 ((BukkitScriptEntryData) queue.getLastEntryExecuted().entryData).setPlayer(player);
             }
-            for (ScriptEntry entry : queue.getEntries()) {
-                ((BukkitScriptEntryData) entry.entryData).setPlayer(player);
-            }
+            queue.forEachPendingEntry(entry -> ((BukkitScriptEntryData) entry.entryData).setPlayer(player));
             return true;
         }
         else if (def.equals("__npc")) {
@@ -395,9 +393,7 @@ public class DenizenCoreImplementation implements DenizenImplementation {
             if (queue.getLastEntryExecuted() != null) {
                 ((BukkitScriptEntryData) queue.getLastEntryExecuted().entryData).setNPC(npc);
             }
-            for (ScriptEntry entry : queue.getEntries()) {
-                ((BukkitScriptEntryData) entry.entryData).setNPC(npc);
-            }
+            queue.forEachPendingEntry(entry -> ((BukkitScriptEntryData) entry.entryData).setNPC(npc));
             return true;
         }
         return false;

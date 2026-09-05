@@ -62,10 +62,7 @@ public class BukkitQueueExtensions {
         // <QueueTag.player>
         // -->
         QueueTag.tagProcessor.registerMechanism("linked_player", false, PlayerTag.class, (queue, mechanism, player) -> {
-            for (ScriptEntry entry : queue.queue.getEntries()) {
-                BukkitScriptEntryData data = (BukkitScriptEntryData) entry.entryData;
-                data.setPlayer(player);
-            }
+            queue.queue.forEachPendingEntry(entry -> ((BukkitScriptEntryData) entry.entryData).setPlayer(player));
         });
 
         // <--[mechanism]
@@ -78,10 +75,7 @@ public class BukkitQueueExtensions {
         // <QueueTag.npc>
         // -->
         QueueTag.tagProcessor.registerMechanism("linked_npc", false, NPCTag.class, (queue, mechanism, npc) -> {
-            for (ScriptEntry entry : queue.queue.getEntries()) {
-                BukkitScriptEntryData data = (BukkitScriptEntryData) entry.entryData;
-                data.setNPC(npc);
-            }
+            queue.queue.forEachPendingEntry(entry -> ((BukkitScriptEntryData) entry.entryData).setNPC(npc));
         });
     }
 }
