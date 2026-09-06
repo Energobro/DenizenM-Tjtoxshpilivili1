@@ -2,7 +2,6 @@ package com.denizenscript.denizen.nms.interfaces;
 
 import com.denizenscript.denizen.nms.util.PlayerProfile;
 import com.denizenscript.denizen.objects.EntityTag;
-import com.denizenscript.denizencore.utilities.debugging.Debug;
 import net.kyori.adventure.nbt.CompoundBinaryTag;
 import org.bukkit.*;
 import org.bukkit.block.*;

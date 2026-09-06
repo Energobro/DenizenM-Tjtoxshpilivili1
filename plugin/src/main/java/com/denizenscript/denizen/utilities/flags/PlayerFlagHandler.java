@@ -18,7 +18,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import java.io.File;
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;

@@ -17,7 +17,6 @@ import org.bukkit.entity.Arrow;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import java.util.ArrayList;
 import java.util.Collection;
 
 public class EntityPotionEffects implements Property {

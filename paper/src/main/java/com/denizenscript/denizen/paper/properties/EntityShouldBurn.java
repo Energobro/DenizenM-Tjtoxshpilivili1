@@ -1,7 +1,5 @@
 package com.denizenscript.denizen.paper.properties;
 
-import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.objects.EntityTag;
 import com.denizenscript.denizen.objects.properties.entity.EntityProperty;
 import com.denizenscript.denizencore.objects.Mechanism;

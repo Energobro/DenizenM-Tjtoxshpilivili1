@@ -1,7 +1,5 @@
 package com.denizenscript.denizen.objects.properties;
 
-import com.denizenscript.denizen.nms.NMSHandler;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.objects.*;
 import com.denizenscript.denizen.objects.properties.bukkit.*;
 import com.denizenscript.denizen.objects.properties.entity.*;

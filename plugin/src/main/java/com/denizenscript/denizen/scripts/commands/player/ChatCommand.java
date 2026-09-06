@@ -22,7 +22,6 @@ import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.ai.speech.Talkable;
 import net.citizensnpcs.api.ai.speech.TalkableEntity;
 import net.citizensnpcs.api.ai.speech.event.NPCSpeechEvent;
-import net.citizensnpcs.api.npc.NPC;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 

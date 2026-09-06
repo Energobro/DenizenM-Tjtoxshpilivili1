@@ -4,7 +4,6 @@ import com.denizenscript.denizen.utilities.implementation.BukkitScriptEntryData;
 import com.denizenscript.denizen.objects.NPCTag;
 import com.denizenscript.denizen.objects.PlayerTag;
 import com.denizenscript.denizencore.objects.core.QueueTag;
-import com.denizenscript.denizencore.scripts.ScriptEntry;
 
 public class BukkitQueueExtensions {
 
