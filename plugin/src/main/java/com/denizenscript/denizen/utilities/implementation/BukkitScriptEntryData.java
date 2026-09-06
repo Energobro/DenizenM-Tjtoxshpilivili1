@@ -53,10 +53,12 @@ public class BukkitScriptEntryData extends ScriptEntryData {
 
     public void setPlayer(PlayerTag player) {
         this.player = player;
+        markChanged();
     }
 
     public void setNPC(NPCTag npc) {
         this.npc = npc;
+        markChanged();
     }
 
     @Override
@@ -67,7 +69,7 @@ public class BukkitScriptEntryData extends ScriptEntryData {
         player = ((BukkitScriptEntryData) scriptEntryData).getPlayer();
         npc = ((BukkitScriptEntryData) scriptEntryData).getNPC();
         scriptEntry = scriptEntryData.scriptEntry;
-
+        markChanged();
     }
 
     @Override
