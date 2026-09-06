@@ -1,7 +1,6 @@
 package com.denizenscript.denizen.scripts.commands.player;
 
 import com.denizenscript.denizen.Denizen;
-import com.denizenscript.denizen.nms.NMSVersion;
 import com.denizenscript.denizen.utilities.Utilities;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.denizenscript.denizen.nms.NMSHandler;
