@@ -320,13 +320,8 @@ public class TextFormattingTags {
         // @example
         // - narrate "<&shadow_color[#00FF0080]>This text has a semi-transparent green shadow"
         // -->
-        TagManager.registerStaticTagBaseHandler(ElementTag.class, ElementTag.class, "&shadow_color", (attribute, colorElement) -> {
-            String shadowCode = FormattedTextHelper.shadowColorCode(colorElement.asString(), attribute.context);
-            if (shadowCode == null) {
-                attribute.echoError("Color '" + colorElement + "' doesn't exist (for &shadow_color[...]).");
-                return null;
-            }
-            return new ElementTag(shadowCode, true);
+        TagManager.registerStaticTagBaseHandler(ElementTag.class, ColorTag.class, "&shadow_color", (attribute, color) -> {
+            return new ElementTag(FormattedTextHelper.shadowColorCode(color), true);
         });
 
         // <--[tag]
@@ -482,9 +477,8 @@ public class TextFormattingTags {
                 attribute.echoError("Invalid gradient style '" + style + "'");
                 return null;
             }
-            MapTag rawInput = FormattedTextHelper.rawMapInput(attribute);
-            fromColor = FormattedTextHelper.withShadowAlpha(fromColor, rawInput, "from");
-            toColor = FormattedTextHelper.withShadowAlpha(toColor, rawInput, "to");
+            fromColor = FormattedTextHelper.withShadowAlpha(fromColor);
+            toColor = FormattedTextHelper.withShadowAlpha(toColor);
             return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[sdw_gradient=" + fromColor + ";" + toColor + ";" + style + "]", true);
         });
 
@@ -520,9 +514,8 @@ public class TextFormattingTags {
                 attribute.echoError("Invalid gradient style '" + style + "'");
                 return null;
             }
-            MapTag rawInput = FormattedTextHelper.rawMapInput(attribute);
-            sFrom = FormattedTextHelper.withShadowAlpha(sFrom, rawInput, "s_from");
-            sTo = FormattedTextHelper.withShadowAlpha(sTo, rawInput, "s_to");
+            sFrom = FormattedTextHelper.withShadowAlpha(sFrom);
+            sTo = FormattedTextHelper.withShadowAlpha(sTo);
             return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[dual_gradient=" + fromColor + ";" + toColor + ";" + sFrom + ";" + sTo + ";" + style + "]", true);
         });
 

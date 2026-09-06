@@ -213,6 +213,76 @@ public class CommonRegistries {
             "match_player", "match_offline_player", "potion_effect_types"
     };
 
+    // ===================================================================================================
+    // ASYNC TAG SAFETY MAP - generated from the markings in registerAsyncTagSafety() below. Machine-readable.
+    // '@asyncsave <Type>: everything' means every tag on that object type is safe off the main thread.
+    // Otherwise the list is exactly the sub-tags that are safe; anything not listed is handed to the main thread.
+    // Constants used by the markings (FLAG_TAGS, PLAYER_ASYNC_SAFE_TAGS, WORLD_ASYNC_SAFE_TAGS) are expanded here.
+    // These are OBJECT TYPE markings, ie they apply however the object arrived (<[def].x>, <context.entity.uuid>, ...).
+    // ===================================================================================================
+    // @asyncsave ChunkTag: add, cuboid, is_loaded, simple, sub, world, x, xz, z
+    // @asyncsave CuboidTag: center, contains, contains_cuboid, contains_location, corners, flag, flag_expiration, flag_map, get_outline, has_flag,
+    //   intersects, is_within, list_flags, max, min, outline, outline_2d, shell, shift, size, volume, walls, with_max, with_min
+    // @asyncsave EllipsoidTag: add, bounding_box, chunks, contains, contains_location, flag, flag_expiration, flag_map, has_flag, include, is_within,
+    //   list_flags, location, random, shell, size, with_location, with_size, world
+    // @asyncsave EntityTag: entity_type, script, translated_name, type, uuid
+    // @asyncsave InventoryTag: (none)
+    // @asyncsave ItemTag: book_author, book_map, book_pages, book_title, display, durability, enchantment_map, enchantment_types, enchantments, flag,
+    //   flag_expiration, flag_map, has_display, has_flag, has_lore, is_enchanted, list_flags, lore, material, max_stack, quantity, script, with_flag
+    // @asyncsave LocationTag: above, add, backward, backward_flat, below, center, chunk, distance, distance_squared, div, down, format, formatted,
+    //   forward, forward_flat, get_chunk, left, mul, normalize, pitch, points_around_x, points_around_y, points_around_z, points_between,
+    //   quaternion_between_vectors, random_offset, raw, relative, right, rotate_around_x, rotate_around_y, rotate_around_z, rotate_pitch, rotate_yaw,
+    //   round, round_down, round_to, round_to_precision, round_up, simple, simplex_3d, sub, to_axis_angle_quaternion, up, vector_length,
+    //   vector_length_squared, vector_to_face, with_pitch, with_x, with_y, with_yaw, with_z, world, x, xyz, y, yaw, z
+    // @asyncsave NPCTag: (none)
+    // @asyncsave PlayerTag: ban_created, ban_created_time, ban_expiration, ban_expiration_time, ban_info, ban_reason, ban_source, chat_history,
+    //   chat_history_list, disguise_to_self, fake_block, fake_block_locations, fake_entities, first_played, first_played_time, flag, flag_expiration,
+    //   flag_map, has_flag, has_played_before, is_banned, is_online, is_op, is_player, is_whitelisted, last_played, last_played_time, list_flags, name,
+    //   sidebar_lines, sidebar_scores, sidebar_title, uuid, whitelisted
+    // @asyncsave PolygonTag: bounding_box, contains, contains_inclusive, contains_location, corners, flag, flag_expiration, flag_map, has_flag,
+    //   include_y, is_within, list_flags, max_y, min_y, outline, outline_2d, shell, shell_inclusive, shift, with_corner, with_y_max, with_y_min, world
+    // @asyncsave WorldTag: allows_animals, allows_monsters, allows_pvp, ambient_spawn_limit, animal_spawn_limit, auto_save, can_generate_structures,
+    //   difficulty, duration_since_created, environment, hardcore, has_storm, is_day, is_night, keep_spawn, max_height, min_height, monster_spawn_limit,
+    //   moon_phase, name, sea_level, seed, simulation_distance, sky_darkness, thunder_duration, thundering, ticks_per_animal_spawn,
+    //   ticks_per_monster_spawn, time, time_duration, time_full, time_period, view_distance, water_animal_spawn_limit, weather_duration, world_type
+    // @asyncsave BiomeTag: (everything)
+    // @asyncsave EnchantmentTag: (everything)
+    // @asyncsave MaterialTag: (everything)
+    // @asyncsave PluginTag: (everything)
+    // @asyncsave TradeTag: (everything)
+    // @asyncsave BinaryTag: (everything)
+    // @asyncsave ColorTag: (everything)
+    // @asyncsave CustomObjectTag: (everything)
+    // @asyncsave DurationTag: (everything)
+    // @asyncsave ElementTag: (everything)
+    // @asyncsave ImageTag: (everything)
+    // @asyncsave JavaReflectedObjectTag: (everything)
+    // @asyncsave ListTag: (everything)
+    // @asyncsave MapTag: (everything)
+    // @asyncsave QuaternionTag: (everything)
+    // @asyncsave QueueTag: (everything)
+    // @asyncsave ScriptTag: (everything)
+    // @asyncsave SecretTag: (everything)
+    // @asyncsave TimeTag: (everything)
+    //
+    // Tag BASES are a separate axis - the '<player...' / '<server...' at the start of a tag.
+    // A base being main-thread-only costs a hand-off only when the tag is WRITTEN that way; the same object
+    // reached through a definition is governed by the object-type list above instead.
+    // @asyncbase mainThreadOnly: biome, chunk, cuboid, ellipsoid, enchantment, entity, inventory, item, plugin, polygon, trade, world, player, server, npc
+    // @asyncbase bareSafe: player, npc
+    // @asyncbase notMarked: location, material, and every core base (list, map, element, time, duration, queue, script, ...)
+    // ===================================================================================================
+    // ASYNC COMMAND MAP - generated from AbstractCommand.asyncSafe / isAsyncSafe across core and plugin.
+    // @asynccmd runsAsync: commands an async queue can run on its own thread. Anything not listed is handed to the main thread.
+    // ===================================================================================================
+    // @asynccmd runsAsync: actionbar, announce, async, choose, debug, debug-invalid-command, debugblock, define, definemap, determine, draw, else,
+    //   filecopy, fileread, filewrite, flag, foreach, goto, if, image, inject, log, mark, narrate, playeffect, playsound, random, ratelimit, redis,
+    //   repeat, run, schematic, sidebar, sql, stop, tablist, title, toast, wait, waituntil, webget, webserver, while, yaml
+    //
+    // Separate capability: an async queue may fire these off to the main thread and carry on without waiting for them.
+    // They do NOT run on the async thread, so they are not part of the list above.
+    // @asynccmd deferrable: actionbar(per_player), announce, compass, fakeequip, narrate(per_player), playeffect, playsound, runlater(id), showfake,
+    //   sidebar(per_player)
     /**
      * Tells the engine which tag bases read live server state, and therefore must be handed to the main thread when an async script reads them.
      * See <@link language Async Tag Safety>.

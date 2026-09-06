@@ -259,7 +259,7 @@ public class ClickableCommand extends BracedCommand {
         if (script == null) {
             newClickable.contextSource = scriptEntry.queue.contextSource;
             newClickable.directEntries = getBracedCommandsDirect(scriptEntry, scriptEntry);
-            newClickable.defMap = scriptEntry.queue.definitions.duplicate();
+            newClickable.defMap = scriptEntry.queue.getAllDefinitions().duplicate();
             if (defMap != null) {
                 newClickable.defMap.putAll(defMap);
             }

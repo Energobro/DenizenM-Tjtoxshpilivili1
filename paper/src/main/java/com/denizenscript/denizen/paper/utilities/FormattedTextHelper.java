@@ -484,53 +484,25 @@ public class FormattedTextHelper {
         builder.append(HEX_LOWER[(value >> 4) & 0xF]).append(HEX_LOWER[value & 0xF]);
     }
 
-    public static String shadowColorCode(String input, TagContext context) {
-        ColorTag color = ColorTag.valueOf(input, context);
-        if (color == null) {
-            return null;
-        }
+    public static String shadowColorCode(ColorTag color) {
         StringBuilder result = new StringBuilder(20);
         result.append(LEGACY_SECTION).append("[shadow=#");
         appendHexByte(result, color.red);
         appendHexByte(result, color.green);
         appendHexByte(result, color.blue);
-        appendHexByte(result, hasExplicitAlpha(input) ? color.alpha : DEFAULT_SHADOW_ALPHA);
+        appendHexByte(result, color.alphaSpecified ? color.alpha : DEFAULT_SHADOW_ALPHA);
         result.append(']');
         return result.toString();
     }
 
-    public static ColorTag withShadowAlpha(ColorTag color, String input) {
-        if (hasExplicitAlpha(input)) {
+    public static ColorTag withShadowAlpha(ColorTag color) {
+        if (color.alphaSpecified) {
             return color;
         }
         ColorTag result = new ColorTag(color);
         result.alpha = DEFAULT_SHADOW_ALPHA;
+        result.alphaSpecified = true;
         return result;
-    }
-
-    public static MapTag rawMapInput(Attribute attribute) {
-        return MapTag.valueOf(attribute.getParam(), attribute.context, false);
-    }
-
-    public static ColorTag withShadowAlpha(ColorTag color, MapTag rawInput, String key) {
-        ElementTag raw = rawInput == null ? null : rawInput.getElement(key);
-        return withShadowAlpha(color, raw == null ? "" : raw.asString());
-    }
-
-    public static boolean hasExplicitAlpha(String input) {
-        if (input.startsWith("co@")) {
-            input = input.substring("co@".length());
-        }
-        if (input.startsWith("#")) {
-            return input.length() == 9;
-        }
-        int commas = 0;
-        for (int i = 0; i < input.length(); i++) {
-            if (input.charAt(i) == ',') {
-                commas++;
-            }
-        }
-        return commas == 3;
     }
 
     public static String cleanRedundantCodes(String str) {

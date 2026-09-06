@@ -284,13 +284,8 @@ public class PaperElementExtensions {
         // @example
         // - narrate <element[text].shadow_color[co@255,0,0,100]>
         // -->
-        ElementTag.tagProcessor.registerStaticTag(ElementTag.class, ElementTag.class, "shadow_color", (attribute, object, colorElement) -> {
-            String shadowCode = FormattedTextHelper.shadowColorCode(colorElement.asString(), attribute.context);
-            if (shadowCode == null) {
-                attribute.echoError("Color '" + colorElement + "' doesn't exist (for ElementTag.shadow_color[...]).");
-                return null;
-            }
-            return new ElementTag(shadowCode + object.asString() + FormattedTextHelper.LEGACY_SECTION + FormattedTextHelper.SHADOW_RESET, true);
+        ElementTag.tagProcessor.registerStaticTag(ElementTag.class, ColorTag.class, "shadow_color", (attribute, object, color) -> {
+            return new ElementTag(FormattedTextHelper.shadowColorCode(color) + object.asString() + FormattedTextHelper.LEGACY_SECTION + FormattedTextHelper.SHADOW_RESET, true);
         });
 
         // <--[tag]
@@ -595,9 +590,8 @@ public class PaperElementExtensions {
                 return null;
             }
 
-            MapTag rawInput = FormattedTextHelper.rawMapInput(attribute);
-            fromColor = FormattedTextHelper.withShadowAlpha(fromColor, rawInput, "from");
-            toColor = FormattedTextHelper.withShadowAlpha(toColor, rawInput, "to");
+            fromColor = FormattedTextHelper.withShadowAlpha(fromColor);
+            toColor = FormattedTextHelper.withShadowAlpha(toColor);
             String res = FormattedTextHelper.doSdwGradient(object.asString(), fromColor, toColor, style.asEnum(GradientStyle.class));
             if (res == null) {
                 return null;
@@ -636,9 +630,8 @@ public class PaperElementExtensions {
                 return null;
             }
 
-            MapTag rawInput = FormattedTextHelper.rawMapInput(attribute);
-            sFrom = FormattedTextHelper.withShadowAlpha(sFrom, rawInput, "s_from");
-            sTo = FormattedTextHelper.withShadowAlpha(sTo, rawInput, "s_to");
+            sFrom = FormattedTextHelper.withShadowAlpha(sFrom);
+            sTo = FormattedTextHelper.withShadowAlpha(sTo);
             String res = FormattedTextHelper.doDualGradient(object.asString(), fromColor, toColor, sFrom, sTo, style.asEnum(GradientStyle.class));
             if (res == null) {
                 return null;
