@@ -38,7 +38,7 @@ public class LegacySavesUpdater {
                 savesFile.delete();
                 return;
             }
-            saveSection = YamlConfiguration.load(saveData);
+            saveSection = YamlConfiguration.load(saveData, "the legacy saves file '" + savesFile.getPath() + "'");
             if (saveSection == null) {
                 Debug.echoError("Something went very wrong: legacy saves file failed to load!");
                 return;
