@@ -1954,10 +1954,14 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
                 attribute.fulfill(1);
                 return new ElementTag(slot);
             }
-            if (!attribute.hasParam() || !ItemTag.matches(attribute.getParam())) {
+            if (!attribute.hasParam()) {
                 return null;
             }
-            ItemTag item = attribute.paramAsType(ItemTag.class);
+            ItemTag item = attribute.paramAsTypeIfMatches(ItemTag.class, ItemTag::matches);
+            if (item == null) {
+                return null;
+            }
+            item = new ItemTag(item.getItemStack().clone());
             item.setAmount(1);
             int slot = -1;
             for (int i = 0; i < object.inventory.getSize(); i++) {
@@ -1975,10 +1979,14 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
 
         tagProcessor.registerTag(ElementTag.class, "find_imperfect", (attribute, object) -> {
             BukkitImplDeprecations.inventoryNonMatcherTags.warn(attribute.context);
-            if (!attribute.hasParam() || !ItemTag.matches(attribute.getParam())) {
+            if (!attribute.hasParam()) {
                 return null;
             }
-            ItemTag item = attribute.paramAsType(ItemTag.class);
+            ItemTag item = attribute.paramAsTypeIfMatches(ItemTag.class, ItemTag::matches);
+            if (item == null) {
+                return null;
+            }
+            item = new ItemTag(item.getItemStack().clone());
             item.setAmount(1);
             int slot = -1;
             for (int i = 0; i < object.inventory.getSize(); i++) {
@@ -2076,9 +2084,9 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
                 attribute.fulfill(1);
                 return new ElementTag(object.countByMaterial(material.getMaterial()));
             }
-            if (attribute.hasParam() && ItemTag.matches(attribute.getParam())) {
-                return new ElementTag(object.count
-                        (attribute.paramAsType(ItemTag.class).getItemStack(), false));
+            ItemTag countOf = attribute.hasParam() ? attribute.paramAsTypeIfMatches(ItemTag.class, ItemTag::matches) : null;
+            if (countOf != null) {
+                return new ElementTag(object.count(countOf.getItemStack(), false));
             }
             else {
                 return new ElementTag(object.count(null, false));
@@ -2092,8 +2100,9 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
         // Returns the number of itemstacks that match an item if one is specified, or the number of all itemstacks if one is not.
         // -->
         tagProcessor.registerTag(ElementTag.class, "stacks", (attribute, object) -> {
-            if (attribute.hasParam() && ItemTag.matches(attribute.getParam())) {
-                return new ElementTag(object.count(attribute.paramAsType(ItemTag.class).getItemStack(), true));
+            ItemTag stacksOf = attribute.hasParam() ? attribute.paramAsTypeIfMatches(ItemTag.class, ItemTag::matches) : null;
+            if (stacksOf != null) {
+                return new ElementTag(object.count(stacksOf.getItemStack(), true));
             }
             else {
                 return new ElementTag(object.count(null, true));

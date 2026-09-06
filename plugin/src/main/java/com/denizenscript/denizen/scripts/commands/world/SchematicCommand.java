@@ -764,8 +764,8 @@ public class SchematicCommand extends AbstractCommand implements Holdable, Liste
         // An input location of 0,0,0 corresponds to the minimum corner of the schematic.
         // -->
         if (attribute.startsWith("block")) {
-            if (attribute.hasParam() && LocationTag.matches(attribute.getParam())) {
-                LocationTag location = attribute.paramAsType(LocationTag.class);
+            LocationTag location = attribute.hasParam() ? attribute.paramAsTypeIfMatches(LocationTag.class, LocationTag::matches) : null;
+            if (location != null) {
                 FullBlockData block = set.blockAt(location.getX(), location.getY(), location.getZ());
                 event.setReplacedObject(new MaterialTag(block.data)
                         .getObjectAttribute(attribute.fulfill(1)));

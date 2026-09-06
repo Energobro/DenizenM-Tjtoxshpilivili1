@@ -2205,10 +2205,10 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
                 return new LocationTag(object.getWorld(), object.getDirection());
             }
             // Get the cardinal direction from this location to another
-            if (attribute.hasParam() && LocationTag.matches(attribute.getParam())) {
+            LocationTag target = attribute.hasParam() ? attribute.paramAsTypeIfMatches(LocationTag.class, LocationTag::matches) : null;
+            if (target != null) {
                 // Subtract this location's vector from the other location's vector,
                 // not the other way around
-                LocationTag target = attribute.paramAsType(LocationTag.class);
 
                 // <--[tag]
                 // @attribute <LocationTag.direction[<location>].yaw>
@@ -2289,16 +2289,14 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
 
                 // The default number of degrees if there is no degrees attribute
                 int degrees = 45;
-                LocationTag facingLoc;
-                if (LocationTag.matches(attribute.getParam())) {
-                    facingLoc = attribute.paramAsType(LocationTag.class);
-                }
-                else if (EntityTag.matches(attribute.getParam())) {
-                    facingLoc = attribute.paramAsType(EntityTag.class).getLocation();
-                }
-                else {
-                    attribute.echoError("Tag location.facing[...] was given an invalid facing target.");
-                    return null;
+                LocationTag facingLoc = attribute.paramAsTypeIfMatches(LocationTag.class, LocationTag::matches);
+                if (facingLoc == null) {
+                    EntityTag facingEntity = attribute.paramAsTypeIfMatches(EntityTag.class, EntityTag::matches);
+                    if (facingEntity == null) {
+                        attribute.echoError("Tag location.facing[...] was given an invalid facing target.");
+                        return null;
+                    }
+                    facingLoc = facingEntity.getLocation();
                 }
 
                 // <--[tag]
@@ -3385,8 +3383,8 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
             if (!attribute.hasParam()) {
                 return null;
             }
-            if (LocationTag.matches(attribute.getParam())) {
-                LocationTag toLocation = attribute.paramAsType(LocationTag.class);
+            LocationTag toLocation = attribute.paramAsTypeIfMatches(LocationTag.class, LocationTag::matches);
+            if (toLocation != null) {
                 if (object.getWorldName() == null) {
                     return new ElementTag(object.toVector().distanceSquared(toLocation.toVector()));
                 }
@@ -3410,8 +3408,8 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
             if (!attribute.hasParam()) {
                 return null;
             }
-            if (LocationTag.matches(attribute.getParam())) {
-                LocationTag toLocation = attribute.paramAsType(LocationTag.class);
+            LocationTag toLocation = attribute.paramAsTypeIfMatches(LocationTag.class, LocationTag::matches);
+            if (toLocation != null) {
 
                 // <--[tag]
                 // @attribute <LocationTag.distance[<location>].horizontal>
@@ -3480,23 +3478,17 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
             if (!attribute.hasParam()) {
                 return null;
             }
-            if (EllipsoidTag.matches(attribute.getParam())) {
-                EllipsoidTag ellipsoid = attribute.paramAsType(EllipsoidTag.class);
-                if (ellipsoid != null) {
-                    return new ElementTag(ellipsoid.contains(object));
-                }
+            EllipsoidTag ellipsoid = attribute.paramAsTypeIfMatches(EllipsoidTag.class, EllipsoidTag::matches);
+            if (ellipsoid != null) {
+                return new ElementTag(ellipsoid.contains(object));
             }
-            else if (PolygonTag.matches(attribute.getParam())) {
-                PolygonTag polygon = attribute.paramAsType(PolygonTag.class);
-                if (polygon != null) {
-                    return new ElementTag(polygon.doesContainLocation(object));
-                }
+            PolygonTag polygon = attribute.paramAsTypeIfMatches(PolygonTag.class, PolygonTag::matches);
+            if (polygon != null) {
+                return new ElementTag(polygon.doesContainLocation(object));
             }
-            else {
-                CuboidTag cuboid = attribute.paramAsType(CuboidTag.class);
-                if (cuboid != null) {
-                    return new ElementTag(cuboid.isInsideCuboid(object));
-                }
+            CuboidTag cuboid = attribute.paramAsType(CuboidTag.class);
+            if (cuboid != null) {
+                return new ElementTag(cuboid.isInsideCuboid(object));
             }
             return null;
         });

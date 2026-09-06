@@ -1546,8 +1546,8 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // Returns whether the entity can see the specified other entity (has an uninterrupted line-of-sight).
         // -->
         registerSpawnedOnlyTag(ElementTag.class, "can_see", (attribute, object) -> {
-            if (object.isLivingEntity() && attribute.hasParam() && EntityTag.matches(attribute.getParam())) {
-                EntityTag toEntity = attribute.paramAsType(EntityTag.class);
+            if (object.isLivingEntity() && attribute.hasParam()) {
+                EntityTag toEntity = attribute.paramAsTypeIfMatches(EntityTag.class, EntityTag::matches);
                 if (toEntity != null && toEntity.isSpawnedOrValidForTag()) {
                     return new ElementTag(object.getLivingEntity().hasLineOfSight(toEntity.getBukkitEntity()));
                 }
