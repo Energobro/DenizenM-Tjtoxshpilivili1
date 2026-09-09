@@ -345,8 +345,8 @@ public class DenizenCoreImplementation implements DenizenImplementation {
         if (queue.getLastEntryExecuted() != null) {
             return (BukkitScriptEntryData) queue.getLastEntryExecuted().entryData;
         }
-        else if (queue.getEntries().size() > 0) {
-            return (BukkitScriptEntryData) queue.getEntries().get(0).entryData;
+        else if (queue.peekPending() != null) {
+            return (BukkitScriptEntryData) queue.peekPending().entryData;
         }
         return null;
     }

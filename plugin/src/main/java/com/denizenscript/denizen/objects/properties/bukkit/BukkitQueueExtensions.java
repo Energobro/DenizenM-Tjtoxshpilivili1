@@ -21,8 +21,8 @@ public class BukkitQueueExtensions {
             if (object.queue.getLastEntryExecuted() != null) {
                 npc = ((BukkitScriptEntryData) object.queue.getLastEntryExecuted().entryData).getNPC();
             }
-            else if (object.queue.getEntries().size() > 0) {
-                npc = ((BukkitScriptEntryData) object.queue.getEntries().get(0).entryData).getNPC();
+            else if (object.queue.peekPending() != null) {
+                npc = ((BukkitScriptEntryData) object.queue.peekPending().entryData).getNPC();
             }
             else if (!attribute.hasAlternative()) {
                 attribute.echoError("Can't determine a linked NPC.");
@@ -42,8 +42,8 @@ public class BukkitQueueExtensions {
             if (object.queue.getLastEntryExecuted() != null) {
                 player = ((BukkitScriptEntryData) object.queue.getLastEntryExecuted().entryData).getPlayer();
             }
-            else if (object.queue.getEntries().size() > 0) {
-                player = ((BukkitScriptEntryData) object.queue.getEntries().get(0).entryData).getPlayer();
+            else if (object.queue.peekPending() != null) {
+                player = ((BukkitScriptEntryData) object.queue.peekPending().entryData).getPlayer();
             }
             else {
                 attribute.echoError("Can't determine a linked player.");
