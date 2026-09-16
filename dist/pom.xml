@@ -44,6 +44,12 @@
         </dependency>
         <dependency>
             <groupId>com.denizenscript</groupId>
+            <artifactId>denizen-v26_3</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.denizenscript</groupId>
             <artifactId>denizen-v26_2</artifactId>
             <version>${project.parent.version}</version>
             <scope>compile</scope>

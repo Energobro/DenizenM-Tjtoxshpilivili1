@@ -140,7 +140,6 @@ public class FeedCommand extends AbstractCommand {
             player.getPlayerEntity().setFoodLevel(result);
             float satResult = Math.max(0, Math.min(20, player.getPlayerEntity().getSaturation() + saturation.asFloat()));
             player.getPlayerEntity().setSaturation(satResult);
-            Debug.echoDebug(scriptEntry, "Player food level updated to " + result + " food and " +  satResult + " saturation.");
         }
     }
 }

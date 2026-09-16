@@ -18,6 +18,7 @@
     <modules>
         <module>plugin</module>
         <module>paper</module>
+        <module>v26_3</module>
         <module>v26_2</module>
         <module>v26_1</module>
         <module>v1_21</module>
