@@ -64,7 +64,7 @@ public class AdjustBlockCommand extends AbstractCommand {
     //
     // @Usage
     // Use to apply several mechanisms to one block at once.
-    // - adjustblock <player.cursor_on> <map[waterlogged=true;facing=north]>
+    // - adjustblock <player.cursor_on> <map[direction=north;half=top]>
     //
     // -->
 
