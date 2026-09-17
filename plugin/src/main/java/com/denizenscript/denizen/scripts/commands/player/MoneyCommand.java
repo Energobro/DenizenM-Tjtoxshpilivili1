@@ -80,9 +80,6 @@ public class MoneyCommand extends AbstractCommand {
             else if (!scriptEntry.hasObject("quantity")
                     && arg.matchesPrefix("quantity", "qty", "q")
                     && arg.matchesFloat()) {
-                if (arg.matchesPrefix("q", "qty")) {
-                    BukkitImplDeprecations.qtyTags.warn(scriptEntry);
-                }
                 scriptEntry.addObject("quantity", arg.asElement());
             }
             else if (!scriptEntry.hasObject("players")

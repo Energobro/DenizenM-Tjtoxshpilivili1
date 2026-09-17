@@ -830,24 +830,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
                 return null;
             }
 
-            if (attribute.startsWith("formatted", 2)) {
-                attribute.fulfill(1);
-                BukkitImplDeprecations.playerMoneyFormatTag.warn(attribute.context);
-                return new ElementTag(Depends.economy.format(Depends.economy.getBalance(object.getOfflinePlayer())));
-            }
-
-            if (attribute.startsWith("currency_singular", 2)) {
-                attribute.fulfill(1);
-                BukkitImplDeprecations.oldEconomyTags.warn(attribute.context);
-                return new ElementTag(Depends.economy.currencyNameSingular());
-            }
-
-            if (attribute.startsWith("currency", 2)) {
-                attribute.fulfill(1);
-                BukkitImplDeprecations.oldEconomyTags.warn(attribute.context);
-                return new ElementTag(Depends.economy.currencyNamePlural());
-            }
-
             return new ElementTag(Depends.economy.getBalance(object.getOfflinePlayer()));
 
         });
@@ -1011,11 +993,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         });
 
         registerOfflineTag(DurationTag.class, "oxygen", (attribute, object) -> {
-            if (attribute.startsWith("max", 2)) {
-                BukkitImplDeprecations.entityMaxOxygenTag.warn(attribute.context);
-                attribute.fulfill(1);
-                return new DurationTag((long) object.getMaximumAir());
-            }
             return new DurationTag((long) object.getRemainingAir());
         });
 
@@ -1689,11 +1666,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         });
 
         registerOnlineOnlyTag(ObjectTag.class, "item_in_hand", (attribute, object) -> {
-            if (attribute.startsWith("slot", 2)) {
-                BukkitImplDeprecations.playerItemInHandSlotTag.warn(attribute.context);
-                attribute.fulfill(1);
-                return new ElementTag(object.getPlayerEntity().getInventory().getHeldItemSlot() + 1);
-            }
             return object.getHeldItem();
         });
 
@@ -2090,30 +2062,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // Returns the current food level (aka hunger) of the player.
         // -->
         registerOnlineOnlyTag(ElementTag.class, "food_level", (attribute, object) -> {
-            if (attribute.startsWith("formatted", 2)) {
-                BukkitImplDeprecations.playerFoodLevelFormatTag.warn(attribute.context);
-                double maxHunger = object.getPlayerEntity().getMaxHealth();
-                if (attribute.hasContext(2)) {
-                    maxHunger = attribute.getIntContext(2);
-                }
-                attribute.fulfill(1);
-                int foodLevel = object.getFoodLevel();
-                if (foodLevel / maxHunger < .10) {
-                    return new ElementTag("starving");
-                }
-                else if (foodLevel / maxHunger < .40) {
-                    return new ElementTag("famished");
-                }
-                else if (foodLevel / maxHunger < .75) {
-                    return new ElementTag("parched");
-                }
-                else if (foodLevel / maxHunger < 1) {
-                    return new ElementTag("hungry");
-                }
-                else {
-                    return new ElementTag("healthy");
-                }
-            }
             return new ElementTag(object.getFoodLevel());
         });
 
@@ -2303,21 +2251,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // Returns the percentage of experience points to the next level.
         // -->
         registerOfflineTag(ElementTag.class, "xp", (attribute, object) -> {
-            if (attribute.startsWith("level", 2)) {
-                BukkitImplDeprecations.playerXpTags.warn(attribute.context);
-                attribute.fulfill(1);
-                return new ElementTag(object.getLevel());
-            }
-            if (attribute.startsWith("to_next_level", 2)) {
-                BukkitImplDeprecations.playerXpTags.warn(attribute.context);
-                attribute.fulfill(1);
-                return new ElementTag(ExperienceCommand.XP_FOR_NEXT_LEVEL(object.getLevel()));
-            }
-            if (attribute.startsWith("total", 2)) {
-                BukkitImplDeprecations.playerXpTags.warn(attribute.context);
-                attribute.fulfill(1);
-                return new ElementTag(object.getTotalExperience());
-            }
             return new ElementTag(object.getExp() * 100);
         });
 

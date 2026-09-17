@@ -242,9 +242,6 @@ public class PlayEffectCommand extends AbstractCommand {
             else if (!scriptEntry.hasObject("quantity")
                     && arg.matchesInteger()
                     && arg.matchesPrefix("qty", "q", "quantity")) {
-                if (arg.matchesPrefix("q", "qty")) {
-                    BukkitImplDeprecations.qtyTags.warn(scriptEntry);
-                }
                 scriptEntry.addObject("quantity", arg.asElement());
             }
             else if (!scriptEntry.hasObject("offset")

@@ -97,9 +97,6 @@ public class DropCommand extends AbstractCommand {
             else if (!scriptEntry.hasObject("quantity")
                     && arg.matchesInteger()
                     && arg.matchesPrefix("quantity", "q", "qty", "a", "amt", "amount")) {
-                if (arg.matchesPrefix("q", "qty")) {
-                    BukkitImplDeprecations.qtyTags.warn(scriptEntry);
-                }
                 scriptEntry.addObject("quantity", arg.asElement().setPrefix("quantity"));
             }
             else if (!scriptEntry.hasObject("action")

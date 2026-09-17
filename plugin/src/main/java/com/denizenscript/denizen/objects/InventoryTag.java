@@ -1270,10 +1270,7 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
             // @description
             // Returns whether the inventory can fit a certain quantity of an item.
             // -->
-            if ((attribute.startsWith("quantity", 2) || attribute.startsWith("qty", 2)) && attribute.hasContext(2)) {
-                if (attribute.startsWith("qty", 2)) {
-                    BukkitImplDeprecations.qtyTags.warn(attribute.context);
-                }
+            if (attribute.startsWith("quantity", 2) && attribute.hasContext(2)) {
                 int qty = attribute.getIntContext(2);
                 ItemTag itemZero = new ItemTag(items.get(0).getItemStack().clone());
                 itemZero.setAmount(qty);
@@ -1319,10 +1316,7 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
             // @description
             // Returns the InventoryTag with a certain quantity of an item added.
             // -->
-            if ((attribute.startsWith("quantity", 2) || attribute.startsWith("qty", 2)) && attribute.hasContext(2)) {
-                if (attribute.startsWith("qty", 2)) {
-                    BukkitImplDeprecations.qtyTags.warn(attribute.context);
-                }
+            if (attribute.startsWith("quantity", 2) && attribute.hasContext(2)) {
                 int qty = attribute.getIntContext(2);
                 ItemTag itemZero = new ItemTag(items.get(0).getItemStack().clone());
                 itemZero.setAmount(qty);
@@ -1404,10 +1398,7 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
                 dummyInv.idHolder = object.idHolder;
             }
             trackTemporaryInventory(dummyInv);
-            if ((attribute.startsWith("quantity", 2) || attribute.startsWith("qty", 2)) && attribute.hasContext(2)) {
-                if (attribute.startsWith("qty", 2)) {
-                    BukkitImplDeprecations.qtyTags.warn(attribute.context);
-                }
+            if (attribute.startsWith("quantity", 2) && attribute.hasContext(2)) {
                 int qty = attribute.getIntContext(2);
                 ItemTag itemZero = new ItemTag(items.get(0).getItemStack().clone());
                 itemZero.setAmount(qty);
@@ -1528,10 +1519,7 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
                 // Use 'strict:' in front of the search element to ensure the display name is EXACTLY the search element,
                 // otherwise the searching will only check if the search element is contained in the display name.
                 // -->
-                if ((attribute.startsWith("quantity", 3) || attribute.startsWith("qty", 3)) && attribute.hasContext(3)) {
-                    if (attribute.startsWith("qty", 3)) {
-                        BukkitImplDeprecations.qtyTags.warn(attribute.context);
-                    }
+                if (attribute.startsWith("quantity", 3) && attribute.hasContext(3)) {
                     qty = attribute.getIntContext(3);
                     attribute.fulfill(1);
                 }
@@ -1611,10 +1599,7 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
                 // Use 'strict:' in front of the search elements to ensure all lore lines are EXACTLY the search elements,
                 // otherwise the searching will only check if the search elements are contained in the lore.
                 // -->
-                if ((attribute.startsWith("quantity", 3) || attribute.startsWith("qty", 3)) && attribute.hasContext(3)) {
-                    if (attribute.startsWith("qty", 3)) {
-                        BukkitImplDeprecations.qtyTags.warn(attribute.context);
-                    }
+                if (attribute.startsWith("quantity", 3) && attribute.hasContext(3)) {
                     qty = attribute.getIntContext(3);
                     attribute.fulfill(1);
                 }
@@ -1685,10 +1670,7 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
                 }
                 int qty = 1;
 
-                if ((attribute.startsWith("quantity", 3) || attribute.startsWith("qty", 3)) && attribute.hasContext(3)) {
-                    if (attribute.startsWith("qty", 3)) {
-                        BukkitImplDeprecations.qtyTags.warn(attribute.context);
-                    }
+                if (attribute.startsWith("quantity", 3) && attribute.hasContext(3)) {
                     qty = attribute.getIntContext(3);
                     attribute.fulfill(1);
                 }
@@ -1745,10 +1727,7 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
                 }
                 String keyName = attribute.getContext(2);
                 int qty = 1;
-                if ((attribute.startsWith("quantity", 3) || attribute.startsWith("qty", 3)) && attribute.hasContext(3)) {
-                    if (attribute.startsWith("qty", 3)) {
-                        BukkitImplDeprecations.qtyTags.warn(attribute.context);
-                    }
+                if (attribute.startsWith("quantity", 3) && attribute.hasContext(3)) {
                     qty = attribute.getIntContext(3);
                     attribute.fulfill(1);
                 }
@@ -1772,10 +1751,7 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
                 List<MaterialTag> materials = attribute.contextAsType(2, ListTag.class).filter(MaterialTag.class, attribute.context);
                 int qty = 1;
 
-                if ((attribute.startsWith("quantity", 3) || attribute.startsWith("qty", 3)) && attribute.hasContext(3)) {
-                    if (attribute.startsWith("qty", 3)) {
-                        BukkitImplDeprecations.qtyTags.warn(attribute.context);
-                    }
+                if (attribute.startsWith("quantity", 3) && attribute.hasContext(3)) {
                     qty = attribute.getIntContext(3);
                     attribute.fulfill(1);
                 }
@@ -1807,10 +1783,7 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
             int qty = 1;
 
             BukkitImplDeprecations.inventoryNonMatcherTags.warn(attribute.context);
-            if ((attribute.startsWith("quantity", 2) || attribute.startsWith("qty", 2)) && attribute.hasContext(2)) {
-                if (attribute.startsWith("qty", 2)) {
-                    BukkitImplDeprecations.qtyTags.warn(attribute.context);
-                }
+            if (attribute.startsWith("quantity", 2) && attribute.hasContext(2)) {
                 qty = attribute.getIntContext(2);
                 attribute.fulfill(1);
             }
@@ -1837,10 +1810,7 @@ public class InventoryTag implements ObjectTag, Notable, Adjustable, FlaggableOb
             }
             int qty = 1;
 
-            if ((attribute.startsWith("quantity", 2) || attribute.startsWith("qty", 2)) && attribute.hasContext(2)) {
-                if (attribute.startsWith("qty", 2)) {
-                    BukkitImplDeprecations.qtyTags.warn(attribute.context);
-                }
+            if (attribute.startsWith("quantity", 2) && attribute.hasContext(2)) {
                 qty = attribute.getIntContext(2);
                 attribute.fulfill(1);
             }
