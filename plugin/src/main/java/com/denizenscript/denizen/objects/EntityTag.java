@@ -1993,10 +1993,6 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         registerSpawnedOnlyTag(ElementTag.class, "force_no_persist", (attribute, object) -> {
             return new ElementTag(!object.getBukkitEntity().isPersistent());
         });
-        registerSpawnedOnlyTag(ElementTag.class, "forced_no_persist", (attribute, object) -> {
-            BukkitImplDeprecations.forcedNoPersist.warn(attribute.context);
-            return new ElementTag(object.getBukkitEntity().isPersistent());
-        });
 
         // <--[tag]
         // @attribute <EntityTag.is_collidable>

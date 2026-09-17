@@ -72,9 +72,6 @@ public class BukkitImplDeprecations {
     public static Warning airLevelEventDuration = new StrongWarning("airLevelEventDuration", "The 'entity changes air level' event uses 'air_duration' context now instead of the old tick count number.");
     public static Warning damageEventTypeMap = new StrongWarning("damageEventTypeMap", "The 'entity damaged' context 'damage_[TYPE]' is deprecated in favor of 'damage_type_map', which is operated as a MapTag.");
 
-    // added 2020/07/28, made normal 2021/11/2021, made strong 2022/12/31.
-    public static Warning headCommand = new StrongWarning("headCommand", "The 'head' command is deprecated: use the 'equip' command with a 'player_head' item using the 'skull_skin' mechanism.");
-
     // added 2020/08/01, made normal 2021/11/2021, made strong 2022/12/31.
     // Safe to remove now.
     public static Warning entityRemoveWhenFar = new StrongWarning("entityRemoveWhenFar", "The EntityTag remove_when_far_away property is deprecated in favor of the persistent property (which is the exact inverse).");
@@ -185,10 +182,6 @@ public class BukkitImplDeprecations {
     // Safe to remove now.
     public static Warning materialHasDataPackTag = new StrongWarning("materialHasDataPackTag", "The tag 'MaterialTag.has_vanilla_data_tag[...]' is deprecated in favor of MaterialTag.vanilla_tags.contains[<name>]");
     public static Warning materialPropertyTags = new StrongWarning("materialPropertyTags", "Old MaterialTag.is_x property tags are deprecated in favor of PropertyHolderObject.supports[property-name]");
-
-    // Added 2024/04/02, is for a feature that was broken from the start in 2022, made strong 2025/01/15.
-    // Safe to remove now.
-    public static Warning forcedNoPersist = new StrongWarning("forcedNoPersist", "The 'forced_no_persist' was misspelled and inverted, use 'force_no_persist' instead.");
 
     // ==================== Normal deprecations ====================
     // These show up every time, and should get the server owner's attention quickly if they check their logs.

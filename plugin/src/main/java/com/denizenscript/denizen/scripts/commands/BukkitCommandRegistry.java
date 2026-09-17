@@ -98,7 +98,6 @@ public class BukkitCommandRegistry {
         registerCommand(FeedCommand.class);
         registerCommand(FlyCommand.class);
         registerCommand(FollowCommand.class);
-        registerCommand(HeadCommand.class);
         registerCommand(HealCommand.class);
         registerCommand(HealthCommand.class);
         registerCommand(HurtCommand.class);
