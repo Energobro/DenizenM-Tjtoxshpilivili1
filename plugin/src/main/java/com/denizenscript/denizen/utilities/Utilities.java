@@ -611,7 +611,7 @@ public class Utilities {
             }
             return enumValue;
         }
-        String updatedName = NMSHandler.instance.updateLegacyName(type, element.asString());
+        String updatedName = NMSHandler.updateLegacyNameCached(type, element.asString());
         if (CoreUtilities.equalsIgnoreCase(element.asString(), updatedName)) {
             return null;
         }

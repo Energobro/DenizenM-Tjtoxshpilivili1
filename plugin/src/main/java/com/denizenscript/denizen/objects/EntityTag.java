@@ -57,6 +57,8 @@ import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import java.util.*;
+import com.denizenscript.denizencore.objects.ObjectFetcher;
+import com.denizenscript.denizencore.objects.ObjectType;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -317,7 +319,7 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // Handle custom DenizenEntityTypes
         DenizenEntityType type = DenizenEntityType.getByName(typeStr);
         if (type == null && Settings.cache_legacySpigotNamesSupport && NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20)) {
-            String updatedTypeStr = NMSHandler.instance.updateLegacyName(EntityType.class, typeStr);
+            String updatedTypeStr = NMSHandler.updateLegacyNameCached(EntityType.class, typeStr);
             if (!CoreUtilities.equalsIgnoreCase(typeStr, updatedTypeStr)) {
                 BukkitImplDeprecations.oldSpigotNames.warn(context);
                 type = DenizenEntityType.getByName(updatedTypeStr);
@@ -4635,6 +4637,20 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         return false;
     }
 
+    public static ObjectType<EntityTag> cachedObjectType;
+
+    @Override
+    public ObjectType<? extends ObjectTag> getDenizenObjectType() {
+        ObjectType<EntityTag> type = cachedObjectType;
+        if (type == null) {
+            type = ObjectFetcher.getType(EntityTag.class);
+            cachedObjectType = type;
+        }
+        return type;
+    }
+
+    public static final Map<String, String> legacyEntityNames = new ConcurrentHashMap<>();
+
     @Override
     public boolean advancedMatches(String text, TagContext context) {
         ScriptEvent.MatchHelper matcher = ScriptEvent.createMatcher(text);
@@ -4648,8 +4664,15 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
             return true;
         }
         if (Settings.cache_legacySpigotNamesSupport && NMSHandler.getVersion().isAtLeast(NMSVersion.v1_20)) {
-            String updatedType = NMSHandler.instance.updateLegacyName(EntityType.class, text);
-            if (!CoreUtilities.equalsIgnoreCase(text, updatedType)) {
+            String updatedType = legacyEntityNames.get(text);
+            if (updatedType == null) {
+                String resolved = NMSHandler.updateLegacyNameCached(EntityType.class, text);
+                updatedType = resolved == null || CoreUtilities.equalsIgnoreCase(text, resolved) ? text : resolved;
+                if (legacyEntityNames.size() < NMSHandler.LEGACY_NAME_CACHE_LIMIT) {
+                    legacyEntityNames.put(text, updatedType);
+                }
+            }
+            if (!updatedType.equals(text)) {
                 BukkitImplDeprecations.oldSpigotNames.warn(context);
                 return getEntityType().getName().equals(updatedType);
             }

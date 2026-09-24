@@ -38,6 +38,9 @@ import java.lang.reflect.Field;
 import java.net.SocketAddress;
 import java.util.Set;
 import net.minecraft.network.protocol.game.ServerboundPunchPacket;
+import net.minecraft.network.protocol.game.ServerboundAttackPacket;
+import net.minecraft.network.protocol.game.ServerboundSetGameRulePacket;
+import net.minecraft.network.protocol.game.ServerboundSpectatorActionPacket;
 
 public class AbstractListenerPlayInImpl extends ServerGamePacketListenerImpl {
 
@@ -440,9 +443,27 @@ public class AbstractListenerPlayInImpl extends ServerGamePacketListenerImpl {
     }
 
     @Override
+    public void handleSetGameRule(ServerboundSetGameRulePacket packet) {
+        if (handlePacketIn(packet)) { return; }
+        oldListener.handleSetGameRule(packet);
+    }
+
+    @Override
     public void handlePunch(ServerboundPunchPacket packet) {
         if (handlePacketIn(packet)) { return; }
         oldListener.handlePunch(packet);
+    }
+
+    @Override
+    public void handleAttack(ServerboundAttackPacket packet) {
+        if (handlePacketIn(packet)) { return; }
+        oldListener.handleAttack(packet);
+    }
+
+    @Override
+    public void handleSpectatorAction(ServerboundSpectatorActionPacket packet) {
+        if (handlePacketIn(packet)) { return; }
+        oldListener.handleSpectatorAction(packet);
     }
 
     @Override
@@ -602,6 +623,21 @@ public class AbstractListenerPlayInImpl extends ServerGamePacketListenerImpl {
     }
 
     @Override
+    public boolean hasClientLoaded() {
+        return oldListener.hasClientLoaded();
+    }
+
+    @Override
+    public boolean canUseCommandBlocks() {
+        return oldListener.canUseCommandBlocks();
+    }
+
+    @Override
+    public boolean isTransferred() {
+        return oldListener.isTransferred();
+    }
+
+    @Override
     public void handleContainerSlotStateChanged(ServerboundContainerSlotStateChangedPacket packet) {
         if (handlePacketIn(packet)) { return; }
         oldListener.handleContainerSlotStateChanged(packet);
@@ -647,6 +683,21 @@ public class AbstractListenerPlayInImpl extends ServerGamePacketListenerImpl {
     public void handleCookieResponse(ServerboundCookieResponsePacket packet) {
         if (handlePacketIn(packet)) { return; }
         oldListener.handleCookieResponse(packet);
+    }
+
+    @Override
+    public void resetFlyingTicks() {
+        oldListener.resetFlyingTicks();
+    }
+
+    @Override
+    public void tickClientLoadTimeout() {
+        oldListener.tickClientLoadTimeout();
+    }
+
+    @Override
+    public void markClientUnloadedAfterDeath() {
+        oldListener.markClientUnloadedAfterDeath();
     }
 
     @Override

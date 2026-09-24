@@ -90,11 +90,12 @@ import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
-import net.minecraft.world.level.storage.loot.providers.number.ints.ResolvableInt;
-import net.minecraft.world.item.component.CookingFuel;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.BrewingInput;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 
 public class ItemHelperImpl extends ItemHelper {
 
@@ -134,6 +135,39 @@ public class ItemHelperImpl extends ItemHelper {
     public static ItemStack asBukkitCopy(net.minecraft.world.item.ItemStack nmsItem) {
         try {
             return (ItemStack) CRAFT_ITEM_STACK_AS_BUKKIT_COPY.invoke(nmsItem);
+        }
+        catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static final MethodHandle CRAFT_ITEM_STACK_AS_MIRROR = Handler.reflectPaperRenamed(CraftItemStack.class, "asCraftMirror", "asBukkitMirror", net.minecraft.world.item.ItemStack.class);
+
+    public static ItemStack asBukkitMirror(net.minecraft.world.item.ItemStack nmsItem) {
+        try {
+            return (ItemStack) CRAFT_ITEM_STACK_AS_MIRROR.invoke(nmsItem);
+        }
+        catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static final MethodHandle CRAFT_BLOCK_DATA_CREATE = Handler.reflectPaperRenamed(CraftBlockData.class, "fromData", "createData", BlockState.class);
+
+    public static CraftBlockData createBlockData(BlockState state) {
+        try {
+            return (CraftBlockData) CRAFT_BLOCK_DATA_CREATE.invoke(state);
+        }
+        catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static final MethodHandle CRAFT_RECIPE_TO_CHOICE = Handler.reflectPaperRenamed(CraftRecipe.class, "toBukkit", "toChoice", Ingredient.class);
+
+    public static RecipeChoice toRecipeChoice(Ingredient ingredient) {
+        try {
+            return (RecipeChoice) CRAFT_RECIPE_TO_CHOICE.invoke(ingredient);
         }
         catch (Throwable e) {
             throw new RuntimeException(e);
@@ -197,11 +231,12 @@ public class ItemHelperImpl extends ItemHelper {
 
     @Override
     public Integer burnTime(Material material) {
-        // 26.3 keeps burn time in the item's COOKING_FUEL component rather than on a server-wide fuel table.
-        // The value comes from a provider, so it takes a loot context; this API has no world to give it, and a
-        // vanilla constant provider ignores the context and answers anyway. The 0 is the fallback for one that does not.
-        net.minecraft.world.item.ItemStack nmsStack = new net.minecraft.world.item.ItemStack(CraftMagicNumbers.getItem(material));
-        return ResolvableInt.getFromItem(nmsStack, DataComponents.COOKING_FUEL, CookingFuel::burnTime, null, 0);
+        if (!material.isFuel()) {
+            return null;
+        }
+        ServerLevel level = ((CraftWorld) Bukkit.getWorlds().getFirst()).getHandle();
+        LootContext lootContext = new LootContext.Builder(new LootParams.Builder(level).create(LootContextParamSets.EMPTY)).create(Optional.empty());
+        return CraftItemType.bukkitToMinecraft(material).components().get(DataComponents.COOKING_FUEL).burnTime().get(lootContext, 0);
     }
 
     @Override
@@ -267,7 +302,7 @@ public class ItemHelperImpl extends ItemHelper {
     @Override
     public void registerSmithingRecipe(String keyName, ItemStack result, ItemStack[] baseItem, boolean baseExact, ItemStack[] upgradeItem, boolean upgradeExact, ItemStack[] templateItem, boolean templateExact) {
         ResourceKey<Recipe<?>> key = createRecipeKey(keyName);
-        Ingredient templateItemRecipe = itemArrayToRecipe(templateItem, templateExact);
+        Ingredient templateItemRecipe = templateItem.length == 0 ? null : itemArrayToRecipe(templateItem, templateExact);
         Ingredient baseItemRecipe = itemArrayToRecipe(baseItem, baseExact);
         Ingredient upgradeItemRecipe = itemArrayToRecipe(upgradeItem, upgradeExact);
         SmithingTransformRecipe recipe = new SmithingTransformRecipe(BASE_RECIPE_INFO, Optional.ofNullable(templateItemRecipe), baseItemRecipe, Optional.of(upgradeItemRecipe), asNMSTemplate(result));
@@ -352,7 +387,7 @@ public class ItemHelperImpl extends ItemHelper {
         if (!(nmsPatchObject instanceof DataComponentPatch nmsPatch)) {
             throw new IllegalArgumentException(nmsPatchObject + " is not a DataComponentPatch");
         }
-        return CraftItemStack.asCraftMirror(new net.minecraft.world.item.ItemStack(
+        return asBukkitMirror(new net.minecraft.world.item.ItemStack(
                 BuiltInRegistries.ITEM.wrapAsHolder(CraftItemType.bukkitToMinecraft(type)), count, nmsPatch
         ));
     }
@@ -746,38 +781,34 @@ public class ItemHelperImpl extends ItemHelper {
         Item nmsItem = BuiltInRegistries.ITEM.getOptional(CraftNamespacedKey.toMinecraft(material.getKey())).orElse(null);
         if (nmsItem instanceof BlockItem) {
             Block block = ((BlockItem) nmsItem).getBlock();
-            return CraftBlockData.fromData(block.defaultBlockState());
+            return createBlockData(block.defaultBlockState());
         }
         return null;
     }
 
     @Override
     public boolean isValidMix(ItemStack input, ItemStack ingredient) {
+        RecipeManager nmsManager = getRecipeManager();
         net.minecraft.world.item.ItemStack nmsInput = CraftItemStack.asNMSCopy(input);
+        if (!nmsManager.propertySet(RecipePropertySet.BREWING_INPUTS).test(nmsInput)) {
+            return false;
+        }
         net.minecraft.world.item.ItemStack nmsIngredient = CraftItemStack.asNMSCopy(ingredient);
-        // Brewing is a normal recipe type in 26.3 (RecipeType.BREWING), so the mix check is a recipe lookup.
-        return MinecraftServer.getServer().getRecipeManager()
-                .getRecipeFor(RecipeType.BREWING, new BrewingInput(nmsInput, nmsIngredient), MinecraftServer.getServer().overworld())
-                .isPresent();
+        if (!nmsManager.propertySet(RecipePropertySet.BREWING_REAGENTS).test(nmsIngredient)) {
+            return false;
+        }
+        return nmsManager.getRecipeFor(RecipeType.BREWING, new BrewingInput(nmsInput, nmsIngredient), MinecraftServer.getServer().overworld()).isPresent();
     }
-
-    public static Class<?> PaperPotionMix_CLASS = null;
-    public static Map<NamespacedKey, BrewingRecipe> customBrewingRecipes = null;
 
     @Override
     public Map<NamespacedKey, BrewingRecipe> getCustomBrewingRecipes() {
-        // 26.3 removed PotionBrewing and with it Paper's 'customMixes' map that this used to read. Brewing is now an
-        // ordinary recipe type, so custom mixes live in the recipe manager alongside every other recipe and would have
-        // to be read back out of there and converted. Until that is written this reports none rather than guessing.
-        return Map.of();
-    }
-
-    private RecipeChoice convertChoice(Predicate<net.minecraft.world.item.ItemStack> nmsPredicate) {
-        // Not an instance of net.minecraft.world.item.crafting.Ingredient = a predicate recipe choice
-        if (nmsPredicate instanceof Ingredient ingredient) {
-            return CraftRecipe.toBukkit(ingredient);
+        Map<NamespacedKey, BrewingRecipe> result = new HashMap<>();
+        for (RecipeHolder<net.minecraft.world.item.crafting.BrewingRecipe> nmsBrewHolder : getRecipeManager().recipes.byType(RecipeType.BREWING)) {
+            net.minecraft.world.item.crafting.BrewingRecipe nmsBrew = nmsBrewHolder.value();
+            BrewingRecipe brewingRecipe = new BrewingRecipe(toRecipeChoice(nmsBrew.getInput().ingredient()), toRecipeChoice(nmsBrew.getReagent().ingredient()), asBukkitCopy(nmsBrew.getOutput().create()));
+            result.put(CraftNamespacedKey.fromMinecraft(nmsBrewHolder.id().identifier()), brewingRecipe);
         }
-        return PaperAPITools.instance.createPredicateRecipeChoice(item -> nmsPredicate.test(CraftItemStack.asNMSCopy(item)));
+        return result;
     }
 
     @Override

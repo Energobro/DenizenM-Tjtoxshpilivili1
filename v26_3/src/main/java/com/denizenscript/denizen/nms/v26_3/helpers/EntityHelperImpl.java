@@ -584,6 +584,17 @@ public class EntityHelperImpl extends EntityHelper {
 
     public static class FakeDamageSrc extends DamageSource { public DamageSource real; public FakeDamageSrc(DamageSource src) { super(null); real = src; } }
 
+    public static final MethodHandle DAMAGE_SOURCE_KNOWN_CAUSE = ReflectionHelper.getMethodHandle(DamageSource.class, "knownCause", EntityDamageEvent.DamageCause.class);
+
+    public static DamageSource withKnownCause(DamageSource src, EntityDamageEvent.DamageCause cause) {
+        try {
+            return (DamageSource) DAMAGE_SOURCE_KNOWN_CAUSE.invoke(src, cause);
+        }
+        catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static DamageSources backupDamageSources;
 
     public static DamageSources getReusableDamageSources() {
@@ -610,14 +621,14 @@ public class EntityHelperImpl extends EntityHelper {
         return switch (cause) {
             case CONTACT -> sources.cactus();
             case ENTITY_ATTACK -> sources.mobAttack(nmsSource instanceof net.minecraft.world.entity.LivingEntity nmsLivingEntity ? nmsLivingEntity : null);
-            case ENTITY_SWEEP_ATTACK -> src != sources.generic() ? src.sweep() : src;
+            case ENTITY_SWEEP_ATTACK -> src != sources.generic() ? withKnownCause(src, cause) : src;
             case PROJECTILE -> sources.thrown(nmsSource, nmsSource != null && nmsSource.getBukkitEntity() instanceof Projectile projectile
                         && projectile.getShooter() instanceof CraftEntity shooter ? shooter.getHandle() : null);
             case SUFFOCATION -> sources.inWall();
             case FALL -> sources.fall();
             case FIRE -> sources.inFire();
             case FIRE_TICK -> sources.onFire();
-            case MELTING -> sources.melting();
+            case MELTING -> withKnownCause(sources.onFire(), cause);
             case LAVA -> sources.lava();
             case DROWNING -> sources.drown();
             case BLOCK_EXPLOSION -> nmsSource instanceof PrimedTnt primedTnt ? sources.explosion(primedTnt, primedTnt.getOwner()) : sources.explosion(null);
@@ -625,7 +636,7 @@ public class EntityHelperImpl extends EntityHelper {
             case VOID -> sources.fellOutOfWorld();
             case LIGHTNING -> sources.lightningBolt();
             case STARVATION -> sources.starve();
-            case POISON -> sources.poison();
+            case POISON -> withKnownCause(sources.magic(), cause);
             case MAGIC -> sources.magic();
             case WITHER -> sources.wither();
             case FALLING_BLOCK -> sources.fallingBlock(nmsSource);

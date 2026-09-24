@@ -18,6 +18,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 public abstract class NMSHandler {
 
@@ -141,5 +143,28 @@ public abstract class NMSHandler {
 
     public String updateLegacyName(Class<?> type, String legacyName) {
         return legacyName;
+    }
+
+    public static final Map<Class<?>, Map<String, String>> legacyNameCache = new ConcurrentHashMap<>();
+
+    public static final int LEGACY_NAME_CACHE_LIMIT = 4096;
+
+    public static String updateLegacyNameCached(Class<?> type, String legacyName) {
+        Map<String, String> forType = legacyNameCache.get(type);
+        if (forType == null) {
+            forType = legacyNameCache.computeIfAbsent(type, k -> new ConcurrentHashMap<>());
+        }
+        String known = forType.get(legacyName);
+        if (known != null) {
+            return known;
+        }
+        String updated = instance.updateLegacyName(type, legacyName);
+        if (updated == null) {
+            updated = legacyName;
+        }
+        if (forType.size() < LEGACY_NAME_CACHE_LIMIT) {
+            forType.put(legacyName, updated);
+        }
+        return updated;
     }
 }

@@ -17,9 +17,11 @@ import net.minecraft.network.protocol.common.ServerboundResourcePackPacket;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerPlayer;
 import org.bukkit.Bukkit;
+import org.bukkit.block.sign.Side;
 import org.bukkit.craftbukkit.block.CraftBlock;
 import org.bukkit.event.block.SignChangeEvent;
 import net.minecraft.network.protocol.game.ServerboundPunchPacket;
+import net.minecraft.network.protocol.game.ServerboundAttackPacket;
 
 public class DenizenPacketListenerImpl extends AbstractListenerPlayInImpl {
 
@@ -56,13 +58,23 @@ public class DenizenPacketListenerImpl extends AbstractListenerPlayInImpl {
         super.handlePlayerAction(packet);
     }
 
-    @Override
-    public void handlePunch(ServerboundPunchPacket packet) {
+    public void updateFakeHeldItem() {
         FakeEquipCommand.EquipmentOverride override = FakeEquipCommand.getOverrideFor(player.getUUID(), getCraftPlayer());
         if (override != null && (override.hand != null || override.offhand != null)) {
             player.getBukkitEntity().updateInventory();
         }
+    }
+
+    @Override
+    public void handlePunch(ServerboundPunchPacket packet) {
         super.handlePunch(packet);
+        updateFakeHeldItem();
+    }
+
+    @Override
+    public void handleAttack(ServerboundAttackPacket packet) {
+        super.handleAttack(packet);
+        updateFakeHeldItem();
     }
 
     @Override
@@ -99,7 +111,7 @@ public class DenizenPacketListenerImpl extends AbstractListenerPlayInImpl {
             PlayerChangesSignScriptEvent evt = (PlayerChangesSignScriptEvent) PlayerChangesSignScriptEvent.instance.clone();
             evt.material = new MaterialTag(org.bukkit.Material.OAK_WALL_SIGN);
             evt.location = new LocationTag(player.getBukkitEntity().getLocation());
-            evt.event = new SignChangeEvent(CraftBlock.at(player.level(), fakeSignExpected), player.getBukkitEntity(), packet.lines().toArray(new String[0]));
+            evt.event = new SignChangeEvent(CraftBlock.at(player.level(), fakeSignExpected), player.getBukkitEntity(), packet.lines().toArray(new String[4]), Side.FRONT);
             fakeSignExpected = null;
             evt.fire(evt.event);
         }
