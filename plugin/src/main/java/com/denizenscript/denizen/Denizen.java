@@ -30,8 +30,6 @@ import com.denizenscript.denizen.utilities.command.manager.CommandManager;
 import com.denizenscript.denizen.utilities.command.manager.Injector;
 import com.denizenscript.denizen.utilities.command.manager.messaging.Messaging;
 import com.denizenscript.denizen.utilities.debugging.BStatsMetricsLite;
-import com.denizenscript.denizen.utilities.debugging.DebugSubmit;
-import com.denizenscript.denizen.utilities.debugging.StatsRecord;
 import com.denizenscript.denizen.utilities.depends.Depends;
 import com.denizenscript.denizen.utilities.entity.DenizenEntityType;
 import com.denizenscript.denizen.utilities.flags.PlayerFlagHandler;
@@ -194,7 +192,6 @@ public class Denizen extends JavaPlugin {
             Debug.echoError(e);
         }
         try {
-            DebugSubmit.init();
             // If Citizens is enabled, Create the NPC Helper
             if (Depends.citizens != null) {
                 npcHelper = new DenizenNPCHelper();
@@ -409,14 +406,6 @@ public class Denizen extends JavaPlugin {
                 Debug.echoError(ex);
             }
         }, 1);
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (Settings.canRecordStats()) {
-                    StatsRecord.trigger();
-                }
-            }
-        }.runTaskTimer(this, 100, 20 * 60 * 60);
         new BukkitRunnable() {
             @Override
             public void run() {

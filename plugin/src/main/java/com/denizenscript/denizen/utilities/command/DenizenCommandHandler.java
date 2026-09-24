@@ -54,35 +54,27 @@ public class DenizenCommandHandler {
     // @name /denizen submit command
     // @group Console Commands
     // @description
-    // Use the '/denizen submit' command with '/denizen debug -r' to record debug output and post it online for assisting developers to see.
+    // This command is no longer supported in this fork.
     //
-    // To begin recording, simply use '/denizen debug -r'.
-    // After that, any debug output sent to the console and any player chat will be added to an internal record.
-    // Once enabled, you should then fire off scripts and events that aren't working fully.
-    // Finally, you use the '/denizen submit' command to take all the recording information and paste it to an online pastebin hosted by the Denizen team.
-    // It will give you back a direct link to the full debug output, which you can view yourself and send to other helpers without trouble.
+    // It used to take everything recorded by '/denizen debug -r' and upload it to a pastebin hosted by the Denizen team, then hand back a link.
+    // That upload was removed, so the command now only tells you so. Debug recording itself still works: start it with '/denizen debug -r',
+    // stop it with the same command again, and read the output from your own console log.
     //
-    // There is no limit to the recording size, to prevent any important information from being trimmed away.
     // Be careful not to leave debug recording enabled by accident, as it may eventually begin using up large amounts of memory.
-    // (The submit command will automatically disable recording, or you can instead just use '/denizen debug -r' again.)
     //
     // -->
     @Command(
             aliases = {"denizen"}, usage = "submit",
-            desc = "Submits recorded logs triggered by /denizen debug -r", modifiers = {"submit"},
+            desc = "No longer supported: log submission was removed from this fork", modifiers = {"submit"},
             min = 1, max = 3, permission = "denizen.submit")
     public void submit(CommandContext args, final CommandSender sender) throws CommandException {
-        if (!CoreConfiguration.shouldRecordDebug) {
-            Messaging.sendError(sender, "Use /denizen debug -r  to record debug information to be submitted");
-            return;
-        }
-        Messaging.send(sender, "Submitting...");
         DebugSubmitter.submitCurrentRecording((s) -> {
-            if (s == null) {
-                Messaging.sendError(sender, "Error while submitting.");
+            if (DebugSubmitter.UNSUPPORTED.equals(s)) {
+                Messaging.sendError(sender, "Log submission is no longer supported in this fork - the upload to a remote paste service was removed.");
+                Messaging.sendError(sender, "Debug recording still works: use /denizen debug -r to start and stop it, and read the output from your own console log.");
             }
-            else if (s.equals("disabled")) {
-                Messaging.sendError(sender, "Submit failed: not recording.");
+            else if (s == null) {
+                Messaging.sendError(sender, "Error while submitting.");
             }
             else {
                 Messaging.send(sender, "Successfully submitted to " + s);

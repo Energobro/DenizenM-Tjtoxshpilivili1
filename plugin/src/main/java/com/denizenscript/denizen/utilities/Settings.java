@@ -9,7 +9,6 @@ import com.denizenscript.denizencore.utilities.CoreConfiguration;
 import com.denizenscript.denizencore.objects.core.DurationTag;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
 import com.denizenscript.denizencore.utilities.ReflectionRefuse;
-import com.denizenscript.denizencore.utilities.debugging.DebugSubmitter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -72,10 +71,6 @@ public class Settings {
         CoreConfiguration.debugTrimLength = config.getInt("Debug.Trim length limit", 1024);
         CoreConfiguration.debugPrefix = config.getString("Debug.Prefix", "");
         CoreConfiguration.debugLineLength = config.getInt("Debug.Line length", 300);
-        DebugSubmitter.pasteURL = config.getString("Debug.Paste URL", DebugSubmitter.corePasteURL);
-        if (DebugSubmitter.pasteURL.equals("default")) {
-            DebugSubmitter.pasteURL = DebugSubmitter.corePasteURL;
-        }
         String scriptEncoding = config.getString("Scripts.Encoding", "default");
         if (scriptEncoding.equalsIgnoreCase("default")) {
             CoreConfiguration.scriptEncoding = null;
@@ -100,7 +95,6 @@ public class Settings {
         cache_showExHelp = config.getBoolean("Debug.Ex command help", true);
         cache_showExDebug = config.getBoolean("Debug.Ex command debug", true);
         cache_getAlternateScriptPath = config.getString("Scripts location.Alternative folder path", "plugins/Denizen");
-        cache_canRecordStats = config.getBoolean("Debug.Stats", true);
         cache_defaultDebugMode = config.getBoolean("Debug.Container default", true);
         cache_warnOnAsyncPackets = config.getBoolean("Debug.Warn on async packets", false);
         cache_interactQueueSpeed = config.getString("Scripts.Interact.Queue speed", "0.5s");
@@ -164,7 +158,7 @@ public class Settings {
     public static long worldPlayerDataMaxCacheTicks = 20 * 60 * 60;
 
     public static boolean cache_overrideHelp,
-            cache_showExHelp, cache_showExDebug, cache_canRecordStats,
+            cache_showExHelp, cache_showExDebug,
             cache_defaultDebugMode, cache_healthTraitEnabledByDefault, cache_healthTraitAnimatedDeathEnabled,
             cache_healthTraitRespawnEnabled, cache_allowServerStop, cache_allowServerRestart,
             cache_healthTraitBlockDrops, cache_chatAsynchronous, cache_chatMustSeeNPC, cache_chatMustLookAtNPC,
@@ -205,10 +199,6 @@ public class Settings {
 
     public static boolean showExDebug() {
         return cache_showExDebug;
-    }
-
-    public static boolean canRecordStats() {
-        return cache_canRecordStats;
     }
 
     public static String interactQueueSpeed() {
