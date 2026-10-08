@@ -432,11 +432,6 @@ public class NPCTag implements ObjectTag, Adjustable, InventoryHolder, EntityFor
 
         // Defined in EntityTag
         tagProcessor.registerTag(ObjectTag.class, "location", (attribute, object) -> {
-            if (attribute.startsWith("previous_location", 2)) {
-                attribute.fulfill(1);
-                BukkitImplDeprecations.npcPreviousLocationTag.warn(attribute.context);
-                return NPCTagBase.previousLocations.get(object.getId());
-            }
             if (object.isSpawned()) {
                 return new EntityTag(object).doLocationTag(attribute);
             }
@@ -504,12 +499,6 @@ public class NPCTag implements ObjectTag, Adjustable, InventoryHolder, EntityFor
 
         // Documented in EntityTag
         tagProcessor.registerTag(ElementTag.class, "name", (attribute, object) -> {
-            if (attribute.startsWith("nickname", 2)) {
-                BukkitImplDeprecations.npcNicknameTag.warn(attribute.context);
-                attribute.fulfill(1);
-                return new ElementTag(object.getCitizen().hasTrait(NicknameTrait.class) ? object.getCitizen().getOrAddTrait(NicknameTrait.class)
-                        .getNickname() : object.getName(), true);
-            }
             return new ElementTag(object.getName(), true);
         });
 
@@ -599,11 +588,6 @@ public class NPCTag implements ObjectTag, Adjustable, InventoryHolder, EntityFor
                     attribute.echoError("NPC Anchor '" + attribute.getParam() + "' is not defined.");
                     return null;
                 }
-            }
-            else if (attribute.startsWith("list", 2)) {
-                attribute.fulfill(1);
-                BukkitImplDeprecations.npcAnchorListTag.warn(attribute.context);
-                return new ListTag(trait.getAnchors(), anchor -> new ElementTag(anchor.getName(), true));
             }
             else {
                 attribute.echoError("npc.anchor[...] tag must have an input.");
@@ -950,12 +934,6 @@ public class NPCTag implements ObjectTag, Adjustable, InventoryHolder, EntityFor
         // -->
         tagProcessor.registerTag(ElementTag.class, "teleport_on_stuck", (attribute, object) -> {
             return new ElementTag(object.getNavigator().getDefaultParameters().stuckAction() == TeleportStuckAction.INSTANCE);
-        });
-
-        tagProcessor.registerTag(ElementTag.class, "has_script", (attribute, object) -> {
-            BukkitImplDeprecations.hasScriptTags.warn(attribute.context);
-            NPC citizen = object.getCitizen();
-            return new ElementTag(citizen.hasTrait(AssignmentTrait.class));
         });
 
         // <--[tag]

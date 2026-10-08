@@ -1608,21 +1608,6 @@ public class ServerTagBase extends PseudoObjectTagBase<ServerTagBase> {
             return new ElementTag(Bukkit.getViewDistance());
         });
 
-        tagProcessor.registerTag(ElementTag.class, ObjectTag.class, "entity_is_spawned", (attribute, object, input) -> {
-            BukkitImplDeprecations.isValidTag.warn(attribute.context);
-            EntityTag entity = input.canBeType(EntityTag.class) ? input.asType(EntityTag.class, attribute.context) : null;
-            return new ElementTag(entity != null && entity.isUnique() && entity.isSpawnedOrValidForTag());
-        });
-        tagProcessor.registerTag(ElementTag.class, ElementTag.class, "player_is_valid", (attribute, object, input) -> {
-            BukkitImplDeprecations.isValidTag.warn(attribute.context);
-            return new ElementTag(PlayerTag.playerNameIsValid(input.asString()));
-        });
-        tagProcessor.registerTag(ElementTag.class, ObjectTag.class, "npc_is_valid", (attribute, object, input) -> {
-            BukkitImplDeprecations.isValidTag.warn(attribute.context);
-            NPCTag npc = input.canBeType(NPCTag.class) ? input.asType(NPCTag.class, attribute.context) : null;
-            return new ElementTag(npc != null && npc.isValid());
-        });
-
         // <--[tag]
         // @attribute <server.current_bossbars>
         // @returns ListTag

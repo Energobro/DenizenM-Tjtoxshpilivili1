@@ -92,10 +92,6 @@ public class EntityHealth implements Property {
         if (attribute.startsWith("formatted_health")) {
             return getHealthFormatted(entity, attribute.hasParam() ? attribute.getDoubleParam() : null);
         }
-        if (attribute.startsWith("health.formatted")) {
-            BukkitImplDeprecations.entityHealthTags.warn(attribute.context);
-            return getHealthFormatted(entity, attribute.hasContext(2) ? attribute.getDoubleContext(2) : null);
-        }
 
         // <--[tag]
         // @attribute <EntityTag.health_max>
@@ -108,11 +104,6 @@ public class EntityHealth implements Property {
         if (attribute.startsWith("health_max")) {
             return new ElementTag(entity.getLivingEntity().getMaxHealth())
                     .getObjectAttribute(attribute.fulfill(1));
-        }
-        if (attribute.startsWith("health.max")) {
-            BukkitImplDeprecations.entityHealthTags.warn(attribute.context);
-            return new ElementTag(entity.getLivingEntity().getMaxHealth())
-                    .getObjectAttribute(attribute.fulfill(2));
         }
 
         // <--[tag]
@@ -130,15 +121,6 @@ public class EntityHealth implements Property {
             }
             return new ElementTag((entity.getLivingEntity().getHealth() / maxHealth) * 100)
                     .getObjectAttribute(attribute.fulfill(1));
-        }
-        if (attribute.startsWith("health.percentage")) {
-            BukkitImplDeprecations.entityHealthTags.warn(attribute.context);
-            double maxHealth = entity.getLivingEntity().getMaxHealth();
-            if (attribute.hasContext(2)) {
-                maxHealth = attribute.getIntContext(2);
-            }
-            return new ElementTag((entity.getLivingEntity().getHealth() / maxHealth) * 100)
-                    .getObjectAttribute(attribute.fulfill(2));
         }
 
         // <--[tag]

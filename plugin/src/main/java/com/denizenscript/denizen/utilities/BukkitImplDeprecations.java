@@ -9,20 +9,8 @@ public class BukkitImplDeprecations {
     // ==================== REMOVE THESE ====================
     // Every warning inside this section should be removed from the codebase.
 
-    // Added on 2019/08/11
-    // Safe to remove now.
-    public static Warning oldEconomyTags = new StrongWarning("oldEconomyTags", "player.money.currency* tags are deprecated in favor of server.economy.currency* tags.");
-
-    // Added on 2019/09/18, but was deprecated earlier.
-    // 2022-year-end commonality: #27
-    // Safe to remove now.
-    public static Warning playerRightClicksEntityContext = new StrongWarning("playerRightClicksEntityContext", "'context.location' in event 'on player right clicks entity' is deprecated: use 'context.entity.location'.");
-
     // In Bukkit impl, Relevant as of 2019/09/25, made current on 2020/02/12, made strong 2022/12/31.
     // Safe to remove now.
-    public static Warning npcNicknameTag = new StrongWarning("npcNicknameTag", pointlessSubtagPrefix + "npc.name.nickname is now just npc.nickname. Note that this historically appeared in the config.yml file, so check there if you're unsure what's using this tag.");
-    public static Warning npcPreviousLocationTag = new StrongWarning("npcPreviousLocationTag", pointlessSubtagPrefix + "npc.location.previous_location is now just npc.previous_location.");
-    public static Warning npcAnchorListTag = new StrongWarning("npcAnchorListTag", pointlessSubtagPrefix + "npc.anchor.list is now just npc.list_anchors.");
     public static Warning playerBanInfoTags = new StrongWarning("playerBanInfoTags", pointlessSubtagPrefix + "player.ban_info.* tags are now just player.ban_*.");
     public static Warning playerSidebarTags = new StrongWarning("playerSidebarTags", pointlessSubtagPrefix + "player.sidebar.* tags are now just player.sidebar_*.");
     public static Warning playerAttackCooldownTags = new StrongWarning("playerAttackCooldownTags", pointlessSubtagPrefix + "player.attack_cooldown.* tags are now just player.attack_cooldown_*.");
@@ -35,10 +23,6 @@ public class BukkitImplDeprecations {
     // Added 2020/04/24, made strong 2022/12/31.
     // Safe to remove now.
     public static Warning itemInventoryTag = new StrongWarning("itemInventoryTag", "The tag 'item.inventory' is deprecated: use inventory_contents instead.");
-
-    // Added 2020/05/21, made strong 2022/12/31.
-    // Safe to remove now.
-    public static Warning itemSkinFullTag = new StrongWarning("itemSkinFullTag", pointlessSubtagPrefix + "item.skin.full is now item.skull_skin.");
 
     // Added 2020/06/03 but deprecated long ago, made strong 2022/12/31.
     // Safe to remove now.
@@ -89,10 +73,6 @@ public class BukkitImplDeprecations {
     // Safe to remove now.
     public static Warning oldPlayEffectSpecials = new StrongWarning("oldPlayEffectSpecials", "The playeffect input of forms like 'iconcrack_' have been deprecated in favor of using the special_data input (refer to meta docs).");
 
-    // Added 2020/04/16, made current 2022/12/31, made strong 2024/01/02.
-    // Safe to remove now.
-    public static Warning entityStandingOn = new StrongWarning("entityStandingOn", pointlessSubtagPrefix + "entity.location.standing_on is now just entity.standing_on.");
-
     // Added 2021/05/05, made current 2022/12/31, made strong 2024/01/02.
     // Safe to remove now.
     public static Warning materialLit = new StrongWarning("materialLit", "The MaterialTag property 'lit' is deprecated in favor of 'switched'.");
@@ -111,10 +91,6 @@ public class BukkitImplDeprecations {
     // Safe to remove now.
     public static Warning horseJumpsFormat = new StrongWarning("horseJumpsFormat", "The '<color> horse jumps' event is deprecated: don't put the color in the event line. (Deprecated for technical design reasons).");
 
-    // Added 2019/11/11, made slow 2021/11/2021, made current 2022/12/31, made strong 2024/01/02.
-    // Safe to remove now.
-    public static Warning entityLocationCursorOnTag = new StrongWarning("entityLocationCursorOnTag", "entity.location.cursor_on tags should be replaced by entity.cursor_on (be careful with the slight differences though).");
-
     // Added 2021/05/05, made current 2022/12/31, made strong 2024/01/02.
     // Safe to remove now.
     public static Warning locationDistanceTag = new StrongWarning("locationDistanceTag", "locationtag.tree_distance is deprecated in favor of location.material.distance");
@@ -126,19 +102,9 @@ public class BukkitImplDeprecations {
     // ==================== STRONG deprecations ====================
     // These show up every time, and warn any online ops. These are made clear they need to be fixed ASAP.
 
-    // In Bukkit impl, Relevant as of 2019/09/25, made current on 2020/02/12, made strong 2022/12/31.
-    // 2023-year-end commonality: #36
-    // 2024-year-end commonality: #21
-    public static Warning entityHealthTags = new StrongWarning("entityHealthTags", pointlessSubtagPrefix + "entity.health.* tags are now just entity.health_*.");
-
     // In Bukkit impl, Added on 2019/08/19
     // Bad candidate for functionality removal - sometimes used by accident (when misreading the escape-tag docs)
     public static Warning pointlessTextTags = new StrongWarning("pointlessTextTags", "Several text tags like '&dot' or '&cm' are pointless (there's no reason you can't just directly write them in). Please replace them with the actual intended text.");
-
-    // Added 2021/09/08, but was irrelevant years earlier, made normal 2024/01/02, made strong 2025/01/15.
-    // 2022-year-end commonality: #31
-    // Safe to remove now.
-    public static Warning isValidTag = new StrongWarning("isValidTag", "The 'server.x_is_valid' style tags are deprecated: use '.exists', '.is_spawned.if_null[false]', etc.");
 
     // Added 2022/05/07, made normal 2024/01/02, made strong 2025/01/15.
     // Safe to remove now.
@@ -349,13 +315,6 @@ public class BukkitImplDeprecations {
     // 2023-year-end commonality: #14
     // 2024-year-end commonality: #9
     public static Warning itemNbt = new VerySlowWarning("itemNbt", "The item 'nbt' property is deprecated: use ItemTag flags instead!");
-
-    // Added 2021/02/03, made very-slow 2022/12/31.
-    // Bad candidate for functional removal due to the "scriptname" variant being useful for debugging sometimes.
-    // 2022-year-end commonality: #3
-    // 2023-year-end commonality: #24
-    // Safe to remove now.
-    public static Warning hasScriptTags = new VerySlowWarning("hasScriptTags", "The ItemTag.scriptname and EntityTag.scriptname and ItemTag.has_script and NPCTag.has_script tags are deprecated: use '.script.name' or a null check on .script.");
 
     // Added 2023/07/21, bump when 1.17 is gone.
     public static Warning chunkRefreshSections = new VerySlowWarning("chunkRefreshSections", "ChunkTag.refresh_chunk_sections, as of MC 1.18, is just a replica of ChunkTag.refresh_chunk, and so that mech should be used instead.");

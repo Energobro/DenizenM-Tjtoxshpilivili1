@@ -86,9 +86,6 @@ public class PlayerRightClicksEntityScriptEvent extends BukkitScriptEvent implem
             case "entity": return entity.getDenizenObject();
             case "item": return item;
             case "hand": return new ElementTag(event.getHand() == EquipmentSlot.OFF_HAND ? "offhand" : "mainhand");
-            case "location":
-                BukkitImplDeprecations.playerRightClicksEntityContext.warn();
-                return entity.getLocation();
             case "click_position":
                 if (event instanceof PlayerInteractAtEntityEvent) {
                     return new LocationTag(((PlayerInteractAtEntityEvent) event).getClickedPosition());

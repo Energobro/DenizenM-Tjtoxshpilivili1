@@ -48,12 +48,6 @@ public class ItemScript implements Property {
             return null;
         }
 
-        if (attribute.startsWith("has_script")) {
-            BukkitImplDeprecations.hasScriptTags.warn(attribute.context);
-            return new ElementTag(item.isItemscript())
-                    .getObjectAttribute(attribute.fulfill(1));
-        }
-
         // <--[tag]
         // @attribute <ItemTag.script>
         // @returns ScriptTag

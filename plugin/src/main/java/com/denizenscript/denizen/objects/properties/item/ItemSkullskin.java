@@ -87,11 +87,6 @@ public class ItemSkullskin implements Property {
             String skin = getPropertyString();
             if (skin != null) {
                 attribute = attribute.fulfill(1);
-
-                if (attribute.startsWith("full")) {
-                    BukkitImplDeprecations.itemSkinFullTag.warn(attribute.context);
-                    return new ElementTag(skin).getObjectAttribute(attribute.fulfill(1));
-                }
                 return new ElementTag(CoreUtilities.split(skin, '|').get(0)).getObjectAttribute(attribute);
             }
             else {

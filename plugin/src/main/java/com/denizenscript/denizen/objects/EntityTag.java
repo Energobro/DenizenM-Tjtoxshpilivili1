@@ -1234,31 +1234,6 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
     }
 
     public LocationTag doLocationTag(Attribute attribute) {
-        if (attribute.startsWith("cursor_on", 2)) {
-            BukkitImplDeprecations.entityLocationCursorOnTag.warn(attribute.context);
-            int range = attribute.getIntContext(2);
-            if (range < 1) {
-                range = 50;
-            }
-            Set<Material> set = new HashSet<>();
-            set.add(Material.AIR);
-
-            if (attribute.startsWith("ignore", 3) && attribute.hasContext(3)) {
-                List<MaterialTag> ignoreList = attribute.contextAsType(3, ListTag.class).filter(MaterialTag.class, attribute.context);
-                for (MaterialTag material : ignoreList) {
-                    set.add(material.getMaterial());
-                }
-                attribute.fulfill(1);
-            }
-            attribute.fulfill(1);
-            return new LocationTag(getTargetBlockSafe(set, range));
-        }
-
-        if (attribute.startsWith("standing_on", 2)) {
-            BukkitImplDeprecations.entityStandingOn.warn(attribute.context);
-            attribute.fulfill(1);
-            return new LocationTag(getBukkitEntity().getLocation().clone().add(0, -0.5f, 0));
-        }
         return new LocationTag(getBukkitEntity().getLocation());
     }
 

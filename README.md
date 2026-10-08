@@ -74,7 +74,7 @@ An implementation of the Denizen Scripting Language for Paper servers, with stro
   * The first thread-crossing operation may take up to a tick, while subsequent sequential calls take only microseconds.
   * Fire-and-forget commands (`narrate`, `playsound`, `playeffect`, `runlater`, etc.) hand over without waiting at all.
 * **New Script Commands & Switches:**
-  * Added `async` parameter support to `run`, `runlater`, `define`, and `detached` executions.
+  * Added `async` parameter support to `run`, `runlater`, `define`, and `definemap` executions.
   * Usage examples:
     * Run async - `run my_task async`
     * Schedule async task - `runlater nightly_report delay:1h async`

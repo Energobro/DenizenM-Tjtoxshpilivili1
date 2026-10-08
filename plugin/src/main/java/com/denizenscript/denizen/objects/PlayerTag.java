@@ -1036,37 +1036,6 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         });
 
         registerOfflineTag(ElementTag.class, "health", (attribute, object) -> {
-            if (attribute.startsWith("is_scaled", 2)) {
-                attribute.fulfill(1);
-                BukkitImplDeprecations.entityHealthTags.warn(attribute.context);
-                return new ElementTag(object.getPlayerEntity().isHealthScaled());
-            }
-
-            if (attribute.startsWith("scale", 2)) {
-                attribute.fulfill(1);
-                BukkitImplDeprecations.entityHealthTags.warn(attribute.context);
-                return new ElementTag(object.getPlayerEntity().getHealthScale());
-            }
-            if (attribute.startsWith("formatted", 2)) {
-                BukkitImplDeprecations.entityHealthTags.warn(attribute.context);
-                Double maxHealth = attribute.hasContext(2) ? attribute.getDoubleContext(2) : null;
-                attribute.fulfill(1);
-                return EntityHealth.getHealthFormatted(new EntityTag(object.getPlayerEntity()), maxHealth);
-            }
-            if (attribute.startsWith("percentage", 2)) {
-                BukkitImplDeprecations.entityHealthTags.warn(attribute.context);
-                attribute.fulfill(1);
-                double maxHealth = object.getPlayerEntity().getMaxHealth();
-                if (attribute.hasParam()) {
-                    maxHealth = attribute.getIntParam();
-                }
-                return new ElementTag((object.getPlayerEntity().getHealth() / maxHealth) * 100);
-            }
-            if (attribute.startsWith("max", 2)) {
-                BukkitImplDeprecations.entityHealthTags.warn(attribute.context);
-                attribute.fulfill(1);
-                return new ElementTag(object.getMaxHealth());
-            }
             return new ElementTag(object.getHealth());
         });
 
