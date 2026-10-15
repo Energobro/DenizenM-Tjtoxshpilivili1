@@ -659,7 +659,8 @@ public class ItemTag implements ObjectTag, Adjustable, FlaggableObject {
         // Generally, prefer tags like <@link tag ElementTag.on_hover.type> with type 'show_item'.
         // -->
         tagProcessor.registerTag(ElementTag.class, "json", (attribute, object) -> {
-            return new ElementTag(NMSHandler.itemHelper.getJsonString(object.item));
+            String json = NMSHandler.itemHelper.getJsonString(object.item);
+            return json == null ? null : new ElementTag(json);
         });
 
         // <--[tag]

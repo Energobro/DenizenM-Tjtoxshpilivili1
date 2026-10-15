@@ -74,7 +74,7 @@ public abstract class ImprovedOfflinePlayer {
 
     public UUID player;
     public File file;
-    public CompoundBinaryTag compound;
+    public volatile CompoundBinaryTag compound;
     public boolean exists;
     public PlayerInventory inventory;
     public Inventory enderchest;

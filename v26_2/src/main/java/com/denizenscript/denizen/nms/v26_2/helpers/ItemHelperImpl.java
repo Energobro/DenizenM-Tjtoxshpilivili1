@@ -18,6 +18,7 @@ import com.google.common.collect.*;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.JsonOps;
 import net.kyori.adventure.nbt.BinaryTag;
 import net.kyori.adventure.nbt.CompoundBinaryTag;
 import net.minecraft.advancements.predicates.BlockPredicate;
@@ -336,8 +337,14 @@ public class ItemHelperImpl extends ItemHelper {
 
     @Override
     public String getJsonString(ItemStack itemStack) {
-        String json = CraftItemStack.asNMSCopy(itemStack).getDisplayName().getStyle().toString().replace("\\", "\\\\").replace("\"", "\\\"");
-        return json.substring(176, json.length() - 185);
+        net.minecraft.world.item.ItemStack nmsItemStack = CraftItemStack.asNMSCopy(itemStack);
+        if (nmsItemStack == null || nmsItemStack.isEmpty()) {
+            return null;
+        }
+        String json = net.minecraft.world.item.ItemStack.CODEC
+                .encodeStart(CraftRegistry.getMinecraftRegistry().createSerializationContext(JsonOps.INSTANCE), nmsItemStack)
+                .getOrThrow().toString();
+        return json.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     @Override

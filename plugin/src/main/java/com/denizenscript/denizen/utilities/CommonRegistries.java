@@ -125,12 +125,15 @@ public class CommonRegistries {
      * is doing instead of reading the live player is written out at the type marking further down.
      */
     public static final String[] PLAYER_ASYNC_SAFE_TAGS = new String[] {
-            "uuid", "is_online", "name", "is_player",
-            "is_op", "whitelisted", "is_whitelisted", "chat_history", "chat_history_list",
-            "is_banned", "ban_expiration_time", "ban_expiration", "ban_reason", "ban_created_time", "ban_created", "ban_source", "ban_info",
-            "has_played_before", "first_played_time", "first_played", "last_played_time", "last_played",
-            "fake_block", "fake_block_locations", "fake_entities", "disguise_to_self",
-            "sidebar_lines", "sidebar_title", "sidebar_scores" };
+            "uuid", "is_online", "name", "is_player", "is_op", "whitelisted", "is_whitelisted", "chat_history", "chat_history_list", "is_banned",
+            "ban_expiration_time", "ban_expiration", "ban_reason", "ban_created_time", "ban_created", "ban_source", "ban_info", "has_played_before",
+            "first_played_time", "first_played", "last_played_time", "last_played", "fake_block", "fake_block_locations", "fake_entities",
+            "disguise_to_self", "sidebar_lines", "sidebar_title", "sidebar_scores", "food_level", "formatted_food_level", "is_blocking",
+            "is_flying", "is_sprinting", "ping", "locale", "client_brand", "main_hand", "time", "weather", "time_asleep", "held_item_slot",
+            "compass_target", "display_name", "list_name", "ip", "ip_address", "host_name", "spectator_target", "last_action_time", "fish_hook",
+            "entity", "health", "health_max", "health_is_scaled", "health_scale", "health_percentage", "formatted_health", "oxygen", "max_oxygen",
+            "xp", "xp_level", "xp_total", "xp_to_next_level", "calculate_xp", "gamemode", "can_fly", "allowed_flight", "fly_speed", "walk_speed",
+            "saturation", "exhaustion", "spawn_forced" };
 
 
     /**
@@ -161,57 +164,14 @@ public class CommonRegistries {
             "time", "time_duration", "time_full", "time_period", "moon_phase", "duration_since_created",
             "has_storm", "thundering", "thunder_duration", "weather_duration", "is_day", "is_night", "sky_darkness" };
     public static final String[] SERVER_STATIC_DATA_TAGS = new String[] {
-            // Enum or registry listings. All of these end in Utilities.listTypes/registryKeys (an enum's constants or a registry stream)
-            // or the equivalent inline loop, and the objects they build - MaterialTag, EnchantmentTag - are already async-safe types.
-            "art_types", "nbt_attribute_types", "damage_causes", "teleport_causes", "particle_types", "effect_types",
-            "pattern_types", "potion_types", "tree_types", "map_cursor_types", "world_types",
-            "entity_types", "material_types", "sound_keys", "statistic_types", "statistic_type", "structures", "enchantments",
-            // GameRuleReflect holds static MethodHandles set at class init, and GameRule.values() hands back a copy of the registry array.
-            "gamerules",
-            // Server properties and build info: plain fields on the server object, read-only, no world involved.
-            "max_players", "motd", "view_distance", "port", "idle_timeout", "bukkit_name", "bukkit_version", "version", "denizen_version",
-            // Depends.permissions/economy are static fields, and isEnabled() reads a boolean off the plugin.
-            "has_permissions", "has_economy",
-            // The server's recentTps array, which the main thread overwrites once per tick - so a reader off-thread gets a value at most
-            // one tick stale, which is meaningless for a TPS measurement. Nothing here touches a world.
-            "recent_tps",
-            // The online player list. This one looks live and is not: Bukkit.getOnlinePlayers() hands back CraftServer's 'playerView' field
-            // without copying, but that view's backing list - PlayerList.players - is a CopyOnWriteArrayList, so iterating it off-thread
-            // can neither throw nor read a torn list; it just sees the players as of when iteration started. What comes out is a PlayerTag
-            // holding nothing but a UUID (PlayerTag:208-214), and the NPC check on the way is Bukkit metadata, whose store is a
-            // ConcurrentHashMap. 'online_players_flagged' is the same loop plus a player flag read, which is already thread-safe storage.
-            // 'ops' joins them for a different reason: Bukkit.getOperators iterates ServerOpList's entries, and StoredUserList's backing map
-            // is a Maps.newConcurrentMap, while the CraftOfflinePlayer it builds per entry is cached into CraftServer.offlinePlayers -
-            // a Guava MapMaker map, also concurrent. That path never looks a player up by UUID, which is what makes it safe.
-            //
-            // 'players' is here for a subtler reason. It does reach CraftServer.getPlayer(UUID) - a plain 'playersByUUID.get(uuid)' on
-            // PlayerList, the one Maps.newHashMap() in the whole chain, rewritten by the main thread on every join and quit. But read what
-            // getOfflinePlayer(UUID) does with the answer: it only picks whether to hand back the live CraftPlayer or build a
-            // CraftOfflinePlayer for the same uuid, and either way the only thing taken from it here is getUniqueId(), which is the uuid
-            // that went in. A racing get can return null or a stale entry; it cannot change this tag's output. (It also does a File.list()
-            // over the playerdata directory per call - slow, but blocking I/O is a reason to want this off the main thread, not to forbid it.)
-            //
-            // That reasoning is load-bearing: it holds only while nothing but the UUID is taken from the returned OfflinePlayer.
-            // If PlayerTag ever starts holding the Bukkit object instead, this tag has to come back off the list.
-            "players",
-            // 'offline_players' and the ops pair used to be excluded, because they *branched* on OfflinePlayer.isOnline() - the same racing
-            // HashMap read, except that there a stale answer puts an online player in an offline list, which is wrong output rather than a
-            // different object. Rather than weigh how narrow that window is, the three tags were rewritten to take the online UUIDs in one
-            // pass off the CopyOnWriteArrayList instead (see ServerTagBase.onlinePlayerIds), which has nothing to race against at all.
-            "offline_players", "online_ops", "offline_ops",
-            "online_players", "online_players_flagged", "ops",
-            // The whitelist and ban lists are the same shape as 'ops' again - a StoredUserList walk plus getOfflinePlayer(NameAndId),
-            // never a UUID lookup. 'banned_addresses' collects into a fresh Set, and 'is_banned' looks an address up in that same
-            // concurrent map (its expiry cleanup writes back, but into the concurrent map, so that is fine too).
-            // 'ban_info' is left out only because its sub-tags weren't read, not because anything about it looked wrong.
-            "has_whitelist", "whitelisted_players", "banned_players", "banned_addresses", "is_banned",
-            // 'match_player' is the online-player loop again, comparing names off the profile; the PlayerTag it builds is a UUID.
-            // 'match_offline_player' walks PlayerTag.playerNames instead - Denizen's own ConcurrentHashMap, never Bukkit - and asks
-            // nothing of the server but which of those UUIDs are online, which it now takes in one pass off the CopyOnWriteArrayList
-            // exactly as 'offline_players' does. It used to ask that per candidate through PlayerTag.isOnline(), which is safe off-thread
-            // but costs a scan of the online list each time, so a loose input like 'a' meant a scan per matching name.
-            "match_player", "match_offline_player", "potion_effect_types"
-    };
+            "art_types", "nbt_attribute_types", "damage_causes", "teleport_causes", "particle_types", "effect_types", "pattern_types",
+            "potion_types", "tree_types", "map_cursor_types", "world_types", "entity_types", "material_types", "sound_keys", "statistic_types",
+            "statistic_type", "structures", "enchantments", "gamerules", "max_players", "motd", "view_distance", "port", "idle_timeout",
+            "bukkit_name", "bukkit_version", "version", "denizen_version", "has_permissions", "has_economy", "recent_tps", "players",
+            "offline_players", "online_ops", "offline_ops", "online_players", "online_players_flagged", "ops", "has_whitelist",
+            "whitelisted_players", "banned_players", "banned_addresses", "is_banned", "match_player", "match_offline_player", "potion_effect_types",
+            "vanilla_entity_tags", "vanilla_tagged_entities", "vanilla_material_tags", "vanilla_tagged_materials", "slot_id", "parse_bukkit_item",
+            "area_notes_debug" };
 
     // ===================================================================================================
     // ASYNC TAG SAFETY MAP - generated from the markings in registerAsyncTagSafety() below. Machine-readable.
@@ -221,26 +181,50 @@ public class CommonRegistries {
     // These are OBJECT TYPE markings, ie they apply however the object arrived (<[def].x>, <context.entity.uuid>, ...).
     // ===================================================================================================
     // @asyncsave ChunkTag: add, cuboid, is_loaded, simple, sub, world, x, xz, z
-    // @asyncsave CuboidTag: center, contains, contains_cuboid, contains_location, corners, flag, flag_expiration, flag_map, get_outline, has_flag,
-    //   intersects, is_within, list_flags, max, min, outline, outline_2d, shell, shift, size, volume, walls, with_max, with_min
-    // @asyncsave EllipsoidTag: add, bounding_box, chunks, contains, contains_location, flag, flag_expiration, flag_map, has_flag, include, is_within,
-    //   list_flags, location, random, shell, size, with_location, with_size, world
-    // @asyncsave EntityTag: entity_type, script, translated_name, type, uuid
+    // @asyncsave CuboidTag: approximate_overlap_areas, center, contained_cuboids, contains, contains_cuboid, contains_location, corners, flag,
+    //   flag_expiration, flag_map, get_outline, has_flag, intersecting_cuboids, intersects, is_within, list_flags, max, min, notable_name,
+    //   note_name, outline, outline_2d, shell, shift, size, volume, walls, with_max, with_min
+    // @asyncsave EllipsoidTag: add, approximate_overlap_areas, bounding_box, chunks, contains, contains_location, flag, flag_expiration, flag_map,
+    //   has_flag, include, is_within, list_flags, location, notable_name, note_name, random, shell, size, with_location, with_size, world
+    // @asyncsave EntityTag: absorption_health, ageable, attack_cooldown_duration, attack_cooldown_max_duration, attack_cooldown_percent, body_yaw,
+    //   breeding, can_breed, can_pickup_items, colorable, disguise_to_others, disguised_type, dragon_phase, eid, empty, entity_type, experience,
+    //   eye_height, eye_location, fall_distance, fallingblock_material, fire_time, fish_hook_apply_lure, fish_hook_hooked_entity,
+    //   fish_hook_in_open_water, fish_hook_lure_time, fish_hook_max_lure_time, fish_hook_min_lure_time, fish_hook_state, force_no_persist,
+    //   fuse_ticks, get_leash_holder, get_passenger, get_passengers, get_shooter, get_vehicle, gliding, glowing, has_passenger, inside_vehicle,
+    //   is_ageable, is_breeding, is_colorable, is_disguised, is_empty, is_enemy, is_hand_raised, is_in_block, is_inside_vehicle, is_leashed,
+    //   is_living, is_mob, is_monster, is_npc, is_on_ground, is_persistent, is_projectile, is_sleeping, is_spawned, is_tameable, is_trading, killer,
+    //   last_damage, leash_holder, leashed, location, max_oxygen, name, on_fire, on_ground, oxygen, passenger, passengers, persistent, pickup_delay,
+    //   pickupdelay, remove_when_far, script, shooter, skin_layers, standing_on, swimming, tameable, target, time_lived, trading_with,
+    //   translated_name, type, uuid, vanilla_tags, vehicle, velocity, visual_pose, world
     // @asyncsave InventoryTag: (none)
-    // @asyncsave ItemTag: book_author, book_map, book_pages, book_title, display, durability, enchantment_map, enchantment_types, enchantments, flag,
-    //   flag_expiration, flag_map, has_display, has_flag, has_lore, is_enchanted, list_flags, lore, material, max_stack, quantity, script, with_flag
-    // @asyncsave LocationTag: above, add, backward, backward_flat, below, center, chunk, distance, distance_squared, div, down, format, formatted,
-    //   forward, forward_flat, get_chunk, left, mul, normalize, pitch, points_around_x, points_around_y, points_around_z, points_between,
-    //   quaternion_between_vectors, random_offset, raw, relative, right, rotate_around_x, rotate_around_y, rotate_around_z, rotate_pitch, rotate_yaw,
-    //   round, round_down, round_to, round_to_precision, round_up, simple, simplex_3d, sub, to_axis_angle_quaternion, up, vector_length,
-    //   vector_length_squared, vector_to_face, with_pitch, with_x, with_y, with_yaw, with_z, world, x, xyz, y, yaw, z
+    // @asyncsave ItemTag: all_raw_nbt, armor_pose, attribute_modifiers, base_color, block_material, book, book_author, book_generation, book_map,
+    //   book_pages, book_title, bukkit_serial, can_destroy, can_place_on, charged_projectiles, color, components_patch, custom_data,
+    //   default_attribute_modifiers, display, durability, effects_data, enchantment_map, enchantment_types, enchantments, firework, firework_data,
+    //   firework_power, flag, flag_expiration, flag_map, flags, formatted, full_components_patch, has_custom_model_data, has_display, has_flag,
+    //   has_inventory, has_lore, has_nbt, has_potion_effect, has_script, has_skin, hides, instrument, inventory_contents, invisible, is_book,
+    //   is_charged, is_colorable, is_dyeable, is_enchanted, is_firework, is_lockable, is_locked, is_waxed, json, knowledge_book_recipes, list_flags,
+    //   lock, lodestone_tracked, lore, map, material, max_durability, max_stack, meta_type, nbt, nbt_attributes, nbt_keys, patterns,
+    //   placed_material, potion_base, potion_base_type, potion_effect, potion_effects, qty, quantity, raw_nbt, repair_cost, repairable, script,
+    //   sign_back_contents, sign_contents, simple, skin, skull_skin, spawner_count, spawner_max_nearby_entities, spawner_maximum_spawn_delay,
+    //   spawner_minimum_spawn_delay, spawner_player_range, spawner_range, spawner_spawn_delay, spawner_type, trim, unbreakable, with_flag
+    // @asyncsave LocationTag: above, add, areas, backward, backward_flat, below, center, chunk, cuboids, distance, distance_squared, div, down,
+    //   ellipsoids, face, format, formatted, forward, forward_flat, get_chunk, left, mul, normalize, notable_name, note_name, pitch,
+    //   points_around_x, points_around_y, points_around_z, points_between, polygons, quaternion_between_vectors, random_offset, raw, relative,
+    //   right, rotate_around_x, rotate_around_y, rotate_around_z, rotate_pitch, rotate_yaw, round, round_down, round_to, round_to_precision,
+    //   round_up, simple, simplex_3d, sub, to_axis_angle_quaternion, to_cuboid, to_ellipsoid, up, vector_length, vector_length_squared,
+    //   vector_to_face, with_pitch, with_x, with_y, with_yaw, with_z, world, x, xyz, y, yaw, z
     // @asyncsave NPCTag: (none)
-    // @asyncsave PlayerTag: ban_created, ban_created_time, ban_expiration, ban_expiration_time, ban_info, ban_reason, ban_source, chat_history,
-    //   chat_history_list, disguise_to_self, fake_block, fake_block_locations, fake_entities, first_played, first_played_time, flag, flag_expiration,
-    //   flag_map, has_flag, has_played_before, is_banned, is_online, is_op, is_player, is_whitelisted, last_played, last_played_time, list_flags, name,
-    //   sidebar_lines, sidebar_scores, sidebar_title, uuid, whitelisted
-    // @asyncsave PolygonTag: bounding_box, contains, contains_inclusive, contains_location, corners, flag, flag_expiration, flag_map, has_flag,
-    //   include_y, is_within, list_flags, max_y, min_y, outline, outline_2d, shell, shell_inclusive, shift, with_corner, with_y_max, with_y_min, world
+    // @asyncsave PlayerTag: allowed_flight, ban_created, ban_created_time, ban_expiration, ban_expiration_time, ban_info, ban_reason, ban_source,
+    //   calculate_xp, can_fly, chat_history, chat_history_list, client_brand, compass_target, disguise_to_self, display_name, entity, exhaustion,
+    //   fake_block, fake_block_locations, fake_entities, first_played, first_played_time, fish_hook, flag, flag_expiration, flag_map, fly_speed,
+    //   food_level, formatted_food_level, formatted_health, gamemode, has_flag, has_played_before, health, health_is_scaled, health_max,
+    //   health_percentage, health_scale, held_item_slot, host_name, ip, ip_address, is_banned, is_blocking, is_flying, is_online, is_op, is_player,
+    //   is_sprinting, is_whitelisted, last_action_time, last_played, last_played_time, list_flags, list_name, locale, main_hand, max_oxygen, name,
+    //   oxygen, ping, saturation, sidebar_lines, sidebar_scores, sidebar_title, spawn_forced, spectator_target, time, time_asleep, uuid, walk_speed,
+    //   weather, whitelisted, xp, xp_level, xp_to_next_level, xp_total
+    // @asyncsave PolygonTag: approximate_overlap_areas, bounding_box, contains, contains_inclusive, contains_location, corners, flag,
+    //   flag_expiration, flag_map, has_flag, include_y, is_within, list_flags, max_y, min_y, notable_name, note_name, outline, outline_2d, shell,
+    //   shell_inclusive, shift, with_corner, with_y_max, with_y_min, world
     // @asyncsave WorldTag: allows_animals, allows_monsters, allows_pvp, ambient_spawn_limit, animal_spawn_limit, auto_save, can_generate_structures,
     //   difficulty, duration_since_created, environment, hardcore, has_storm, is_day, is_night, keep_spawn, max_height, min_height, monster_spawn_limit,
     //   moon_phase, name, sea_level, seed, simulation_distance, sky_darkness, thunder_duration, thundering, ticks_per_animal_spawn,
@@ -358,11 +342,18 @@ public class CommonRegistries {
         // was resolved from the live server. And nothing here protects one ItemTag object from a script adjusting it on another thread at the same
         // moment; that is the script writer's problem, the same as two '~sql' lines sharing one connection.
         TagManager.markObjectTypeMainThreadOnly(ItemTag.class, withFlagTags(
-                "material", "quantity", "max_stack", "durability",
-                "display", "has_display", "lore", "has_lore",
-                "enchantments", "enchantment_map", "enchantment_types", "is_enchanted",
-                "book_author", "book_title", "book_pages", "book_map",
-                "script", "with_flag"));
+                "material", "block_material", "placed_material", "quantity", "qty", "max_stack", "durability", "max_durability", "repairable",
+                "repair_cost", "unbreakable", "simple", "formatted", "meta_type", "json", "bukkit_serial", "display", "has_display", "lore",
+                "has_lore", "enchantments", "enchantment_map", "enchantment_types", "is_enchanted", "book", "book_author", "book_title",
+                "book_pages", "book_map", "book_generation", "script", "has_script", "with_flag", "custom_data", "components_patch",
+                "full_components_patch", "nbt", "has_nbt", "nbt_keys", "raw_nbt", "all_raw_nbt", "nbt_attributes", "attribute_modifiers",
+                "default_attribute_modifiers", "flags", "hides", "has_custom_model_data", "color", "base_color", "patterns", "trim", "instrument",
+                "armor_pose", "invisible", "is_book", "is_colorable", "is_dyeable", "is_firework", "is_lockable", "can_destroy", "can_place_on",
+                "charged_projectiles", "is_charged", "firework", "firework_data", "firework_power", "has_inventory", "inventory_contents", "lock",
+                "is_locked", "lodestone_tracked", "knowledge_book_recipes", "map", "potion_base", "potion_base_type", "potion_effect",
+                "potion_effects", "has_potion_effect", "effects_data", "sign_contents", "sign_back_contents", "is_waxed", "spawner_type",
+                "spawner_count", "spawner_range", "spawner_player_range", "spawner_max_nearby_entities", "spawner_spawn_delay",
+                "spawner_minimum_spawn_delay", "spawner_maximum_spawn_delay", "skull_skin", "skin", "has_skin"));
         // BiomeTag is deliberately not marked at all - every one of its tags is readable off-thread, so there is nothing to list.
         // A BiomeTag holds a BiomeNMS, which is a NamespacedKey, a World, and a Holder.Reference into the biome registry - a handle on
         // datapack data, not on anything live. Read against the 26.2 jar, tag by tag:
@@ -388,10 +379,9 @@ public class CommonRegistries {
         // Flags are in here for the reason spelled out on PolygonTag below: a noted area keeps them in a SavableMapFlagTracker,
         // whose storage is concurrent, which is why the 'cuboid' tag base has listed them as safe all along - the type marking has to say so too.
         TagManager.markObjectTypeMainThreadOnly(CuboidTag.class, withFlagTags(
-                "center", "size", "volume", "max", "min", "corners", "shift",
-                "contains", "contains_location", "contains_cuboid", "intersects", "is_within",
-                "with_min", "with_max",
-                "outline", "get_outline", "outline_2d", "walls", "shell"));
+                "center", "size", "volume", "max", "min", "corners", "shift", "contains", "contains_location", "contains_cuboid", "intersects",
+                "is_within", "with_min", "with_max", "outline", "get_outline", "outline_2d", "walls", "shell", "note_name", "notable_name",
+                "approximate_overlap_areas", "contained_cuboids", "intersecting_cuboids"));
         // An ellipsoid is a center LocationTag plus a size LocationTag, so the same reasoning as the cuboid above applies: its own
         // geometry is arithmetic on stored coordinates, and only the tags that go and look at what is *inside* the area cost a hand-off.
         // 'contains' was freed the same way as the cuboid's, by comparing world names instead of resolving worlds (see EllipsoidTag.contains) -
@@ -404,8 +394,8 @@ public class CommonRegistries {
         // plain HashMaps and ArrayLists that the main thread rewrites whenever an area is noted; and 'note_name' is a NoteManager lookup,
         // left alone for the same reason it was on the cuboid.
         TagManager.markObjectTypeMainThreadOnly(EllipsoidTag.class, withFlagTags(
-                "location", "size", "random", "add", "include", "with_location", "with_size", "chunks",
-                "bounding_box", "world", "contains", "contains_location", "shell", "is_within"));
+                "note_name", "notable_name", "approximate_overlap_areas", "location", "size", "random", "add", "include", "with_location",
+                "with_size", "chunks", "bounding_box", "world", "contains", "contains_location", "shell", "is_within"));
         // A polygon is a WorldTag holding a name, a y-range, and a list of plain x/z corner pairs - so, like the cuboid and the ellipsoid
         // above, its own geometry is arithmetic over stored numbers and the only tags that need the main thread are the ones that go
         // and look at what is *inside* the area.
@@ -424,9 +414,9 @@ public class CommonRegistries {
         // whose storage is concurrent, which is why the 'polygon' tag base has listed them as safe all along.
         // A type marking has to say so separately though, or "<[my_polygon].flag[x]>" pays a hand-off that "<polygon[my_polygon].flag[x]>" does not.
         TagManager.markObjectTypeMainThreadOnly(PolygonTag.class, withFlagTags(
-                "max_y", "min_y", "corners", "shift", "with_corner", "with_y_min", "with_y_max", "include_y",
-                "outline", "outline_2d", "shell_inclusive", "contains_inclusive", "contains_location",
-                "bounding_box", "world", "contains", "shell", "is_within"));
+                "note_name", "notable_name", "approximate_overlap_areas", "max_y", "min_y", "corners", "shift", "with_corner", "with_y_min",
+                "with_y_max", "include_y", "outline", "outline_2d", "shell_inclusive", "contains_inclusive", "contains_location", "bounding_box",
+                "world", "contains", "shell", "is_within"));
         // A trade is a MerchantRecipe and nothing else - all nine of its tags come from trade property classes, and every one of them
         // just reads a field off that recipe. 'result' and 'inputs' hand back ItemTags, but the ItemTag constructor clones the stack,
         // so what comes out is a copy rather than a window onto anything live. Note the 'trade' tag base stays main-thread-only:
@@ -444,7 +434,19 @@ public class CommonRegistries {
         // Nothing else can be freed, and that is structural rather than a matter of effort: an EntityTag holds the live entity, and
         // getBukkitEntity re-fetches it through Bukkit.getEntity when the reference has gone stale. Flags are no exception - an entity keeps
         // them in its PDC, whose backing map is a plain HashMap belonging to CraftBukkit, where a resize can hide an entry that is present.
-        TagManager.markObjectTypeMainThreadOnly(EntityTag.class, "type", "entity_type", "uuid", "script", "translated_name");
+        TagManager.markObjectTypeMainThreadOnly(EntityTag.class,
+                "type", "entity_type", "uuid", "script", "translated_name", "is_living", "is_mob", "is_monster", "is_enemy", "is_projectile",
+                "is_spawned", "vanilla_tags", "eid", "name", "time_lived", "fall_distance", "fire_time", "on_fire", "is_on_ground", "on_ground",
+                "visual_pose", "glowing", "force_no_persist", "is_persistent", "persistent", "remove_when_far", "can_pickup_items", "is_npc",
+                "absorption_health", "oxygen", "max_oxygen", "gliding", "swimming", "is_sleeping", "is_hand_raised", "eye_height", "is_empty",
+                "empty", "has_passenger", "passenger", "get_passenger", "passengers", "get_passengers", "vehicle", "get_vehicle",
+                "is_inside_vehicle", "inside_vehicle", "is_leashed", "leashed", "leash_holder", "get_leash_holder", "shooter", "get_shooter",
+                "target", "killer", "last_damage", "location", "eye_location", "standing_on", "velocity", "world", "body_yaw",
+                "fallingblock_material", "experience", "fuse_ticks", "dragon_phase", "is_in_block", "pickup_delay", "pickupdelay", "breeding",
+                "is_breeding", "can_breed", "tameable", "is_tameable", "ageable", "is_ageable", "colorable", "is_colorable", "is_trading",
+                "trading_with", "fish_hook_state", "fish_hook_lure_time", "fish_hook_min_lure_time", "fish_hook_max_lure_time",
+                "fish_hook_hooked_entity", "fish_hook_apply_lure", "fish_hook_in_open_water", "attack_cooldown_duration",
+                "attack_cooldown_max_duration", "attack_cooldown_percent", "skin_layers", "is_disguised", "disguised_type", "disguise_to_others");
         // ChunkTag was read tag by tag, all 23 of them, and they fall into three groups.
         // Free because they never leave the tag object: 'x', 'z', 'xz' and 'world' hand back stored fields; 'simple' formats those plus the
         // stored world name; 'add' and 'sub' are arithmetic on the stored coordinates and hand back a new ChunkTag; 'cuboid' asks the world for
@@ -485,33 +487,13 @@ public class CommonRegistries {
         // 'center' joined them by being changed the same way the area types' outline family was, to name the world instead of resolving it.
         // Excluded on purpose despite looking like pure arithmetic: 'direction' calls getWorld() outright to build its vector.
         TagManager.markObjectTypeMainThreadOnly(LocationTag.class,
-                "x", "y", "z", "pitch", "yaw", "simple", "distance", "distance_squared",
-                "round", "round_up", "round_down", "round_to", "round_to_precision",
-                "with_x", "with_y", "with_z", "with_yaw", "with_pitch",
-                "add", "sub", "mul", "div",
-                // 'chunk' only divides the coordinates and copies the world name - it doesn't go and fetch the actual chunk,
-                // and 'world' hands back the name wrapped in a WorldTag rather than resolving the world itself.
-                "chunk", "get_chunk", "world",
-                // These move the location by a vector worked out from its own yaw and pitch, then hand the result back through
-                // the LocationTag(Location) constructor. That constructor used to resolve the world and so kept this whole family
-                // off limits; it no longer does when copying a LocationTag, which is what freed them.
-                "above", "below", "forward", "forward_flat", "backward", "backward_flat",
-                "left", "right", "up", "down", "points_between",
-                // Same family, same reasoning: trigonometry over the location's own coordinates, handed back through clone() and the
-                // LocationTag(Location) constructor. 'clone' is a shallow field copy and copying a LocationTag never asks for the world.
-                "rotate_around_x", "rotate_around_y", "rotate_around_z",
-                "points_around_x", "points_around_y", "points_around_z",
-                "relative", "random_offset",
-                // Pure arithmetic on the stored coordinates, with no location input at all.
-                "simplex_3d", "vector_to_face", "center", "rotate_yaw", "rotate_pitch",
-                // The rest of the vector family, registered onto this same processor by VectorObject.register (see LocationTag.register).
-                // They treat the location as three numbers and build their result through duplicate(), which for a location is clone().
-                // 'x'/'y'/'z'/'with_*'/'add'/'sub'/'mul'/'div' above come from there too, and were already trusted on exactly this basis.
-                "xyz", "normalize", "vector_length", "vector_length_squared",
-                "to_axis_angle_quaternion", "quaternion_between_vectors",
-                // Text forms of the location. They read the world's *name*, which getWorldName hands back without resolving anything.
-                // 'format' does the same, substituting coordinates into the script's own format string.
-                "format", "formatted", "raw");
+                "x", "y", "z", "pitch", "yaw", "simple", "distance", "distance_squared", "round", "round_up", "round_down", "round_to",
+                "round_to_precision", "with_x", "with_y", "with_z", "with_yaw", "with_pitch", "add", "sub", "mul", "div", "chunk", "get_chunk",
+                "world", "above", "below", "forward", "forward_flat", "backward", "backward_flat", "left", "right", "up", "down", "points_between",
+                "rotate_around_x", "rotate_around_y", "rotate_around_z", "points_around_x", "points_around_y", "points_around_z", "relative",
+                "random_offset", "simplex_3d", "vector_to_face", "center", "rotate_yaw", "rotate_pitch", "to_cuboid", "to_ellipsoid", "face", "xyz",
+                "normalize", "vector_length", "vector_length_squared", "to_axis_angle_quaternion", "quaternion_between_vectors", "format",
+                "formatted", "raw", "note_name", "notable_name", "areas", "cuboids", "ellipsoids", "polygons");
         // Note: no flag exception for entities and the rest - only player flags have thread-safe storage, everything else keeps its flags in live Bukkit data.
         // Two more get through here. 'uuid' is a stored field on the tag object and touches nothing at all - PlayerTag is only ever a UUID.
         // 'is_online' had to be earned: every route to it (PlayerTag.isOnline, CraftPlayer.isOnline, CraftOfflinePlayer.isOnline) ends at

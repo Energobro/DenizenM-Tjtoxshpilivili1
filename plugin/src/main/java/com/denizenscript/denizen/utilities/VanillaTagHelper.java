@@ -10,37 +10,60 @@ import org.bukkit.entity.EntityType;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class VanillaTagHelper {
 
-    public static HashMap<Material, HashSet<String>> tagsByMaterial = new HashMap<>();
+    public static volatile HashMap<Material, HashSet<String>> tagsByMaterial = new HashMap<>();
 
-    public static HashMap<String, HashSet<Material>> materialTagsByKey = new HashMap<>();
+    public static volatile HashMap<String, HashSet<Material>> materialTagsByKey = new HashMap<>();
 
-    public static HashMap<EntityType, HashSet<String>> tagsByEntity = new HashMap<>();
+    public static volatile HashMap<EntityType, HashSet<String>> tagsByEntity = new HashMap<>();
 
-    public static HashMap<String, HashSet<EntityType>> entityTagsByKey = new HashMap<>();
+    public static volatile HashMap<String, HashSet<EntityType>> entityTagsByKey = new HashMap<>();
+
+    private static final Object writeLock = new Object();
 
     static {
         loadTagsCache();
     }
 
-    public static void addOrUpdateMaterialTag(Tag<Material> tag) {
-        if (materialTagsByKey.containsKey(tag.getKey().getKey())) {
-            updateMaterialTag(tag);
+    static <K, V> HashMap<K, HashSet<V>> deepCopy(HashMap<K, HashSet<V>> source) {
+        HashMap<K, HashSet<V>> copy = new HashMap<>(source.size());
+        for (Map.Entry<K, HashSet<V>> entry : source.entrySet()) {
+            copy.put(entry.getKey(), new HashSet<>(entry.getValue()));
         }
-        else {
-            addMaterialTag(tag);
+        return copy;
+    }
+
+    public static void addOrUpdateMaterialTag(Tag<Material> tag) {
+        synchronized (writeLock) {
+            HashMap<Material, HashSet<String>> byObject = deepCopy(tagsByMaterial);
+            HashMap<String, HashSet<Material>> byKey = deepCopy(materialTagsByKey);
+            if (byKey.containsKey(tag.getKey().getKey())) {
+                update(tag, byObject, byKey);
+            }
+            else {
+                add(tag, byObject, byKey);
+            }
+            tagsByMaterial = byObject;
+            materialTagsByKey = byKey;
         }
     }
 
     public static void addOrUpdateEntityTag(Tag<EntityType> tag) {
-        if (entityTagsByKey.containsKey(tag.getKey().getKey())) {
-            updateEntityTag(tag);
-        }
-        else {
-            addEntityTag(tag);
+        synchronized (writeLock) {
+            HashMap<EntityType, HashSet<String>> byObject = deepCopy(tagsByEntity);
+            HashMap<String, HashSet<EntityType>> byKey = deepCopy(entityTagsByKey);
+            if (byKey.containsKey(tag.getKey().getKey())) {
+                update(tag, byObject, byKey);
+            }
+            else {
+                add(tag, byObject, byKey);
+            }
+            tagsByEntity = byObject;
+            entityTagsByKey = byKey;
         }
     }
 
@@ -69,11 +92,23 @@ public class VanillaTagHelper {
     }
 
     public static void updateMaterialTag(Tag<Material> tag) {
-        update(tag, tagsByMaterial, materialTagsByKey);
+        synchronized (writeLock) {
+            HashMap<Material, HashSet<String>> byObject = deepCopy(tagsByMaterial);
+            HashMap<String, HashSet<Material>> byKey = deepCopy(materialTagsByKey);
+            update(tag, byObject, byKey);
+            tagsByMaterial = byObject;
+            materialTagsByKey = byKey;
+        }
     }
 
     public static void updateEntityTag(Tag<EntityType> tag) {
-        update(tag, tagsByEntity, entityTagsByKey);
+        synchronized (writeLock) {
+            HashMap<EntityType, HashSet<String>> byObject = deepCopy(tagsByEntity);
+            HashMap<String, HashSet<EntityType>> byKey = deepCopy(entityTagsByKey);
+            update(tag, byObject, byKey);
+            tagsByEntity = byObject;
+            entityTagsByKey = byKey;
+        }
     }
 
     static <T extends Keyed> void add(Tag<T> tag, HashMap<T, HashSet<String>> tagByObj, HashMap<String, HashSet<T>> objByTag) {
@@ -84,29 +119,27 @@ public class VanillaTagHelper {
         }
     }
 
-    static void addMaterialTag(Tag<Material> tag) {
-        add(tag, tagsByMaterial, materialTagsByKey);
-    }
-
-    static void addEntityTag(Tag<EntityType> tag) {
-        add(tag, tagsByEntity, entityTagsByKey);
-    }
-
     public static void loadTagsCache() {
-        tagsByMaterial.clear();
-        materialTagsByKey.clear();
-        tagsByEntity.clear();
-        entityTagsByKey.clear();
+        HashMap<Material, HashSet<String>> newTagsByMaterial = new HashMap<>();
+        HashMap<String, HashSet<Material>> newMaterialTagsByKey = new HashMap<>();
+        HashMap<EntityType, HashSet<String>> newTagsByEntity = new HashMap<>();
+        HashMap<String, HashSet<EntityType>> newEntityTagsByKey = new HashMap<>();
         for (Tag<Material> tag : Bukkit.getTags("blocks", Material.class)) {
-            addMaterialTag(tag);
+            add(tag, newTagsByMaterial, newMaterialTagsByKey);
         }
         if (NMSHandler.getVersion().isAtLeast(NMSVersion.v1_18)) { // Note: existed on prior versions, but was bugged
             for (Tag<EntityType> tag : Bukkit.getTags("entity_types", EntityType.class)) {
-                addEntityTag(tag);
+                add(tag, newTagsByEntity, newEntityTagsByKey);
             }
         }
         for (Tag<Material> tag : Bukkit.getTags("items", Material.class)) {
-            addMaterialTag(tag);
+            add(tag, newTagsByMaterial, newMaterialTagsByKey);
+        }
+        synchronized (writeLock) {
+            tagsByMaterial = newTagsByMaterial;
+            materialTagsByKey = newMaterialTagsByKey;
+            tagsByEntity = newTagsByEntity;
+            entityTagsByKey = newEntityTagsByKey;
         }
     }
 }

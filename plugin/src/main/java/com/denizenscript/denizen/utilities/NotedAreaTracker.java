@@ -81,7 +81,19 @@ public class NotedAreaTracker {
             this.index = index;
         }
 
-        public final ArrayList<TrackedArea> list = new ArrayList<>();
+        public volatile ArrayList<TrackedArea> list = new ArrayList<>();
+
+        void addArea(TrackedArea area) {
+            ArrayList<TrackedArea> replacement = new ArrayList<>(list);
+            replacement.add(area);
+            list = replacement;
+        }
+
+        void removeArea(TrackedArea area) {
+            ArrayList<TrackedArea> replacement = new ArrayList<>(list);
+            replacement.remove(area);
+            list = replacement;
+        }
 
         public final int index;
 
@@ -96,7 +108,7 @@ public class NotedAreaTracker {
 
         public final AreaSet globalSet = new AreaSet(0, 0);
 
-        public final Int2ObjectOpenHashMap<AreaSet> sets50 = new Int2ObjectOpenHashMap<>(), sets50_offset = new Int2ObjectOpenHashMap<>(), sets200 = new Int2ObjectOpenHashMap<>(), sets200_offset = new Int2ObjectOpenHashMap<>();
+        public volatile Int2ObjectOpenHashMap<AreaSet> sets50 = new Int2ObjectOpenHashMap<>(), sets50_offset = new Int2ObjectOpenHashMap<>(), sets200 = new Int2ObjectOpenHashMap<>(), sets200_offset = new Int2ObjectOpenHashMap<>();
 
         public static boolean doesFit(TrackedArea area, int scale, int offset) {
             int lowX = (area.lowX + offset) / scale, lowZ = (area.lowZ + offset) / scale, highX = (area.highX + offset) / scale, highZ = (area.highZ + offset) / scale;
@@ -109,28 +121,50 @@ public class NotedAreaTracker {
             return cleanX + (cleanZ << 16);
         }
 
-        public AreaSet getOrGenSetFor(Int2ObjectOpenHashMap<AreaSet> sets, int type, TrackedArea area, int scale, int offset, boolean generate) {
+        public Int2ObjectOpenHashMap<AreaSet> setsOfType(int type) {
+            return switch (type) {
+                case 1 -> sets50;
+                case 2 -> sets50_offset;
+                case 3 -> sets200;
+                case 4 -> sets200_offset;
+                default -> null;
+            };
+        }
+
+        private void publish(int type, Int2ObjectOpenHashMap<AreaSet> replacement) {
+            switch (type) {
+                case 1 -> sets50 = replacement;
+                case 2 -> sets50_offset = replacement;
+                case 3 -> sets200 = replacement;
+                case 4 -> sets200_offset = replacement;
+            }
+        }
+
+        public AreaSet getOrGenSetFor(int type, TrackedArea area, int scale, int offset, boolean generate) {
             int index = getIndex(area.lowX, area.lowZ, scale, offset);
+            Int2ObjectOpenHashMap<AreaSet> sets = setsOfType(type);
             AreaSet set = sets.get(index);
             if (set == null && generate) {
                 set = new AreaSet(type, index);
-                sets.put(index, set);
+                Int2ObjectOpenHashMap<AreaSet> replacement = new Int2ObjectOpenHashMap<>(sets);
+                replacement.put(index, set);
+                publish(type, replacement);
             }
             return set;
         }
 
         public AreaSet bestSetFor(TrackedArea area, boolean generate) {
             if (doesFit(area, 50, 0)) {
-                return getOrGenSetFor(sets50, 1, area, 50, 0, generate);
+                return getOrGenSetFor(1, area, 50, 0, generate);
             }
             else if (doesFit(area, 50, 25)) {
-                return getOrGenSetFor(sets50_offset, 2, area, 50, 25, generate);
+                return getOrGenSetFor(2, area, 50, 25, generate);
             }
             else if (doesFit(area, 200, 0)) {
-                return getOrGenSetFor(sets200, 3, area, 200, 0, generate);
+                return getOrGenSetFor(3, area, 200, 0, generate);
             }
             else if (doesFit(area, 200, 100)) {
-                return getOrGenSetFor(sets200_offset, 4, area, 200, 100, generate);
+                return getOrGenSetFor(4, area, 200, 100, generate);
             }
             return globalSet;
         }
@@ -140,30 +174,37 @@ public class NotedAreaTracker {
         }
 
         public void remove(AreaSet set) {
-            switch (set.type) {
-                case 1 -> sets50.remove(set.index);
-                case 2 -> sets50_offset.remove(set.index);
-                case 3 -> sets200.remove(set.index);
-                case 4 -> sets200_offset.remove(set.index);
+            Int2ObjectOpenHashMap<AreaSet> sets = setsOfType(set.type);
+            if (sets == null) {
+                return;
             }
+            Int2ObjectOpenHashMap<AreaSet> replacement = new Int2ObjectOpenHashMap<>(sets);
+            replacement.remove(set.index);
+            publish(set.type, replacement);
         }
     }
 
-    public static HashMap<String, PerWorldSet> worlds = new HashMap<>();
+    public static volatile HashMap<String, PerWorldSet> worlds = new HashMap<>();
+
+    private static final Object writeLock = new Object();
 
     /**
      * Call to add an area into the tracker.
      */
     public static void add(AreaContainmentObject area) {
         String worldName = CoreUtilities.toLowerCase(area.getWorld().getName());
-        PerWorldSet set = worlds.get(worldName);
-        if (set == null) {
-            set = new PerWorldSet();
-            worlds.put(worldName, set);
+        synchronized (writeLock) {
+            PerWorldSet set = worlds.get(worldName);
+            if (set == null) {
+                set = new PerWorldSet();
+                HashMap<String, PerWorldSet> replacement = new HashMap<>(worlds);
+                replacement.put(worldName, set);
+                worlds = replacement;
+            }
+            TrackedArea tracker = new TrackedArea(area);
+            AreaSet areaSet = set.bestSetFor(tracker, true);
+            areaSet.addArea(tracker);
         }
-        TrackedArea tracker = new TrackedArea(area);
-        AreaSet areaSet = set.bestSetFor(tracker, true);
-        areaSet.list.add(tracker);
     }
 
     /**
@@ -171,20 +212,24 @@ public class NotedAreaTracker {
      */
     public static void remove(AreaContainmentObject area) {
         String worldName = CoreUtilities.toLowerCase(area.getWorld().getName());
-        PerWorldSet set = worlds.get(worldName);
-        if (set == null) {
-            return;
-        }
-        TrackedArea tracker = new TrackedArea(area);
-        AreaSet areaSet = set.bestSetFor(tracker, false);
-        if (areaSet == null) {
-            return;
-        }
-        areaSet.list.remove(tracker);
-        if (areaSet.isEmpty()) {
-            set.remove(areaSet);
-            if (set.isEmpty()) {
-                worlds.remove(worldName);
+        synchronized (writeLock) {
+            PerWorldSet set = worlds.get(worldName);
+            if (set == null) {
+                return;
+            }
+            TrackedArea tracker = new TrackedArea(area);
+            AreaSet areaSet = set.bestSetFor(tracker, false);
+            if (areaSet == null) {
+                return;
+            }
+            areaSet.removeArea(tracker);
+            if (areaSet.isEmpty()) {
+                set.remove(areaSet);
+                if (set.isEmpty()) {
+                    HashMap<String, PerWorldSet> replacement = new HashMap<>(worlds);
+                    replacement.remove(worldName);
+                    worlds = replacement;
+                }
             }
         }
     }
@@ -205,7 +250,8 @@ public class NotedAreaTracker {
      */
     public static void forEachAreaThatContains(LocationTag location, Consumer<AreaContainmentObject> action) {
         int x = location.getBlockX(), y = location.getBlockY(), z = location.getBlockZ();
-        PerWorldSet set = worlds.get(CoreUtilities.toLowerCase(location.getWorldName()));
+        String worldName = location.getWorldName();
+        PerWorldSet set = worldName == null ? null : worlds.get(CoreUtilities.toLowerCase(worldName));
         if (set == null) {
             return;
         }
@@ -232,41 +278,43 @@ public class NotedAreaTracker {
         min = pair.low;
         max = pair.high;
         TrackedArea area2 = new TrackedArea(null, min, max);
-        PerWorldSet set = worlds.get(CoreUtilities.toLowerCase(min.getWorldName()));
+        String worldName = min.getWorldName();
+        PerWorldSet set = worldName == null ? null : worlds.get(CoreUtilities.toLowerCase(worldName));
         if (set == null) {
             return;
         }
         forEachAreaInSetThatIntersects(area2, set.globalSet, action);
+        Int2ObjectOpenHashMap<AreaSet> sets50 = set.sets50, sets50_offset = set.sets50_offset, sets200 = set.sets200, sets200_offset = set.sets200_offset;
         // Loose heuristic for when a regional-indexed loop is probably counterproductive - total looped regions exceeds 10x actual total areas available
-        if (pair.xDistance() * pair.zDistance() / (50 * 50) > (set.sets50.size() + set.sets50_offset.size()) * 10) {
-            for (AreaSet areaSet : set.sets50.values()) {
+        if (pair.xDistance() * pair.zDistance() / (50 * 50) > (sets50.size() + sets50_offset.size()) * 10) {
+            for (AreaSet areaSet : sets50.values()) {
                 forEachAreaInSetThatIntersects(area2, areaSet, action);
             }
-            for (AreaSet areaSet : set.sets50_offset.values()) {
+            for (AreaSet areaSet : sets50_offset.values()) {
                 forEachAreaInSetThatIntersects(area2, areaSet, action);
             }
         }
         else {
             for (int x = area2.lowX - 50; x <= area2.highX + 50; x += 50) {
                 for (int z = area2.lowZ - 50; z <= area2.highZ + 50; z += 50) {
-                    forEachAreaInSetThatIntersects(area2, set.sets50.get(PerWorldSet.getIndex(x, z, 50, 0)), action);
-                    forEachAreaInSetThatIntersects(area2, set.sets50_offset.get(PerWorldSet.getIndex(x, z, 50, 25)), action);
+                    forEachAreaInSetThatIntersects(area2, sets50.get(PerWorldSet.getIndex(x, z, 50, 0)), action);
+                    forEachAreaInSetThatIntersects(area2, sets50_offset.get(PerWorldSet.getIndex(x, z, 50, 25)), action);
                 }
             }
         }
-        if (pair.xDistance() * pair.zDistance() / (288 * 200) > (set.sets200.size() + set.sets200_offset.size()) * 10) {
-            for (AreaSet areaSet : set.sets200.values()) {
+        if (pair.xDistance() * pair.zDistance() / (288 * 200) > (sets200.size() + sets200_offset.size()) * 10) {
+            for (AreaSet areaSet : sets200.values()) {
                 forEachAreaInSetThatIntersects(area2, areaSet, action);
             }
-            for (AreaSet areaSet : set.sets200_offset.values()) {
+            for (AreaSet areaSet : sets200_offset.values()) {
                 forEachAreaInSetThatIntersects(area2, areaSet, action);
             }
         }
         else {
             for (int x = area2.lowX - 200; x <= area2.highX + 200; x += 200) {
                 for (int z = area2.lowZ - 200; z <= area2.highZ + 200; z += 200) {
-                    forEachAreaInSetThatIntersects(area2, set.sets200.get(PerWorldSet.getIndex(x, z, 200, 0)), action);
-                    forEachAreaInSetThatIntersects(area2, set.sets200_offset.get(PerWorldSet.getIndex(x, z, 200, 100)), action);
+                    forEachAreaInSetThatIntersects(area2, sets200.get(PerWorldSet.getIndex(x, z, 200, 0)), action);
+                    forEachAreaInSetThatIntersects(area2, sets200_offset.get(PerWorldSet.getIndex(x, z, 200, 100)), action);
                 }
             }
         }

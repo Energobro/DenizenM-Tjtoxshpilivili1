@@ -306,6 +306,9 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
     }
 
     public ImprovedOfflinePlayer getNBTEditor() {
+        if (!DenizenCore.isMainThread()) {
+            return NMSHandler.playerHelper.getOfflineData(uuid);
+        }
         ImprovedOfflinePlayer result = ImprovedOfflinePlayer.offlinePlayers.get(uuid);
         if (result == null || (!result.modified && result.timeLastLoaded + Settings.worldPlayerDataMaxCacheTicks < DenizenCore.currentTimeMonotonicMillis)) {
             result = NMSHandler.playerHelper.getOfflineData(uuid);
