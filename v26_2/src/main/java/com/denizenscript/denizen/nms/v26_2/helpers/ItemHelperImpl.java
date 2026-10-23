@@ -105,6 +105,28 @@ public class ItemHelperImpl extends ItemHelper {
 
     public static final MethodHandle CRAFT_ITEM_STACK_AS_TEMPLATE = Handler.reflectPaperRenamed(CraftItemStack.class, "asNMSTemplate", "asTemplate", ItemStack.class);
 
+    public static final MethodHandle CRAFT_RECIPE_TO_CHOICE = Handler.reflectPaperRenamed(CraftRecipe.class, "toBukkit", "toChoice", Ingredient.class);
+
+    public static RecipeChoice toRecipeChoice(Ingredient ingredient) {
+        try {
+            return (RecipeChoice) CRAFT_RECIPE_TO_CHOICE.invoke(ingredient);
+        }
+        catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static final MethodHandle CRAFT_BLOCK_DATA_CREATE = Handler.reflectPaperRenamed(CraftBlockData.class, "fromData", "createData", BlockState.class);
+
+    public static CraftBlockData createBlockData(BlockState state) {
+        try {
+            return (CraftBlockData) CRAFT_BLOCK_DATA_CREATE.invoke(state);
+        }
+        catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static ItemStackTemplate asNMSTemplate(ItemStack item) {
         try {
             return (ItemStackTemplate) CRAFT_ITEM_STACK_AS_TEMPLATE.invokeExact(item);
@@ -746,7 +768,7 @@ public class ItemHelperImpl extends ItemHelper {
         Item nmsItem = BuiltInRegistries.ITEM.getOptional(CraftNamespacedKey.toMinecraft(material.getKey())).orElse(null);
         if (nmsItem instanceof BlockItem) {
             Block block = ((BlockItem) nmsItem).getBlock();
-            return CraftBlockData.fromData(block.defaultBlockState());
+            return createBlockData(block.defaultBlockState());
         }
         return null;
     }
@@ -780,7 +802,7 @@ public class ItemHelperImpl extends ItemHelper {
     private RecipeChoice convertChoice(Predicate<net.minecraft.world.item.ItemStack> nmsPredicate) {
         // Not an instance of net.minecraft.world.item.crafting.Ingredient = a predicate recipe choice
         if (nmsPredicate instanceof Ingredient ingredient) {
-            return CraftRecipe.toBukkit(ingredient);
+            return toRecipeChoice(ingredient);
         }
         return PaperAPITools.instance.createPredicateRecipeChoice(item -> nmsPredicate.test(CraftItemStack.asNMSCopy(item)));
     }

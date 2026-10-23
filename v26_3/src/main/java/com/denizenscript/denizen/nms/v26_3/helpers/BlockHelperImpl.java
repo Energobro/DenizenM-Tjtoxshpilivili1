@@ -46,7 +46,6 @@ import org.bukkit.craftbukkit.block.CraftBlock;
 import org.bukkit.craftbukkit.block.CraftBlockEntityState;
 import org.bukkit.craftbukkit.block.CraftCreatureSpawner;
 import org.bukkit.craftbukkit.block.CraftSkull;
-import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.craftbukkit.entity.CraftEntity;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.util.CraftMagicNumbers;
@@ -89,9 +88,9 @@ public class BlockHelperImpl implements BlockHelper {
         }
         BlockPos pos = new BlockPos(x, y, z);
         if (!level.isInValidBounds(pos)) {
-            return CraftBlockData.fromData(Blocks.VOID_AIR.defaultBlockState());
+            return ItemHelperImpl.createBlockData(Blocks.VOID_AIR.defaultBlockState());
         }
-        return CraftBlockData.fromData(chunk.getBlockState(pos));
+        return ItemHelperImpl.createBlockData(chunk.getBlockState(pos));
     }
 
     @Override

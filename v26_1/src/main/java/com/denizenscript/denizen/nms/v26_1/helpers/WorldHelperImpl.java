@@ -16,7 +16,6 @@ import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.craftbukkit.CraftWorld;
-import org.bukkit.event.world.TimeSkipEvent;
 
 public class WorldHelperImpl implements WorldHelper {
 
@@ -79,7 +78,7 @@ public class WorldHelperImpl implements WorldHelper {
     @Override
     public void setDayTime(World world, long time) {
         ServerLevel nmsWorld = ((CraftWorld) world).getHandle();
-        nmsWorld.dimensionType().defaultClock().ifPresent((clock) -> nmsWorld.clockManager().setTotalTicks(clock, time, TimeSkipEvent.SkipReason.CUSTOM));
+        nmsWorld.dimensionType().defaultClock().ifPresent((clock) -> nmsWorld.clockManager().setTotalTicks(clock, time));
     }
 
     @Override

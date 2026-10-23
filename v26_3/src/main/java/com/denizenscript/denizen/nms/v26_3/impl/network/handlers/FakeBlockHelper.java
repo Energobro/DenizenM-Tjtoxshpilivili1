@@ -1,6 +1,7 @@
 package com.denizenscript.denizen.nms.v26_3.impl.network.handlers;
 
 import com.denizenscript.denizen.Denizen;
+import com.denizenscript.denizen.nms.v26_3.Handler;
 import com.denizenscript.denizen.objects.LocationTag;
 import com.denizenscript.denizen.utilities.blocks.FakeBlock;
 import com.denizenscript.denizencore.utilities.ReflectionHelper;
@@ -20,6 +21,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.chunk.Strategy;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.craftbukkit.CraftRegistry;
 import org.bukkit.craftbukkit.CraftWorld;
@@ -33,6 +35,17 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 public class FakeBlockHelper {
+
+    public static final MethodHandle CRAFT_BLOCK_STATES_CREATE_BLOCK_ENTITY = Handler.reflectPaperRenamed(CraftBlockStates.class, "createNewTileEntity", "createNewBlockEntity", Material.class);
+
+    public static BlockEntity createNewBlockEntity(Material material) {
+        try {
+            return (BlockEntity) CRAFT_BLOCK_STATES_CREATE_BLOCK_ENTITY.invoke(material);
+        }
+        catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public static Field CHUNKDATA_BLOCK_ENTITIES = ReflectionHelper.getFields(ClientboundLevelChunkPacketData.class).getFirstOfType(List.class);
     public static MethodHandle CHUNKDATA_CONSTRUCTOR = ReflectionHelper.getConstructor(ClientboundLevelChunkPacketData.class, Map.class, byte[].class, List.class);
@@ -98,7 +111,7 @@ public class FakeBlockHelper {
                 for (FakeBlock block : blocks) {
                     LocationTag loc = block.location;
                     if (loc.getBlockX() == x && loc.getBlockY() == y && loc.getBlockZ() == z && block.material != null) {
-                        BlockEntity newBlockEnt = CraftBlockStates.createNewTileEntity(block.material.getMaterial());
+                        BlockEntity newBlockEnt = createNewBlockEntity(block.material.getMaterial());
                         Object newData = CHUNKDATA_BLOCK_ENTITY_CONSTRUCTOR.invoke(xz, y, newBlockEnt.getType(), Optional.ofNullable(newBlockEnt).map(blockEntity -> blockEntity.getUpdateTag(CraftRegistry.getMinecraftRegistry())));
                         blockEntities.set(i, newData);
                         break;

@@ -1,6 +1,7 @@
 package com.denizenscript.denizen.nms.v26_1.impl.network.handlers.packet;
 
 import com.denizenscript.denizen.nms.NMSHandler;
+import com.denizenscript.denizen.nms.v26_1.Handler;
 import com.denizenscript.denizen.nms.v26_1.impl.network.handlers.DenizenNetworkManagerImpl;
 import com.denizenscript.denizen.utilities.entity.EntityAttachmentHelper;
 import com.denizenscript.denizencore.utilities.CoreConfiguration;
@@ -16,6 +17,7 @@ import org.bukkit.craftbukkit.entity.CraftEntity;
 import org.bukkit.craftbukkit.util.CraftVector;
 import org.bukkit.util.Vector;
 
+import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
 import java.util.Set;
 
@@ -36,6 +38,17 @@ public class AttachPacketHandlers {
     public static Field PITCH_PACKENT = ReflectionHelper.getFields(ClientboundMoveEntityPacket.class).get("xRot", byte.class);
 
     public static Vector VECTOR_ZERO = new Vector(0, 0, 0);
+
+    public static final MethodHandle CRAFT_VECTOR_TO_VEC3 = Handler.reflectPaperRenamed(CraftVector.class, "toNMS", "toVec3", Vector.class);
+
+    public static Vec3 toVec3(Vector vector) {
+        try {
+            return (Vec3) CRAFT_VECTOR_TO_VEC3.invoke(vector);
+        }
+        catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public static void tryProcessMovePacketForAttach(DenizenNetworkManagerImpl networkManager, ClientboundMoveEntityPacket packet, Entity e) throws IllegalAccessException {
         EntityAttachmentHelper.EntityAttachedToMap attList = EntityAttachmentHelper.toEntityToData.get(e.getUUID());
@@ -101,7 +114,7 @@ public class AttachPacketHandlers {
                                 || offZ < Short.MIN_VALUE || offZ > Short.MAX_VALUE) {
                             ClientboundTeleportEntityPacket newTeleportPacket = new ClientboundTeleportEntityPacket(
                                     att.attached.getBukkitEntity().getEntityId(),
-                                    new PositionMoveRotation(CraftVector.toNMS(goalPosition), Vec3.ZERO, newYaw, pitch),
+                                    new PositionMoveRotation(toVec3(goalPosition), Vec3.ZERO, newYaw, pitch),
                                     Set.of(),
                                     e.onGround()
                             );
@@ -217,7 +230,7 @@ public class AttachPacketHandlers {
                         pitch = EntityAttachmentHelper.normalizeAngle(pitch + att.positionalOffset.getPitch());
                         pNew = new ClientboundTeleportEntityPacket(
                                 att.attached.getBukkitEntity().getEntityId(),
-                                new PositionMoveRotation(CraftVector.toNMS(resultPos), packet.change().deltaMovement(), newYaw, pitch),
+                                new PositionMoveRotation(toVec3(resultPos), packet.change().deltaMovement(), newYaw, pitch),
                                 packet.relatives(),
                                 packet.onGround()
                         );

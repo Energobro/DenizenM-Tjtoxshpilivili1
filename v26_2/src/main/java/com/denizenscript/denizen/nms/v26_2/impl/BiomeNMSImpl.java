@@ -45,6 +45,7 @@ import net.minecraft.world.level.MoonPhase;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSpecialEffects;
 import net.minecraft.world.level.biome.MobSpawnSettings;
+import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -67,6 +68,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class BiomeNMSImpl extends BiomeNMS {
 
+    public static final MethodHandle CHUNK_SET_NOISE_BIOME = Handler.reflectPaperRenamed(ChunkAccess.class, "setBiome", "setNoiseBiome", int.class, int.class, int.class, Holder.class);
     public static final MethodHandle BIOME_CLIMATESETTINGS_CONSTRUCTOR = ReflectionHelper.getConstructor(Biome.ClimateSettings.class, boolean.class, float.class, Biome.TemperatureModifier.class, float.class);
     public static final MethodHandle MAPPED_REGISTRY_REGISTRATION_INFOS = ReflectionHelper.getFields(MappedRegistry.class).getGetter("registrationInfos");
     public static final MethodHandle BIOME_ATTRIBUTES_SETTER = ReflectionHelper.getFields(Biome.class).getSetter("attributes");
@@ -651,6 +653,15 @@ public class BiomeNMSImpl extends BiomeNMS {
         return entityTypes;
     }
 
+    public static void setNoiseBiome(ChunkAccess chunk, int x, int y, int z, Holder<Biome> biome) {
+        try {
+            CHUNK_SET_NOISE_BIOME.invoke(chunk, x, y, z, biome);
+        }
+        catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Override
     public void setTo(Block block) {
         if (((CraftWorld) block.getWorld()).getHandle() != this.world) {
@@ -662,7 +673,7 @@ public class BiomeNMSImpl extends BiomeNMS {
         if (world.hasChunkAt(pos)) {
             LevelChunk chunk = world.getChunkAt(pos);
             if (chunk != null) {
-                chunk.setBiome(block.getX() >> 2, block.getY() >> 2, block.getZ() >> 2, biomeHolder);
+                setNoiseBiome(chunk, block.getX() >> 2, block.getY() >> 2, block.getZ() >> 2, biomeHolder);
                 chunk.markUnsaved();
             }
         }
