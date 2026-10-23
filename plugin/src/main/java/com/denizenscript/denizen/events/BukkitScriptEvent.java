@@ -597,20 +597,102 @@ public abstract class BukkitScriptEvent extends ScriptEvent {
     // The default priority is "normal".
     // -->
 
+    // <--[language]
+    // @name Network Thread Events
+    // @group Script Events
+    // @description
+    // Packet events fire on the server's network thread, and normally their script paths are handed over to the main thread to run on the next tick.
+    // A path with the switch "thread:network" runs right away on the network thread instead, so it costs the main thread nothing,
+    // and 'determine cancelled' really stops the packet.
+    // Only the packet events support this switch. A path without it keeps running on the main thread, as before.
+    // 'player receives packet' fires on whichever thread is sending the packet. That is usually the main thread already, and there the path runs as usual;
+    // the switch only changes packets sent from other threads, which would otherwise wait for the next tick.
+    //
+    // A network-thread path must stay short and use only tags and commands that are safe off the main thread (see <@link language ~waitable>).
+    // Anything that is not safe waits for the main thread to process it, and that wait holds up every player on the same network thread.
+    // -->
+
+    public static final int THREAD_PASS_ALL = 0, THREAD_PASS_NETWORK = 1, THREAD_PASS_MAIN = 2;
+
+    public int threadPass = THREAD_PASS_ALL;
+
+    public record ThreadSplit(ScriptPath[] networkPaths, boolean hasMainPaths) {
+    }
+
+    public volatile ThreadSplit threadSplit = null;
+
+    public static boolean isNetworkPath(ScriptPath path) {
+        String thread = path.switches.get("thread");
+        return thread != null && CoreUtilities.equalsIgnoreCase(thread, "network");
+    }
+
+    public boolean threadMatches(ScriptPath path) {
+        return threadPass == THREAD_PASS_ALL || (threadPass == THREAD_PASS_NETWORK) == isNetworkPath(path);
+    }
+
+    public void buildThreadSplit() {
+        ArrayList<ScriptPath> network = new ArrayList<>();
+        boolean hasMain = false;
+        for (ScriptPath path : eventPaths) {
+            if (isNetworkPath(path)) {
+                network.add(path);
+            }
+            else {
+                hasMain = true;
+            }
+        }
+        threadSplit = network.isEmpty() ? null : new ThreadSplit(network.toArray(new ScriptPath[0]), hasMain);
+    }
+
+    public BukkitScriptEvent fireNetworkPaths(ThreadSplit split) {
+        BukkitScriptEvent copy = (BukkitScriptEvent) clone();
+        copy.threadPass = THREAD_PASS_NETWORK;
+        if (!split.hasMainPaths()) {
+            eventData.stats_fires++;
+        }
+        for (ScriptPath path : split.networkPaths()) {
+            try {
+                if (matchesScript(copy, path)) {
+                    if (path.fireAfter) {
+                        Bukkit.getScheduler().runTask(Denizen.getInstance(), () -> copy.run(path));
+                    }
+                    else {
+                        copy.run(path);
+                    }
+                }
+            }
+            catch (Exception ex) {
+                Debug.echoError("Matching script " + path.container.getName() + " event path:" + path.event + ":::");
+                Debug.echoError(ex);
+            }
+        }
+        copy.perFireContext = null;
+        return copy;
+    }
+
     @Override
     public ScriptEvent fire() {
         if (!Bukkit.isPrimaryThread()) {
             if (CoreConfiguration.debugVerbose) {
                 Debug.log("Event is firing async: " + getName());
             }
+            ThreadSplit split = threadSplit;
+            BukkitScriptEvent networkEvent = null;
+            if (split != null) {
+                networkEvent = fireNetworkPaths(split);
+                if (!split.hasMainPaths()) {
+                    return networkEvent;
+                }
+            }
             BukkitScriptEvent altEvent = (BukkitScriptEvent) clone();
+            altEvent.threadPass = split == null ? THREAD_PASS_ALL : THREAD_PASS_MAIN;
             new BukkitRunnable() {
                 @Override
                 public void run() {
                     altEvent.fire();
                 }
             }.runTask(Denizen.getInstance());
-            return altEvent;
+            return networkEvent != null ? networkEvent : altEvent;
         }
         return super.fire();
     }
@@ -646,6 +728,7 @@ public abstract class BukkitScriptEvent extends ScriptEvent {
 
     @Override
     public void destroy() {
+        threadSplit = null;
         if (priorityHandlers != null) {
             for (BukkitScriptEvent event : priorityHandlers.values()) {
                 event.destroy();

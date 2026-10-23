@@ -9,19 +9,19 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class ProfileEditor {
 
     public static final String EMPTY_NAME = "";
     public static final UUID NIL_UUID = new UUID(0L, 0L);
 
-    public final static Map<UUID, PlayerProfile> fakeProfiles = new HashMap<>();
+    public final static Map<UUID, PlayerProfile> fakeProfiles = new ConcurrentHashMap<>();
 
-    public final static HashSet<UUID> mirrorUUIDs = new HashSet<>();
+    public final static Set<UUID> mirrorUUIDs = ConcurrentHashMap.newKeySet();
 
     public ProfileEditor() {
         Bukkit.getServer().getPluginManager().registerEvents(new PlayerProfileEditorListener(), NMSHandler.getJavaPlugin());
@@ -105,16 +105,15 @@ public abstract class ProfileEditor {
 
     private PlayerProfile getFakeProfile(Player player, boolean createCache) {
         UUID uuid = player.getUniqueId();
-        if (fakeProfiles.containsKey(uuid)) {
-            return fakeProfiles.get(uuid);
+        PlayerProfile cached = fakeProfiles.get(uuid);
+        if (cached != null) {
+            return cached;
         }
-        else {
-            PlayerProfile fakeProfile = NMSHandler.instance.getPlayerProfile(player);
-            if (createCache) {
-                fakeProfiles.put(uuid, fakeProfile);
-            }
-            return fakeProfile;
+        PlayerProfile fakeProfile = NMSHandler.instance.getPlayerProfile(player);
+        if (createCache && fakeProfile != null) {
+            fakeProfiles.put(uuid, fakeProfile);
         }
+        return fakeProfile;
     }
 
     private static class PlayerProfileEditorListener implements Listener {

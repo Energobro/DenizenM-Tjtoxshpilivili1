@@ -70,9 +70,17 @@ public abstract class PlayerHelper {
             this.flag = 1 << offset;
         }
     }
-    public abstract byte getSkinLayers(Player player);
+    public abstract byte getSkinLayers(Entity entity);
 
-    public abstract void setSkinLayers(Player player, byte flags);
+    public abstract void setSkinLayers(Entity entity, byte flags);
+
+    public byte getSkinLayers(Player player) {
+        return getSkinLayers((Entity) player);
+    }
+
+    public void setSkinLayers(Player player, byte flags) {
+        setSkinLayers((Entity) player, flags);
+    }
 
     public abstract void setBossBarTitle(BossBar bar, String title);
 

@@ -107,6 +107,7 @@ public class Handler extends NMSHandler {
         playerHelper = new PlayerHelperImpl();
         worldHelper = new WorldHelperImpl();
         enchantmentHelper = new EnchantmentHelperImpl();
+        CoreUtilities.objectConversions.add(obj -> obj instanceof Component component ? new ElementTag(stringifyNMSComponent(component), true) : null);
 
         registerConversion(ItemTag.class, ItemStack.class, item -> CraftItemStack.asNMSCopy(item.getItemStack()));
         registerConversion(ElementTag.class, Component.class, element -> parseNMSComponent(element.asString(), PaperAPITools.BaseColor.WHITE));

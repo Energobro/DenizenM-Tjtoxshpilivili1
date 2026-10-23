@@ -1,6 +1,5 @@
 package com.denizenscript.denizen.nms.v26_1.helpers;
 
-
 import com.denizenscript.denizencore.objects.ArgumentHelper;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import net.minecraft.world.entity.*;

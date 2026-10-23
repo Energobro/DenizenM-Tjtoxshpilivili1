@@ -89,6 +89,8 @@ public interface BlockHelper {
         spawner.setSpawnedType(entity.getBukkitEntityType());
     }
 
+    public abstract BlockData getBlockDataIfLoaded(World world, int x, int y, int z);
+
     default Color getMapColor(Block block) { // TODO: once 1.20 is the minimum supported version, remove from NMS
         return block.getBlockData().getMapColor();
     }

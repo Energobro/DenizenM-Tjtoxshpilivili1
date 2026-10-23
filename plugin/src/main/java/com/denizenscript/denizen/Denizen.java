@@ -422,6 +422,7 @@ public class Denizen extends JavaPlugin {
             }
         }.runTaskTimer(this, 100, 20 * 60);
         Bukkit.getPluginManager().registerEvents(new WorldListChangeTracker(), this);
+        WorldListChangeTracker.rebuildNames(null);
     }
 
     public boolean hasDisabled = false;

@@ -15,8 +15,22 @@ import java.util.UUID;
 
 public class EntityAttachmentHelper {
 
-    public static HashMap<UUID, PlayerAttachMap> attachedEntityToData = new HashMap<>();
-    public static HashMap<UUID, EntityAttachedToMap> toEntityToData = new HashMap<>();
+    public static volatile HashMap<UUID, PlayerAttachMap> attachedEntityToData = new HashMap<>();
+    public static volatile HashMap<UUID, EntityAttachedToMap> toEntityToData = new HashMap<>();
+
+    private static final Object writeLock = new Object();
+
+    static <V> HashMap<UUID, V> mapWith(HashMap<UUID, V> source, UUID key, V value) {
+        HashMap<UUID, V> replacement = new HashMap<>(source);
+        replacement.put(key, value);
+        return replacement;
+    }
+
+    static <V> HashMap<UUID, V> mapWithout(HashMap<UUID, V> source, UUID key) {
+        HashMap<UUID, V> replacement = new HashMap<>(source);
+        replacement.remove(key);
+        return replacement;
+    }
 
     public static class AttachmentData {
 
@@ -102,7 +116,7 @@ public class EntityAttachmentHelper {
                 }
                 else {
                     if (map.playerToAttachment != null) {
-                        map.playerToAttachment.remove(forPlayer);
+                        map.playerToAttachment = mapWithout(map.playerToAttachment, forPlayer);
                     }
                     map.autoNull();
                 }
@@ -114,24 +128,26 @@ public class EntityAttachmentHelper {
                 checkTask.cancel();
             }
             checkTask = null;
-            EntityAttachedToMap map = toEntityToData.get(to.getUUID());
-            if (map != null) {
-                PlayerAttachMap subMap = map.attachedToMap.get(attached.getUUID());
-                if (subMap != null) {
-                    removeFrom(subMap);
-                    if (subMap.everyoneAttachment == null && subMap.playerToAttachment == null) {
-                        map.attachedToMap.remove(attached.getUUID());
-                        if (map.attachedToMap.isEmpty()) {
-                            toEntityToData.remove(to.getUUID());
+            synchronized (writeLock) {
+                EntityAttachedToMap map = toEntityToData.get(to.getUUID());
+                if (map != null) {
+                    PlayerAttachMap subMap = map.attachedToMap.get(attached.getUUID());
+                    if (subMap != null) {
+                        removeFrom(subMap);
+                        if (subMap.everyoneAttachment == null && subMap.playerToAttachment == null) {
+                            map.attachedToMap = mapWithout(map.attachedToMap, attached.getUUID());
+                            if (map.attachedToMap.isEmpty()) {
+                                toEntityToData = mapWithout(toEntityToData, to.getUUID());
+                            }
                         }
                     }
                 }
-            }
-            PlayerAttachMap attachMap = attachedEntityToData.get(attached.getUUID());
-            if (attachMap != null) {
-                removeFrom(attachMap);
-                if (attachMap.everyoneAttachment == null && attachMap.playerToAttachment == null) {
-                    attachedEntityToData.remove(attached.getUUID());
+                PlayerAttachMap attachMap = attachedEntityToData.get(attached.getUUID());
+                if (attachMap != null) {
+                    removeFrom(attachMap);
+                    if (attachMap.everyoneAttachment == null && attachMap.playerToAttachment == null) {
+                        attachedEntityToData = mapWithout(attachedEntityToData, attached.getUUID());
+                    }
                 }
             }
         }
@@ -141,9 +157,9 @@ public class EntityAttachmentHelper {
 
         public EntityTag attached;
 
-        public AttachmentData everyoneAttachment;
+        public volatile AttachmentData everyoneAttachment;
 
-        public HashMap<UUID, AttachmentData> playerToAttachment;
+        public volatile HashMap<UUID, AttachmentData> playerToAttachment;
 
         public AttachmentData getAttachment(UUID player) {
             if (playerToAttachment == null) {
@@ -176,7 +192,7 @@ public class EntityAttachmentHelper {
 
     public static class EntityAttachedToMap {
 
-        public HashMap<UUID, PlayerAttachMap> attachedToMap = new HashMap<>();
+        public volatile HashMap<UUID, PlayerAttachMap> attachedToMap = new HashMap<>();
     }
 
     public static byte adaptedCompressedAngle(byte angle, float offset) {
@@ -221,53 +237,61 @@ public class EntityAttachmentHelper {
     }
 
     public static void removeAttachment(UUID attachedId, UUID forPlayer) {
-        PlayerAttachMap map = attachedEntityToData.get(attachedId);
-        if (map == null) {
-            return;
-        }
-        if (forPlayer == null) {
-            attachedEntityToData.remove(attachedId);
-            map.cancelAll();
-        }
-        else {
-            if (map.playerToAttachment != null) {
-                AttachmentData data = map.playerToAttachment.get(forPlayer);
-                if (data != null) {
-                    data.cancelAndRemove();
+        synchronized (writeLock) {
+            PlayerAttachMap map = attachedEntityToData.get(attachedId);
+            if (map == null) {
+                return;
+            }
+            if (forPlayer == null) {
+                attachedEntityToData = mapWithout(attachedEntityToData, attachedId);
+                map.cancelAll();
+            }
+            else {
+                if (map.playerToAttachment != null) {
+                    AttachmentData data = map.playerToAttachment.get(forPlayer);
+                    if (data != null) {
+                        data.cancelAndRemove();
+                    }
                 }
             }
         }
     }
 
-    public static void addPlayerAttachMap(Map<UUID, PlayerAttachMap> target, AttachmentData attachment) {
+    public static HashMap<UUID, PlayerAttachMap> addPlayerAttachMap(HashMap<UUID, PlayerAttachMap> target, AttachmentData attachment) {
         PlayerAttachMap map = target.get(attachment.attached.getUUID());
-        if (map == null) {
+        boolean freshMap = map == null;
+        if (freshMap) {
             map = new PlayerAttachMap();
             map.attached = attachment.attached;
-            target.put(attachment.attached.getUUID(), map);
         }
         if (attachment.forPlayer == null) {
             map.everyoneAttachment = attachment;
         }
         else {
-            if (map.playerToAttachment == null) {
-                map.playerToAttachment = new HashMap<>();
-            }
-            map.playerToAttachment.put(attachment.forPlayer, attachment);
+            map.playerToAttachment = mapWith(map.playerToAttachment == null ? new HashMap<>() : map.playerToAttachment, attachment.forPlayer, attachment);
         }
+        if (freshMap) {
+            target = mapWith(target, attachment.attached.getUUID(), map);
+        }
+        return target;
     }
 
     public static void registerAttachment(AttachmentData attachment) {
         NetworkInterceptHelper.enable();
         removeAttachment(attachment.attached.getUUID(), attachment.forPlayer);
         attachment.startTask();
-        EntityAttachedToMap toMap = toEntityToData.get(attachment.to.getUUID());
-        if (toMap == null) {
-            toMap = new EntityAttachedToMap();
-            toEntityToData.put(attachment.to.getUUID(), toMap);
+        synchronized (writeLock) {
+            EntityAttachedToMap toMap = toEntityToData.get(attachment.to.getUUID());
+            boolean freshToMap = toMap == null;
+            if (freshToMap) {
+                toMap = new EntityAttachedToMap();
+            }
+            attachedEntityToData = addPlayerAttachMap(attachedEntityToData, attachment);
+            toMap.attachedToMap = addPlayerAttachMap(toMap.attachedToMap, attachment);
+            if (freshToMap) {
+                toEntityToData = mapWith(toEntityToData, attachment.to.getUUID(), toMap);
+            }
         }
-        addPlayerAttachMap(attachedEntityToData, attachment);
-        addPlayerAttachMap(toMap.attachedToMap, attachment);
         if (attachment.syncServer) {
             attachment.doServerSync();
         }

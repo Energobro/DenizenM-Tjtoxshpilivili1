@@ -354,7 +354,7 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
             return new LocationTag(getPlayerEntity().getLocation());
         }
         else {
-            return new LocationTag(getNBTEditor().getLocation());
+            return getNBTEditor().getLocationTag();
         }
     }
 
@@ -1518,6 +1518,18 @@ public class PlayerTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // -->
         registerOnlineOnlyTag(ElementTag.class, "client_brand", (attribute, object) -> {
             return new ElementTag(PaperAPITools.instance.getClientBrand(object.getPlayerEntity()), true);
+        });
+
+        // <--[tag]
+        // @attribute <PlayerTag.plugin_channels>
+        // @returns ListTag
+        // @description
+        // Returns the plugin messaging channels the client has registered via "minecraft:register", like "fabric:registry/sync" or "voicechat:state".
+        // Includes the channels registered during the configuration phase. A vanilla client registers none.
+        // Server plugins can add channels for a player too, so a channel on this list is not always one the client sent.
+        // -->
+        registerOnlineOnlyTag(ListTag.class, "plugin_channels", (attribute, object) -> {
+            return new ListTag(object.getPlayerEntity().getListeningPluginChannels(), true);
         });
 
         // <--[tag]

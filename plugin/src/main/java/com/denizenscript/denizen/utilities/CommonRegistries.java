@@ -3,15 +3,16 @@ package com.denizenscript.denizen.utilities;
 import com.denizenscript.denizen.objects.*;
 import com.denizenscript.denizen.objects.properties.bukkit.BukkitColorExtensions;
 import com.denizenscript.denizen.tags.core.*;
-import com.denizenscript.denizencore.objects.ObjectType;
-import com.denizenscript.denizencore.utilities.CoreConfiguration;
-import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.denizenscript.denizen.utilities.depends.Depends;
 import com.denizenscript.denizencore.objects.ObjectFetcher;
+import com.denizenscript.denizencore.objects.ObjectTag;
+import com.denizenscript.denizencore.objects.ObjectType;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.objects.notable.NoteManager;
 import com.denizenscript.denizencore.tags.TagManager;
+import com.denizenscript.denizencore.utilities.CoreConfiguration;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
+import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.denizenscript.denizencore.utilities.debugging.DebugInternals;
 import net.citizensnpcs.api.npc.NPC;
 import org.bukkit.*;
@@ -25,6 +26,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MerchantRecipe;
 import org.bukkit.plugin.Plugin;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class CommonRegistries {
@@ -92,6 +94,8 @@ public class CommonRegistries {
      * Names of the flag tags, which read plain saved data and so are safe to read off the main thread
      * (their storage is thread-safe) even when the object type they're on is not.
      */
+    public static final String[] NPC_ASYNC_SAFE_TAGS = new String[] { "is_npc", "id", "name", "is_spawned" };
+
     public static final String[] FLAG_TAGS = new String[] { "flag", "has_flag", "flag_expiration", "flag_map", "list_flags" };
 
     /** The given async-safe tag names plus {@link #FLAG_TAGS}, for a type or base whose flags are safe to read off-thread alongside them. */
@@ -99,6 +103,21 @@ public class CommonRegistries {
         String[] combined = Arrays.copyOf(FLAG_TAGS, FLAG_TAGS.length + tagNames.length);
         System.arraycopy(tagNames, 0, combined, FLAG_TAGS.length, tagNames.length);
         return combined;
+    }
+
+    public static String[] withInheritedTags(Class<? extends ObjectTag> type, String[] ownTags, String[] inheritedTags) {
+        ObjectType<? extends ObjectTag> objectType = ObjectFetcher.getType(type);
+        if (objectType == null || objectType.tagProcessor == null) {
+            Debug.echoError("Cannot inherit async-safe tags onto '" + DebugInternals.getClassNameOpti(type) + "': it isn't registered.");
+            return ownTags;
+        }
+        ArrayList<String> result = new ArrayList<>(Arrays.asList(ownTags));
+        for (String name : inheritedTags) {
+            if (!objectType.tagProcessor.registeredObjectTags.containsKey(name)) {
+                result.add(name);
+            }
+        }
+        return result.toArray(new String[0]);
     }
 
     /**
@@ -124,6 +143,20 @@ public class CommonRegistries {
      * through a definition run the very same tag code, so a name free one way and costly the other is nothing but a trap. What each of these
      * is doing instead of reading the live player is written out at the type marking further down.
      */
+    public static final String[] ENTITY_ASYNC_SAFE_TAGS = new String[] {
+            "type", "entity_type", "uuid", "script", "translated_name", "is_living", "is_mob", "is_monster", "is_enemy", "is_projectile",
+            "is_spawned", "vanilla_tags", "eid", "name", "time_lived", "fall_distance", "fire_time", "on_fire", "is_on_ground", "on_ground",
+            "visual_pose", "glowing", "force_no_persist", "is_persistent", "persistent", "remove_when_far", "can_pickup_items", "is_npc",
+            "absorption_health", "oxygen", "max_oxygen", "gliding", "swimming", "is_sleeping", "is_hand_raised", "eye_height", "is_empty", "empty",
+            "has_passenger", "passenger", "get_passenger", "passengers", "get_passengers", "vehicle", "get_vehicle", "is_inside_vehicle",
+            "inside_vehicle", "is_leashed", "leashed", "leash_holder", "get_leash_holder", "shooter", "get_shooter", "target", "killer",
+            "last_damage", "location", "eye_location", "bounding_box", "standing_on", "velocity", "world", "body_yaw", "fallingblock_material",
+            "experience", "fuse_ticks", "dragon_phase", "is_in_block", "pickup_delay", "pickupdelay", "breeding", "is_breeding", "can_breed", "tameable",
+            "is_tameable", "ageable", "is_ageable", "colorable", "is_colorable", "is_trading", "trading_with", "fish_hook_state",
+            "fish_hook_lure_time", "fish_hook_min_lure_time", "fish_hook_max_lure_time", "fish_hook_hooked_entity", "fish_hook_apply_lure",
+            "fish_hook_in_open_water", "attack_cooldown_duration", "attack_cooldown_max_duration", "attack_cooldown_percent", "skin_layers",
+            "is_disguised", "disguised_type", "disguise_to_others", "attached_to", "attached_offset", "attached_entities" };
+
     public static final String[] PLAYER_ASYNC_SAFE_TAGS = new String[] {
             "uuid", "is_online", "name", "is_player", "is_op", "whitelisted", "is_whitelisted", "chat_history", "chat_history_list", "is_banned",
             "ban_expiration_time", "ban_expiration", "ban_reason", "ban_created_time", "ban_created", "ban_source", "ban_info", "has_played_before",
@@ -133,8 +166,8 @@ public class CommonRegistries {
             "compass_target", "display_name", "list_name", "ip", "ip_address", "host_name", "spectator_target", "last_action_time", "fish_hook",
             "entity", "health", "health_max", "health_is_scaled", "health_scale", "health_percentage", "formatted_health", "oxygen", "max_oxygen",
             "xp", "xp_level", "xp_total", "xp_to_next_level", "calculate_xp", "gamemode", "can_fly", "allowed_flight", "fly_speed", "walk_speed",
-            "saturation", "exhaustion", "spawn_forced" };
-
+            "saturation", "exhaustion", "spawn_forced", "location", "world",
+            "nameplate", "skin_blob", "skull_skin" };
 
     /**
      * World tags that read a plain field off the level rather than going and gathering anything, so they are safe off the main thread.
@@ -186,17 +219,18 @@ public class CommonRegistries {
     //   note_name, outline, outline_2d, shell, shift, size, volume, walls, with_max, with_min
     // @asyncsave EllipsoidTag: add, approximate_overlap_areas, bounding_box, chunks, contains, contains_location, flag, flag_expiration, flag_map,
     //   has_flag, include, is_within, list_flags, location, notable_name, note_name, random, shell, size, with_location, with_size, world
-    // @asyncsave EntityTag: absorption_health, ageable, attack_cooldown_duration, attack_cooldown_max_duration, attack_cooldown_percent, body_yaw,
-    //   breeding, can_breed, can_pickup_items, colorable, disguise_to_others, disguised_type, dragon_phase, eid, empty, entity_type, experience,
-    //   eye_height, eye_location, fall_distance, fallingblock_material, fire_time, fish_hook_apply_lure, fish_hook_hooked_entity,
-    //   fish_hook_in_open_water, fish_hook_lure_time, fish_hook_max_lure_time, fish_hook_min_lure_time, fish_hook_state, force_no_persist,
-    //   fuse_ticks, get_leash_holder, get_passenger, get_passengers, get_shooter, get_vehicle, gliding, glowing, has_passenger, inside_vehicle,
-    //   is_ageable, is_breeding, is_colorable, is_disguised, is_empty, is_enemy, is_hand_raised, is_in_block, is_inside_vehicle, is_leashed,
-    //   is_living, is_mob, is_monster, is_npc, is_on_ground, is_persistent, is_projectile, is_sleeping, is_spawned, is_tameable, is_trading, killer,
-    //   last_damage, leash_holder, leashed, location, max_oxygen, name, on_fire, on_ground, oxygen, passenger, passengers, persistent, pickup_delay,
-    //   pickupdelay, remove_when_far, script, shooter, skin_layers, standing_on, swimming, tameable, target, time_lived, trading_with,
-    //   translated_name, type, uuid, vanilla_tags, vehicle, velocity, visual_pose, world
-    // @asyncsave InventoryTag: (none)
+    // @asyncsave EntityTag: absorption_health, ageable, attached_entities, attached_offset, attached_to, attack_cooldown_duration,
+    //   attack_cooldown_max_duration, attack_cooldown_percent, body_yaw, bounding_box, breeding, can_breed, can_pickup_items, colorable,
+    //   disguise_to_others, disguised_type, dragon_phase, eid, empty, entity_type, experience, eye_height, eye_location, fall_distance, fallingblock_material,
+    //   fire_time, fish_hook_apply_lure, fish_hook_hooked_entity, fish_hook_in_open_water, fish_hook_lure_time, fish_hook_max_lure_time,
+    //   fish_hook_min_lure_time, fish_hook_state, force_no_persist, fuse_ticks, get_leash_holder, get_passenger, get_passengers, get_shooter,
+    //   get_vehicle, gliding, glowing, has_passenger, inside_vehicle, is_ageable, is_breeding, is_colorable, is_disguised, is_empty, is_enemy,
+    //   is_hand_raised, is_in_block, is_inside_vehicle, is_leashed, is_living, is_mob, is_monster, is_npc, is_on_ground, is_persistent,
+    //   is_projectile, is_sleeping, is_spawned, is_tameable, is_trading, killer, last_damage, leash_holder, leashed, location, max_oxygen, name,
+    //   on_fire, on_ground, oxygen, passenger, passengers, persistent, pickup_delay, pickupdelay, remove_when_far, script, shooter, skin_layers,
+    //   standing_on, swimming, tameable, target, time_lived, trading_with, translated_name, type, uuid, vanilla_tags, vehicle, velocity,
+    //   visual_pose, world
+    // @asyncsave InventoryTag: id_type, inventory_type, note_name
     // @asyncsave ItemTag: all_raw_nbt, armor_pose, attribute_modifiers, base_color, block_material, book, book_author, book_generation, book_map,
     //   book_pages, book_title, bukkit_serial, can_destroy, can_place_on, charged_projectiles, color, components_patch, custom_data,
     //   default_attribute_modifiers, display, durability, effects_data, enchantment_map, enchantment_types, enchantments, firework, firework_data,
@@ -207,21 +241,40 @@ public class CommonRegistries {
     //   placed_material, potion_base, potion_base_type, potion_effect, potion_effects, qty, quantity, raw_nbt, repair_cost, repairable, script,
     //   sign_back_contents, sign_contents, simple, skin, skull_skin, spawner_count, spawner_max_nearby_entities, spawner_maximum_spawn_delay,
     //   spawner_minimum_spawn_delay, spawner_player_range, spawner_range, spawner_spawn_delay, spawner_type, trim, unbreakable, with_flag
-    // @asyncsave LocationTag: above, add, areas, backward, backward_flat, below, center, chunk, cuboids, distance, distance_squared, div, down,
-    //   ellipsoids, face, format, formatted, forward, forward_flat, get_chunk, left, mul, normalize, notable_name, note_name, pitch,
-    //   points_around_x, points_around_y, points_around_z, points_between, polygons, quaternion_between_vectors, random_offset, raw, relative,
-    //   right, rotate_around_x, rotate_around_y, rotate_around_z, rotate_pitch, rotate_yaw, round, round_down, round_to, round_to_precision,
-    //   round_up, simple, simplex_3d, sub, to_axis_angle_quaternion, to_cuboid, to_ellipsoid, up, vector_length, vector_length_squared,
-    //   vector_to_face, with_pitch, with_x, with_y, with_yaw, with_z, world, x, xyz, y, yaw, z
-    // @asyncsave NPCTag: (none)
-    // @asyncsave PlayerTag: allowed_flight, ban_created, ban_created_time, ban_expiration, ban_expiration_time, ban_info, ban_reason, ban_source,
-    //   calculate_xp, can_fly, chat_history, chat_history_list, client_brand, compass_target, disguise_to_self, display_name, entity, exhaustion,
-    //   fake_block, fake_block_locations, fake_entities, first_played, first_played_time, fish_hook, flag, flag_expiration, flag_map, fly_speed,
-    //   food_level, formatted_food_level, formatted_health, gamemode, has_flag, has_played_before, health, health_is_scaled, health_max,
-    //   health_percentage, health_scale, held_item_slot, host_name, ip, ip_address, is_banned, is_blocking, is_flying, is_online, is_op, is_player,
-    //   is_sprinting, is_whitelisted, last_action_time, last_played, last_played_time, list_flags, list_name, locale, main_hand, max_oxygen, name,
-    //   oxygen, ping, saturation, sidebar_lines, sidebar_scores, sidebar_title, spawn_forced, spectator_target, time, time_asleep, uuid, walk_speed,
-    //   weather, whitelisted, xp, xp_level, xp_to_next_level, xp_total
+    // @asyncsave LocationTag: above, add, areas, backward, backward_flat, below, block_facing, center, chunk, cuboids, distance, distance_squared,
+    //   div, down, ellipsoids, face, format, formatted, forward, forward_flat, get_chunk, left, material, mul, normalize, notable_name, note_name,
+    //   other_block, pitch, points_around_x, points_around_y, points_around_z, points_between, polygons, quaternion_between_vectors, random_offset,
+    //   raw, relative, right, rotate_around_x, rotate_around_y, rotate_around_z, rotate_pitch, rotate_yaw, round, round_down, round_to,
+    //   round_to_precision, round_up, simple, simplex_3d, sub, to_axis_angle_quaternion, to_cuboid, to_ellipsoid, tree_distance, up, vector_length,
+    //   vector_length_squared, vector_to_face, with_facing_direction, with_pitch, with_x, with_y, with_yaw, with_z, world, x, xyz, y, yaw, z
+    // @asyncsave NPCTag: absorption_health, ageable, attack_cooldown_duration, attack_cooldown_max_duration, attack_cooldown_percent, body_yaw,
+    //   bounding_box, breeding, can_breed, can_pickup_items, colorable, disguise_to_others, disguised_type, dragon_phase, eid, empty, entity_type, experience,
+    //   eye_height, fall_distance, fallingblock_material, fire_time, fish_hook_apply_lure, fish_hook_hooked_entity, fish_hook_in_open_water,
+    //   fish_hook_lure_time, fish_hook_max_lure_time, fish_hook_min_lure_time, fish_hook_state, force_no_persist, fuse_ticks, get_leash_holder,
+    //   get_passenger, get_passengers, get_shooter, get_vehicle, gliding, glowing, has_passenger, id, inside_vehicle, is_ageable, is_breeding,
+    //   is_colorable, is_disguised, is_empty, is_enemy, is_hand_raised, is_in_block, is_inside_vehicle, is_leashed, is_living, is_mob, is_monster,
+    //   is_npc, is_on_ground, is_persistent, is_projectile, is_spawned, is_tameable, is_trading, killer, last_damage, leash_holder, leashed,
+    //   max_oxygen, name, on_fire, on_ground, oxygen, passenger, passengers, persistent, pickup_delay, pickupdelay, remove_when_far, shooter,
+    //   skin_layers, standing_on, swimming, tameable, target, time_lived, trading_with, translated_name, type, uuid, vanilla_tags, vehicle,
+    //   velocity, visual_pose, world
+    // @asyncsave PlayerTag: absorption_health, ageable, allowed_flight, attached_entities, attached_offset, attached_to, attack_cooldown_duration,
+    //   attack_cooldown_max_duration, attack_cooldown_percent, ban_created, ban_created_time, ban_expiration, ban_expiration_time, ban_info,
+    //   ban_reason, ban_source, body_yaw, bounding_box, breeding, calculate_xp, can_breed, can_fly, can_pickup_items, chat_history, chat_history_list,
+    //   client_brand, colorable, compass_target, disguise_to_others, disguise_to_self, disguised_type, display_name, dragon_phase, eid, empty,
+    //   entity, entity_type, exhaustion, experience, eye_height, eye_location, fake_block, fake_block_locations, fake_entities, fall_distance,
+    //   fallingblock_material, fire_time, first_played, first_played_time, fish_hook, fish_hook_apply_lure, fish_hook_hooked_entity,
+    //   fish_hook_in_open_water, fish_hook_lure_time, fish_hook_max_lure_time, fish_hook_min_lure_time, fish_hook_state, flag, flag_expiration,
+    //   flag_map, fly_speed, food_level, force_no_persist, formatted_food_level, formatted_health, fuse_ticks, gamemode, get_leash_holder,
+    //   get_passenger, get_passengers, get_shooter, get_vehicle, gliding, glowing, has_flag, has_passenger, has_played_before, health,
+    //   health_is_scaled, health_max, health_percentage, health_scale, held_item_slot, host_name, inside_vehicle, ip, ip_address, is_ageable,
+    //   is_banned, is_blocking, is_breeding, is_colorable, is_disguised, is_empty, is_enemy, is_flying, is_hand_raised, is_in_block,
+    //   is_inside_vehicle, is_leashed, is_living, is_mob, is_monster, is_npc, is_on_ground, is_online, is_op, is_persistent, is_player,
+    //   is_projectile, is_sleeping, is_spawned, is_sprinting, is_tameable, is_trading, is_whitelisted, killer, last_action_time, last_damage,
+    //   last_played, last_played_time, leash_holder, leashed, list_flags, list_name, locale, location, main_hand, max_oxygen, name, nameplate,
+    //   on_fire, on_ground, oxygen, passenger, passengers, persistent, pickup_delay, pickupdelay, ping, remove_when_far, saturation, script,
+    //   shooter, sidebar_lines, sidebar_scores, sidebar_title, skin_blob, skin_layers, skull_skin, spawn_forced, spectator_target, standing_on,
+    //   swimming, tameable, target, time, time_asleep, time_lived, trading_with, translated_name, type, uuid, vanilla_tags, vehicle, velocity,
+    //   visual_pose, walk_speed, weather, whitelisted, world, xp, xp_level, xp_to_next_level, xp_total
     // @asyncsave PolygonTag: approximate_overlap_areas, bounding_box, contains, contains_inclusive, contains_location, corners, flag,
     //   flag_expiration, flag_map, has_flag, include_y, is_within, list_flags, max_y, min_y, notable_name, note_name, outline, outline_2d, shell,
     //   shell_inclusive, shift, with_corner, with_y_max, with_y_min, world
@@ -252,9 +305,9 @@ public class CommonRegistries {
     // Tag BASES are a separate axis - the '<player...' / '<server...' at the start of a tag.
     // A base being main-thread-only costs a hand-off only when the tag is WRITTEN that way; the same object
     // reached through a definition is governed by the object-type list above instead.
-    // @asyncbase mainThreadOnly: biome, chunk, cuboid, ellipsoid, enchantment, entity, inventory, item, plugin, polygon, trade, world, player, server, npc
+    // @asyncbase mainThreadOnly: biome, entity, inventory, item, plugin, world, player, server, npc
     // @asyncbase bareSafe: player, npc
-    // @asyncbase notMarked: location, material, and every core base (list, map, element, time, duration, queue, script, ...)
+    // @asyncbase notMarked: location, material, chunk, cuboid, ellipsoid, enchantment, polygon, trade, and every core base (list, map, element, time, duration, queue, script, ...)
     // ===================================================================================================
     // ASYNC COMMAND MAP - generated from AbstractCommand.asyncSafe / isAsyncSafe across core and plugin.
     // @asynccmd runsAsync: commands an async queue can run on its own thread. Anything not listed is handed to the main thread.
@@ -279,8 +332,7 @@ public class CommonRegistries {
         // Note 'material' is deliberately absent: building one is a lookup in the Material enum plus, for a block, a BlockData from the
         // static block registry - it never asks the server for anything. See the MaterialTag marking further down.
         // Note 'location' is deliberately absent - see below.
-        for (String objectBase : new String[] { "biome", "chunk", "cuboid", "ellipsoid", "enchantment", "entity", "inventory", "item",
-                "plugin", "polygon", "trade", "world" }) {
+        for (String objectBase : new String[] { "biome", "entity", "inventory", "item", "plugin", "world" }) {
             TagManager.markMainThreadOnly(objectBase, FLAG_TAGS);
         }
         // The 'location' base is not marked at all, which is different from the bases above having exceptions: the base itself is free,
@@ -298,7 +350,7 @@ public class CommonRegistries {
         // through a definition. Anything added to the list from here on is free both ways or neither.
         // Listing them here is only safe because building the PlayerTag itself is now safe: PlayerTag.valueOfInternal resolves a UUID
         // string with no server call at all, and a name through the concurrent playerNames map. See it for what it used to do instead.
-        TagManager.markMainThreadOnly("player", withFlagTags(PLAYER_ASYNC_SAFE_TAGS));
+        TagManager.markMainThreadOnly("player", withFlagTags(withInheritedTags(PlayerTag.class, PLAYER_ASYNC_SAFE_TAGS, ENTITY_ASYNC_SAFE_TAGS)));
         // "<player>" on its own hands back the queue's own linked player and never touches Bukkit, so it needn't cost a hand-off.
         // Note the parameterized form is fine off-thread now too - it is only the sub-tags outside the exception list that still cost anything.
         TagManager.markBareBaseAsyncSafe("player");
@@ -307,13 +359,13 @@ public class CommonRegistries {
         TagManager.markMainThreadOnly("server", withFlagTags(SERVER_STATIC_DATA_TAGS));
         if (Depends.citizens != null) {
             // NPC flags live in a Citizens trait, so unlike players even those have to be read on the main thread.
-            TagManager.markMainThreadOnly("npc");
+            TagManager.markMainThreadOnly("npc", withInheritedTags(NPCTag.class, NPC_ASYNC_SAFE_TAGS, ENTITY_ASYNC_SAFE_TAGS));
             TagManager.markBareBaseAsyncSafe("npc");
         }
         // The same types again, but marked on the object type rather than the tag base.
         // This is what covers an object reaching a tag without going through its own base, eg "<[my_entity].flag[x]>" or "<context.entity.location>".
         // InventoryTag is what is left in it: an inventory is a window onto live contents, and every tag on it reads through that window.
-        TagManager.markObjectTypeMainThreadOnly(InventoryTag.class);
+        TagManager.markObjectTypeMainThreadOnly(InventoryTag.class, "id_type", "inventory_type", "note_name");
         // PluginTag is deliberately not marked at all, the way BiomeTag below is not. All seven of its tags - name, version, description,
         // authors, depends, soft_depends, commands - read the PluginDescriptionFile, which is parsed out of plugin.yml when the plugin loads
         // and never touched again. Its flags are no exception: they redirect into the server flag map (a RedirectionFlagTracker over
@@ -434,19 +486,7 @@ public class CommonRegistries {
         // Nothing else can be freed, and that is structural rather than a matter of effort: an EntityTag holds the live entity, and
         // getBukkitEntity re-fetches it through Bukkit.getEntity when the reference has gone stale. Flags are no exception - an entity keeps
         // them in its PDC, whose backing map is a plain HashMap belonging to CraftBukkit, where a resize can hide an entry that is present.
-        TagManager.markObjectTypeMainThreadOnly(EntityTag.class,
-                "type", "entity_type", "uuid", "script", "translated_name", "is_living", "is_mob", "is_monster", "is_enemy", "is_projectile",
-                "is_spawned", "vanilla_tags", "eid", "name", "time_lived", "fall_distance", "fire_time", "on_fire", "is_on_ground", "on_ground",
-                "visual_pose", "glowing", "force_no_persist", "is_persistent", "persistent", "remove_when_far", "can_pickup_items", "is_npc",
-                "absorption_health", "oxygen", "max_oxygen", "gliding", "swimming", "is_sleeping", "is_hand_raised", "eye_height", "is_empty",
-                "empty", "has_passenger", "passenger", "get_passenger", "passengers", "get_passengers", "vehicle", "get_vehicle",
-                "is_inside_vehicle", "inside_vehicle", "is_leashed", "leashed", "leash_holder", "get_leash_holder", "shooter", "get_shooter",
-                "target", "killer", "last_damage", "location", "eye_location", "standing_on", "velocity", "world", "body_yaw",
-                "fallingblock_material", "experience", "fuse_ticks", "dragon_phase", "is_in_block", "pickup_delay", "pickupdelay", "breeding",
-                "is_breeding", "can_breed", "tameable", "is_tameable", "ageable", "is_ageable", "colorable", "is_colorable", "is_trading",
-                "trading_with", "fish_hook_state", "fish_hook_lure_time", "fish_hook_min_lure_time", "fish_hook_max_lure_time",
-                "fish_hook_hooked_entity", "fish_hook_apply_lure", "fish_hook_in_open_water", "attack_cooldown_duration",
-                "attack_cooldown_max_duration", "attack_cooldown_percent", "skin_layers", "is_disguised", "disguised_type", "disguise_to_others");
+        TagManager.markObjectTypeMainThreadOnly(EntityTag.class, ENTITY_ASYNC_SAFE_TAGS);
         // ChunkTag was read tag by tag, all 23 of them, and they fall into three groups.
         // Free because they never leave the tag object: 'x', 'z', 'xz' and 'world' hand back stored fields; 'simple' formats those plus the
         // stored world name; 'add' and 'sub' are arithmetic on the stored coordinates and hand back a new ChunkTag; 'cuboid' asks the world for
@@ -493,7 +533,8 @@ public class CommonRegistries {
                 "rotate_around_x", "rotate_around_y", "rotate_around_z", "points_around_x", "points_around_y", "points_around_z", "relative",
                 "random_offset", "simplex_3d", "vector_to_face", "center", "rotate_yaw", "rotate_pitch", "to_cuboid", "to_ellipsoid", "face", "xyz",
                 "normalize", "vector_length", "vector_length_squared", "to_axis_angle_quaternion", "quaternion_between_vectors", "format",
-                "formatted", "raw", "note_name", "notable_name", "areas", "cuboids", "ellipsoids", "polygons");
+                "formatted", "raw", "note_name", "notable_name", "areas", "cuboids", "ellipsoids", "polygons",
+                "material", "block_facing", "with_facing_direction", "tree_distance", "other_block");
         // Note: no flag exception for entities and the rest - only player flags have thread-safe storage, everything else keeps its flags in live Bukkit data.
         // Two more get through here. 'uuid' is a stored field on the tag object and touches nothing at all - PlayerTag is only ever a UUID.
         // 'is_online' had to be earned: every route to it (PlayerTag.isOnline, CraftPlayer.isOnline, CraftOfflinePlayer.isOnline) ends at
@@ -525,9 +566,9 @@ public class CommonRegistries {
         //   line count that its lines haven't caught up with. See Sidebar. The deprecated '<player.sidebar.lines>' family stays behind.
         // Left main-thread-only among the rest: 'money'/'formatted_money'/'chat_prefix'/'chat_suffix'/'groups'/'in_group'/'has_permission'
         // all go out to Vault and a third-party plugin.
-        TagManager.markObjectTypeMainThreadOnly(PlayerTag.class, withFlagTags(PLAYER_ASYNC_SAFE_TAGS));
+        TagManager.markObjectTypeMainThreadOnly(PlayerTag.class, withFlagTags(withInheritedTags(PlayerTag.class, PLAYER_ASYNC_SAFE_TAGS, ENTITY_ASYNC_SAFE_TAGS)));
         if (Depends.citizens != null) {
-            TagManager.markObjectTypeMainThreadOnly(NPCTag.class);
+            TagManager.markObjectTypeMainThreadOnly(NPCTag.class, withInheritedTags(NPCTag.class, NPC_ASYNC_SAFE_TAGS, ENTITY_ASYNC_SAFE_TAGS));
         }
     }
 

@@ -689,6 +689,11 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         return entity instanceof Player && !isNPC();
     }
 
+    private boolean hasSkinLayers() {
+        Entity bukkitEntity = getBukkitEntity();
+        return bukkitEntity instanceof Player || bukkitEntity instanceof Mannequin;
+    }
+
     public <T extends Entity> T as(Class<T> entityClass) {
         return (T) getBukkitEntity();
     }
@@ -2510,12 +2515,16 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // @returns ListTag
         // @mechanism EntityTag.skin_layers
         // @description
-        // Returns the skin layers currently visible on a player-type entity.
+        // Returns the skin layers currently visible on a player-type entity or a mannequin.
         // Output is a list of values from the set of:
         // CAPE, HAT, JACKET, LEFT_PANTS, LEFT_SLEEVE, RIGHT_PANTS, or RIGHT_SLEEVE.
         // -->
         registerSpawnedOnlyTag(ListTag.class, "skin_layers", (attribute, object) -> {
-            byte flags = NMSHandler.playerHelper.getSkinLayers((Player) object.getBukkitEntity());
+            if (!object.hasSkinLayers()) {
+                attribute.echoError("Entity '" + object.debuggable() + "' is not a player or a mannequin, so it has no skin layers.");
+                return null;
+            }
+            byte flags = NMSHandler.playerHelper.getSkinLayers(object.getBukkitEntity());
             ListTag result = new ListTag();
             for (PlayerHelper.SkinLayer layer : PlayerHelper.SkinLayer.values()) {
                 if ((flags & layer.flag) != 0) {
@@ -4068,13 +4077,17 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
         // @name skin_layers
         // @input ListTag
         // @description
-        // Sets the visible skin layers on a player-type entity (PlayerTag or player-type NPCTag).
+        // Sets the visible skin layers on a player-type entity (PlayerTag or player-type NPCTag) or a mannequin.
         // Input is a list of values from the set of:
         // CAPE, HAT, JACKET, LEFT_PANTS, LEFT_SLEEVE, RIGHT_PANTS, RIGHT_SLEEVE, or "ALL"
         // @tags
         // <EntityTag.skin_layers>
         // -->
         if (mechanism.matches("skin_layers")) {
+            if (!hasSkinLayers()) {
+                mechanism.echoError("Entity '" + debuggable() + "' is not a player or a mannequin, so it has no skin layers.");
+                return;
+            }
             int flags = 0;
             for (String str : mechanism.valueAsType(ListTag.class)) {
                 String upper = str.toUpperCase();
@@ -4086,7 +4099,7 @@ public class EntityTag implements ObjectTag, Adjustable, EntityFormObject, Flagg
                     flags |= layer.flag;
                 }
             }
-            NMSHandler.playerHelper.setSkinLayers((Player) getBukkitEntity(), (byte) flags);
+            NMSHandler.playerHelper.setSkinLayers(getBukkitEntity(), (byte) flags);
         }
 
         // <--[mechanism]

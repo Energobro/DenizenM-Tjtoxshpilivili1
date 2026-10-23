@@ -24,6 +24,7 @@ public class PlayerReceivesPacketScriptEvent extends BukkitScriptEvent {
     // @Cancellable true
     //
     // @Switch class:<classname-matcher> to only process the event when the packet class name matches a given classname matcher.
+    // @Switch thread:network to run the path right away on the thread that sends the packet, instead of handing it to the main thread. See <@link language Network Thread Events>.
     //
     // @Warning This event will fire extremely rapidly. Use with caution.
     //
@@ -38,7 +39,7 @@ public class PlayerReceivesPacketScriptEvent extends BukkitScriptEvent {
     public PlayerReceivesPacketScriptEvent() {
         instance = this;
         registerCouldMatcher("player receives packet");
-        registerSwitches("class");
+        registerSwitches("class", "thread");
     }
 
     public static PlayerReceivesPacketScriptEvent instance;
@@ -49,6 +50,9 @@ public class PlayerReceivesPacketScriptEvent extends BukkitScriptEvent {
 
     @Override
     public boolean matches(ScriptPath path) {
+        if (!threadMatches(path)) {
+            return false;
+        }
         if (!runGenericSwitchCheck(path, "class", className.asString())) {
             return false;
         }
@@ -59,6 +63,7 @@ public class PlayerReceivesPacketScriptEvent extends BukkitScriptEvent {
     public void init() {
         NetworkInterceptHelper.enable();
         super.init();
+        buildThreadSplit();
     }
 
     @Override
@@ -76,9 +81,10 @@ public class PlayerReceivesPacketScriptEvent extends BukkitScriptEvent {
     }
 
     public static boolean fireFor(Player player, Object packet) {
-        instance.player = new PlayerTag(player);
-        instance.className = new ElementTag(DebugInternals.getClassNameOpti(packet.getClass()));
-        instance.packet = packet;
-        return instance.fire().cancelled;
+        PlayerReceivesPacketScriptEvent event = (PlayerReceivesPacketScriptEvent) instance.clone();
+        event.player = new PlayerTag(player);
+        event.className = new ElementTag(DebugInternals.getClassNameOpti(packet.getClass()));
+        event.packet = packet;
+        return event.fire().cancelled;
     }
 }

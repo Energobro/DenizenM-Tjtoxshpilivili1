@@ -33,7 +33,9 @@ package com.denizenscript.denizen.nms.abstracts;
  *
  */
 
+import com.denizenscript.denizen.objects.LocationTag;
 import com.denizenscript.denizen.utilities.Settings;
+import com.denizenscript.denizen.utilities.world.WorldListChangeTracker;
 import com.denizenscript.denizencore.DenizenCore;
 import com.denizenscript.denizencore.utilities.CoreConfiguration;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
@@ -48,6 +50,10 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.util.Vector;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -97,7 +103,7 @@ public abstract class ImprovedOfflinePlayer {
                     if (CoreConfiguration.debugVerbose) {
                         Debug.verboseLog("[Verbose] async-saving player data for " + player);
                     }
-                    DenizenCore.runAsync(() -> saveInternal(tag));
+                    DenizenCore.runAsync(() -> saveGuarded(tag));
                 }
             }, Settings.worldPlayerDataSaveDelay));
         }
@@ -106,7 +112,9 @@ public abstract class ImprovedOfflinePlayer {
 
     public ImprovedOfflinePlayer(UUID playeruuid) {
         timeLastLoaded = DenizenCore.currentTimeMonotonicMillis;
-        this.exists = loadPlayerData(playeruuid);
+        synchronized (fileLock) {
+            this.exists = loadPlayerData(playeruuid);
+        }
     }
 
     private void modifyAbilities(UnaryOperator<CompoundBinaryTag> editor) {
@@ -131,6 +139,13 @@ public abstract class ImprovedOfflinePlayer {
     public abstract Inventory getEnderChest();
 
     public abstract void setEnderChest(Inventory inventory);
+
+    public LocationTag getLocationTag() {
+        ListBinaryTag position = this.compound.getList("Pos");
+        ListBinaryTag rotation = this.compound.getList("Rotation");
+        String worldName = WorldListChangeTracker.nameOf(new UUID(this.compound.getLong("WorldUUIDMost"), this.compound.getLong("WorldUUIDLeast")));
+        return new LocationTag(worldName, position.getDouble(0), position.getDouble(1), position.getDouble(2), rotation.getFloat(0), rotation.getFloat(1));
+    }
 
     public Location getLocation() {
         ListBinaryTag position = this.compound.getList("Pos");
@@ -183,7 +198,40 @@ public abstract class ImprovedOfflinePlayer {
     public void saveToFile() {
         if (exists && modified) {
             modified = false;
-            saveInternal(compound);
+            saveGuarded(compound);
+        }
+    }
+
+    private static final Object fileLock = new Object();
+
+    public void saveGuarded(CompoundBinaryTag tag) {
+        synchronized (fileLock) {
+            saveInternal(tag);
+        }
+    }
+
+    protected void replaceFile(File temp, File target) throws IOException {
+        for (int attempt = 0; ; attempt++) {
+            try {
+                Files.move(temp.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE);
+                return;
+            }
+            catch (AtomicMoveNotSupportedException ex) {
+                Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                return;
+            }
+            catch (IOException ex) {
+                if (attempt >= 5) {
+                    throw ex;
+                }
+                try {
+                    Thread.sleep(2);
+                }
+                catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw ex;
+                }
+            }
         }
     }
 

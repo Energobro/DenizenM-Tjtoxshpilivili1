@@ -356,39 +356,22 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
     }
 
     public BlockData getBlockDataForTag(Attribute attribute) {
-        NMSHandler.chunkHelper.changeChunkServerThread(getWorld());
-        try {
-            if (getWorld() == null) {
-                attribute.echoError("LocationTag trying to read block, but cannot because no world is specified.");
-                return null;
-            }
-            if (!isChunkLoaded()) {
-                attribute.echoError("LocationTag trying to read block, but cannot because the chunk is unloaded. Use the 'chunkload' command to ensure the chunk is loaded.");
-                return null;
-            }
-            return super.getBlock().getBlockData();
+        World world = getWorld();
+        if (world == null) {
+            attribute.echoError("LocationTag trying to read block, but cannot because no world is specified.");
+            return null;
         }
-        finally {
-            NMSHandler.chunkHelper.restoreServerThread(getWorld());
+        BlockData data = NMSHandler.blockHelper.getBlockDataIfLoaded(world, getBlockX(), getBlockY(), getBlockZ());
+        if (data == null) {
+            attribute.echoError("LocationTag trying to read block, but cannot because the chunk is unloaded. Use the 'chunkload' command to ensure the chunk is loaded.");
+            return null;
         }
+        return data;
     }
 
     public Material getBlockTypeForTag(Attribute attribute) {
-        NMSHandler.chunkHelper.changeChunkServerThread(getWorld());
-        try {
-            if (getWorld() == null) {
-                attribute.echoError("LocationTag trying to read block, but cannot because no world is specified.");
-                return null;
-            }
-            if (!isChunkLoaded()) {
-                attribute.echoError("LocationTag trying to read block, but cannot because the chunk is unloaded. Use the 'chunkload' command to ensure the chunk is loaded.");
-                return null;
-            }
-            return super.getBlock().getType();
-        }
-        finally {
-            NMSHandler.chunkHelper.restoreServerThread(getWorld());
-        }
+        BlockData data = getBlockDataForTag(attribute);
+        return data == null ? null : data.getMaterial();
     }
 
     public static BlockState getBlockStateSafe(Block block) {
@@ -885,6 +868,9 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // -->
         tagProcessor.registerTag(LocationTag.class, "block_facing", (attribute, object) -> {
             BlockData block = object.getBlockDataForTag(attribute);
+            if (block == null) {
+                return null;
+            }
             MaterialTag material = new MaterialTag(block);
             if (!MaterialDirectional.describes(material)) {
                 return null;
@@ -907,6 +893,9 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // -->
         tagProcessor.registerTag(LocationTag.class, "with_facing_direction", (attribute, object) -> {
             BlockData block = object.getBlockDataForTag(attribute);
+            if (block == null) {
+                return null;
+            }
             MaterialTag material = new MaterialTag(block);
             if (!MaterialDirectional.describes(material)) {
                 return null;
@@ -3792,7 +3781,11 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // -->
         tagProcessor.registerTag(ElementTag.class, "tree_distance", (attribute, object) -> {
             BukkitImplDeprecations.locationDistanceTag.warn(attribute.context);
-            MaterialTag material = new MaterialTag(object.getBlockDataForTag(attribute));
+            BlockData block = object.getBlockDataForTag(attribute);
+            if (block == null) {
+                return null;
+            }
+            MaterialTag material = new MaterialTag(block);
             if (MaterialDistance.describes(material)) {
                 return new ElementTag(MaterialDistance.getFrom(material).getDistance());
             }
@@ -3954,7 +3947,11 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // -->
         tagProcessor.registerTag(LocationTag.class, "attached_to", (attribute, object) -> {
             BlockFace face = BlockFace.SELF;
-            MaterialTag material = new MaterialTag(object.getBlockDataForTag(attribute));
+            BlockData block = object.getBlockDataForTag(attribute);
+            if (block == null) {
+                return null;
+            }
+            MaterialTag material = new MaterialTag(block);
             if (material.getMaterial() == Material.TORCH || material.getMaterial() == Material.REDSTONE_TORCH || material.getMaterial() == Material.SOUL_TORCH) {
                 face = BlockFace.DOWN;
             }
@@ -3989,6 +3986,9 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // -->
         tagProcessor.registerTag(LocationTag.class, "other_block", (attribute, object) -> {
             BlockData b = object.getBlockDataForTag(attribute);
+            if (b == null) {
+                return null;
+            }
             MaterialTag material = new MaterialTag(b);
             if (MaterialHalf.describes(material)) {
                 Vector vec = MaterialHalf.getFrom(material).getRelativeBlockVector();

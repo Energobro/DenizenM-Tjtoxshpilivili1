@@ -21,20 +21,24 @@ import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.BaseSpawner;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.SpawnData;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.PushReaction;
 import org.bukkit.Instrument;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.block.Skull;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.craftbukkit.CraftChunk;
 import org.bukkit.craftbukkit.CraftRegistry;
 import org.bukkit.craftbukkit.CraftWorld;
@@ -42,9 +46,10 @@ import org.bukkit.craftbukkit.block.CraftBlock;
 import org.bukkit.craftbukkit.block.CraftBlockEntityState;
 import org.bukkit.craftbukkit.block.CraftCreatureSpawner;
 import org.bukkit.craftbukkit.block.CraftSkull;
+import org.bukkit.craftbukkit.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.entity.CraftEntity;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.util.CraftMagicNumbers;
-import org.bukkit.craftbukkit.entity.CraftEntity;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
@@ -73,6 +78,20 @@ public class BlockHelperImpl implements BlockHelper {
         catch (Throwable e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public BlockData getBlockDataIfLoaded(World world, int x, int y, int z) {
+        ServerLevel level = ((CraftWorld) world).getHandle();
+        LevelChunk chunk = level.getChunkIfLoaded(x >> 4, z >> 4);
+        if (chunk == null) {
+            return null;
+        }
+        BlockPos pos = new BlockPos(x, y, z);
+        if (!level.isInValidBounds(pos)) {
+            return CraftBlockData.fromData(Blocks.VOID_AIR.defaultBlockState());
+        }
+        return CraftBlockData.fromData(chunk.getBlockState(pos));
     }
 
     @Override

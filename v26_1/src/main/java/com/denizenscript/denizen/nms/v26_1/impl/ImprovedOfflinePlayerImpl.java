@@ -35,6 +35,7 @@ import org.bukkit.inventory.InventoryHolder;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -159,10 +160,15 @@ public class ImprovedOfflinePlayerImpl extends ImprovedOfflinePlayer {
 
     @Override
     public void saveInternal(CompoundBinaryTag compound) {
+        File temp = new File(this.file.getParentFile(), this.file.getName() + ".denizen-tmp");
         try {
-            NbtIo.writeCompressed(NBTAdapter.toNMS(compound), new FileOutputStream(this.file));
+            try (FileOutputStream stream = new FileOutputStream(temp)) {
+                NbtIo.writeCompressed(NBTAdapter.toNMS(compound), stream);
+            }
+            replaceFile(temp, this.file);
         }
         catch (Exception e) {
+            temp.delete();
             Debug.echoError(e);
         }
     }
