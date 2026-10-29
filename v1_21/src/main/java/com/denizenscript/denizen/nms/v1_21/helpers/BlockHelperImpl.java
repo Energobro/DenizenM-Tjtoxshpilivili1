@@ -30,6 +30,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.PushReaction;
+import net.minecraft.world.phys.AABB;
 import org.bukkit.Instrument;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -50,9 +51,12 @@ import org.bukkit.craftbukkit.v1_21_R7.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_21_R7.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_21_R7.util.CraftLocation;
 import org.bukkit.craftbukkit.v1_21_R7.util.CraftMagicNumbers;
+import org.bukkit.util.BoundingBox;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class BlockHelperImpl implements BlockHelper {
@@ -81,6 +85,24 @@ public class BlockHelperImpl implements BlockHelper {
             return CraftBlockData.fromData(Blocks.VOID_AIR.defaultBlockState());
         }
         return CraftBlockData.fromData(chunk.getBlockState(pos));
+    }
+
+    @Override
+    public List<BoundingBox> getCollisionBoxesIfLoaded(World world, int x, int y, int z) {
+        ServerLevel level = ((CraftWorld) world).getHandle();
+        LevelChunk chunk = level.getChunkIfLoaded(x >> 4, z >> 4);
+        if (chunk == null) {
+            return null;
+        }
+        BlockPos pos = new BlockPos(x, y, z);
+        List<BoundingBox> boxes = new ArrayList<>();
+        if (!level.isInValidBounds(pos)) {
+            return boxes;
+        }
+        for (AABB box : chunk.getBlockState(pos).getCollisionShape(chunk, pos).toAabbs()) {
+            boxes.add(new BoundingBox(box.minX + x, box.minY + y, box.minZ + z, box.maxX + x, box.maxY + y, box.maxZ + z));
+        }
+        return boxes;
     }
 
     @Override

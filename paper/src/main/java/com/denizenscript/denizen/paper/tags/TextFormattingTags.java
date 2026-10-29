@@ -417,20 +417,26 @@ public class TextFormattingTags {
         // @description
         // Returns a chat code that displays a texture atlas sprite in text, as the vanilla 'atlas_sprite' object component (requires Minecraft 1.21.9+).
         // Give just a sprite key to use the default "minecraft:blocks" atlas, or "<atlas>:<sprite>" to name the atlas as well.
+        // The atlas is always written with its namespace ("minecraft:items"), and the sprite may carry its own namespace after it,
+        // so "minecraft:items:mypack:item/ruby" is the sprite "mypack:item/ruby" in the "minecraft:items" atlas.
         // Note that this is a magic Denizen tool - refer to <@link language Denizen Text Formatting>.
         // @example
         // - narrate "<&sprite[block/stone]>that's stone"
         // @example
         // - narrate "<&sprite[minecraft:items:item/apple]>that's an apple"
+        // @example
+        // - narrate "<&sprite[minecraft:items:mypack:item/ruby]>that's a ruby from a resource pack"
         // -->
         TagManager.registerStaticTagBaseHandler(ElementTag.class, ElementTag.class, "&sprite", (attribute, spriteElement) -> {
             String input = spriteElement.asString();
             String atlas = SpriteObjectContents.DEFAULT_ATLAS.asString();
             String sprite = input;
-            int lastColon = input.lastIndexOf(':');
-            if (lastColon != -1 && input.indexOf(':') != lastColon) {
-                atlas = input.substring(0, lastColon);
-                sprite = input.substring(lastColon + 1);
+            int firstColon = input.indexOf(':');
+            int secondColon = firstColon == -1 ? -1 : input.indexOf(':', firstColon + 1);
+            if (secondColon != -1) {
+                int split = input.indexOf(':', secondColon + 1) == -1 ? input.lastIndexOf(':') : secondColon;
+                atlas = input.substring(0, split);
+                sprite = input.substring(split + 1);
             }
             return new ElementTag(FormattedTextHelper.LEGACY_SECTION + "[sprite=" + FormattedTextHelper.escape(atlas) + "|" + FormattedTextHelper.escape(sprite) + "]", true);
         });

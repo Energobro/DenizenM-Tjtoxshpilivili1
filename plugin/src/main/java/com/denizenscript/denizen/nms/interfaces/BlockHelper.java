@@ -7,7 +7,9 @@ import org.bukkit.*;
 import org.bukkit.block.*;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.BoundingBox;
 
+import java.util.List;
 import java.util.Set;
 
 public interface BlockHelper {
@@ -90,6 +92,8 @@ public interface BlockHelper {
     }
 
     public abstract BlockData getBlockDataIfLoaded(World world, int x, int y, int z);
+
+    public abstract List<BoundingBox> getCollisionBoxesIfLoaded(World world, int x, int y, int z);
 
     default Color getMapColor(Block block) { // TODO: once 1.20 is the minimum supported version, remove from NMS
         return block.getBlockData().getMapColor();

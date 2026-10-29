@@ -1089,7 +1089,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // Consider using <@link tag LocationTag.round_down> instead.
         // -->
         tagProcessor.registerTag(LocationTag.class, "block", (attribute, object) -> {
-            return new LocationTag(object.getWorld(), object.getBlockX(), object.getBlockY(), object.getBlockZ());
+            return new LocationTag(object.getBlockX(), object.getBlockY(), object.getBlockZ(), object.getWorldName());
         });
 
         // <--[tag]
@@ -1218,6 +1218,38 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
                 return null;
             }
             return new ElementTag(block.isPassable());
+        });
+
+        // <--[tag]
+        // @attribute <LocationTag.collision_boxes>
+        // @returns ListTag
+        // @group world
+        // @description
+        // Returns the collision boxes of the block at the location, each in the format "<low>|<high>", the same as <@link tag EntityTag.bounding_box>.
+        // The boxes are in world coordinates. Most blocks have one box, some have several (like stairs),
+        // and blocks that can be walked through (like air, flowers, or an open fence gate) have none.
+        // Blocks whose collision depends on what touches them (like scaffolding or powder snow) return the shape they have on their own.
+        // -->
+        tagProcessor.registerTag(ListTag.class, "collision_boxes", (attribute, object) -> {
+            World world = object.getWorld();
+            if (world == null) {
+                attribute.echoError("LocationTag trying to read block, but cannot because no world is specified.");
+                return null;
+            }
+            List<BoundingBox> boxes = NMSHandler.blockHelper.getCollisionBoxesIfLoaded(world, object.getBlockX(), object.getBlockY(), object.getBlockZ());
+            if (boxes == null) {
+                attribute.echoError("LocationTag trying to read block, but cannot because the chunk is unloaded. Use the 'chunkload' command to ensure the chunk is loaded.");
+                return null;
+            }
+            String worldName = object.getWorldName();
+            ListTag result = new ListTag();
+            for (BoundingBox box : boxes) {
+                ListTag pair = new ListTag();
+                pair.addObject(new LocationTag(box.getMinX(), box.getMinY(), box.getMinZ(), worldName));
+                pair.addObject(new LocationTag(box.getMaxX(), box.getMaxY(), box.getMaxZ(), worldName));
+                result.addObject(pair);
+            }
+            return result;
         });
 
         // <--[tag]

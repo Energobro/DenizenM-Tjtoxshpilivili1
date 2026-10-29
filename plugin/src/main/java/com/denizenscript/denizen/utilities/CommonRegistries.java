@@ -147,7 +147,7 @@ public class CommonRegistries {
             "type", "entity_type", "uuid", "script", "translated_name", "is_living", "is_mob", "is_monster", "is_enemy", "is_projectile",
             "is_spawned", "vanilla_tags", "eid", "name", "time_lived", "fall_distance", "fire_time", "on_fire", "is_on_ground", "on_ground",
             "visual_pose", "glowing", "force_no_persist", "is_persistent", "persistent", "remove_when_far", "can_pickup_items", "is_npc",
-            "absorption_health", "oxygen", "max_oxygen", "gliding", "swimming", "is_sleeping", "is_hand_raised", "eye_height", "is_empty", "empty",
+            "absorption_health", "oxygen", "max_oxygen", "gliding", "swimming", "is_sneaking", "is_sleeping", "is_hand_raised", "eye_height", "is_empty", "empty",
             "has_passenger", "passenger", "get_passenger", "passengers", "get_passengers", "vehicle", "get_vehicle", "is_inside_vehicle",
             "inside_vehicle", "is_leashed", "leashed", "leash_holder", "get_leash_holder", "shooter", "get_shooter", "target", "killer",
             "last_damage", "location", "eye_location", "bounding_box", "standing_on", "velocity", "world", "body_yaw", "fallingblock_material",
@@ -241,7 +241,7 @@ public class CommonRegistries {
     //   placed_material, potion_base, potion_base_type, potion_effect, potion_effects, qty, quantity, raw_nbt, repair_cost, repairable, script,
     //   sign_back_contents, sign_contents, simple, skin, skull_skin, spawner_count, spawner_max_nearby_entities, spawner_maximum_spawn_delay,
     //   spawner_minimum_spawn_delay, spawner_player_range, spawner_range, spawner_spawn_delay, spawner_type, trim, unbreakable, with_flag
-    // @asyncsave LocationTag: above, add, areas, backward, backward_flat, below, block_facing, center, chunk, cuboids, distance, distance_squared,
+    // @asyncsave LocationTag: above, add, areas, backward, backward_flat, below, block_facing, center, chunk, collision_boxes, cuboids, distance, distance_squared,
     //   div, down, ellipsoids, face, format, formatted, forward, forward_flat, get_chunk, left, material, mul, normalize, notable_name, note_name,
     //   other_block, pitch, points_around_x, points_around_y, points_around_z, points_between, polygons, quaternion_between_vectors, random_offset,
     //   raw, relative, right, rotate_around_x, rotate_around_y, rotate_around_z, rotate_pitch, rotate_yaw, round, round_down, round_to,
@@ -531,10 +531,10 @@ public class CommonRegistries {
                 "round_to_precision", "with_x", "with_y", "with_z", "with_yaw", "with_pitch", "add", "sub", "mul", "div", "chunk", "get_chunk",
                 "world", "above", "below", "forward", "forward_flat", "backward", "backward_flat", "left", "right", "up", "down", "points_between",
                 "rotate_around_x", "rotate_around_y", "rotate_around_z", "points_around_x", "points_around_y", "points_around_z", "relative",
-                "random_offset", "simplex_3d", "vector_to_face", "center", "rotate_yaw", "rotate_pitch", "to_cuboid", "to_ellipsoid", "face", "xyz",
+                "random_offset", "simplex_3d", "vector_to_face", "center", "block", "rotate_yaw", "rotate_pitch", "to_cuboid", "to_ellipsoid", "face", "xyz",
                 "normalize", "vector_length", "vector_length_squared", "to_axis_angle_quaternion", "quaternion_between_vectors", "format",
                 "formatted", "raw", "note_name", "notable_name", "areas", "cuboids", "ellipsoids", "polygons",
-                "material", "block_facing", "with_facing_direction", "tree_distance", "other_block");
+                "material", "collision_boxes", "block_facing", "with_facing_direction", "tree_distance", "other_block");
         // Note: no flag exception for entities and the rest - only player flags have thread-safe storage, everything else keeps its flags in live Bukkit data.
         // Two more get through here. 'uuid' is a stored field on the tag object and touches nothing at all - PlayerTag is only ever a UUID.
         // 'is_online' had to be earned: every route to it (PlayerTag.isOnline, CraftPlayer.isOnline, CraftOfflinePlayer.isOnline) ends at
