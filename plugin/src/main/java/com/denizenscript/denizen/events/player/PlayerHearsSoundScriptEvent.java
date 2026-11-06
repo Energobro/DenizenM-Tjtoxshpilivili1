@@ -10,6 +10,8 @@ import com.denizenscript.denizencore.events.ScriptEvent;
 import com.denizenscript.denizencore.objects.ObjectTag;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.scripts.ScriptEntryData;
+import com.denizenscript.denizencore.utilities.debugging.Debug;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Registry;
 import org.bukkit.entity.Entity;
@@ -31,6 +33,7 @@ public class PlayerHearsSoundScriptEvent extends BukkitScriptEvent implements Li
     // @Location true
     //
     // @Switch key:<sound_key> to only process the event if the sound matches the modern Minecraft sound key.
+    // @Switch thread:network to run the path right away on the thread that sends the sound, without waiting for the main thread. A sound played from an entity still goes to the main thread, as finding the entity requires it. See <@link language Network Thread Events>.
     //
     // @Context
     // <context.sound_key> returns an ElementTag of the modern Minecraft sound key.
@@ -49,7 +52,7 @@ public class PlayerHearsSoundScriptEvent extends BukkitScriptEvent implements Li
     public PlayerHearsSoundScriptEvent() {
         instance = this;
         registerCouldMatcher("player hears sound");
-        registerSwitches("key");
+        registerSwitches("key", "thread");
     }
 
     public static PlayerHearsSoundScriptEvent instance;
@@ -64,6 +67,9 @@ public class PlayerHearsSoundScriptEvent extends BukkitScriptEvent implements Li
 
     @Override
     public boolean matches(ScriptPath path) {
+        if (!threadMatches(path)) {
+            return false;
+        }
         if (!runInCheck(path, location)) {
             return false;
         }
@@ -82,6 +88,7 @@ public class PlayerHearsSoundScriptEvent extends BukkitScriptEvent implements Li
     public void init() {
         NetworkInterceptHelper.enable();
         super.init();
+        buildThreadSplit();
     }
 
     @Override
@@ -108,6 +115,24 @@ public class PlayerHearsSoundScriptEvent extends BukkitScriptEvent implements Li
     }
 
     public boolean run(Player player, String soundName, String category, boolean isCustom, Entity entity, Location location, float volume, float pitch) {
+        ThreadSplit split = threadSplit;
+        if (split != null && !Bukkit.isPrimaryThread()) {
+            PlayerHearsSoundScriptEvent copy = (PlayerHearsSoundScriptEvent) clone();
+            copy.fill(player, soundName, category, isCustom, entity, location, volume, pitch);
+            try {
+                return copy.fireSplitAndWait(split).cancelled;
+            }
+            catch (Throwable ex) {
+                Debug.echoError(ex);
+                return false;
+            }
+        }
+        fill(player, soundName, category, isCustom, entity, location, volume, pitch);
+        ScriptEvent fired = fire();
+        return fired.cancelled;
+    }
+
+    public void fill(Player player, String soundName, String category, boolean isCustom, Entity entity, Location location, float volume, float pitch) {
         this.player = player;
         this.soundName = soundName;
         this.category = category;
@@ -116,7 +141,5 @@ public class PlayerHearsSoundScriptEvent extends BukkitScriptEvent implements Li
         this.location = location == null ? entity.getLocation() : location;
         this.volume = volume;
         this.pitch = pitch;
-        ScriptEvent fired = fire();
-        return fired.cancelled;
     }
 }

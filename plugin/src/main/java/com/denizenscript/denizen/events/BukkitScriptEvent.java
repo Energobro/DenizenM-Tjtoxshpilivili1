@@ -11,6 +11,7 @@ import com.denizenscript.denizen.utilities.NotedAreaTracker;
 import com.denizenscript.denizen.utilities.Utilities;
 import com.denizenscript.denizen.utilities.implementation.BukkitScriptEntryData;
 import com.denizenscript.denizen.utilities.inventory.SlotHelper;
+import com.denizenscript.denizencore.DenizenCore;
 import com.denizenscript.denizencore.events.ScriptEvent;
 import com.denizenscript.denizencore.flags.AbstractFlagTracker;
 import com.denizenscript.denizencore.flags.FlaggableObject;
@@ -604,7 +605,8 @@ public abstract class BukkitScriptEvent extends ScriptEvent {
     // Packet events fire on the server's network thread, and normally their script paths are handed over to the main thread to run on the next tick.
     // A path with the switch "thread:network" runs right away on the network thread instead, so it costs the main thread nothing,
     // and 'determine cancelled' really stops the packet.
-    // Only the packet events support this switch. A path without it keeps running on the main thread, as before.
+    // Only the packet events, 'player receives message', 'player receives actionbar' and 'player hears sound' support this switch. A path without it keeps running on the main thread, as before.
+    // On those last three, a thread that sends the packet still waits for any paths without the switch, so their determinations apply. With only network paths, it does not wait at all.
     // 'player receives packet' fires on whichever thread is sending the packet. That is usually the main thread already, and there the path runs as usual;
     // the switch only changes packets sent from other threads, which would otherwise wait for the next tick.
     //
@@ -668,6 +670,15 @@ public abstract class BukkitScriptEvent extends ScriptEvent {
         }
         copy.perFireContext = null;
         return copy;
+    }
+
+    public BukkitScriptEvent fireSplitAndWait(ThreadSplit split) {
+        BukkitScriptEvent[] result = new BukkitScriptEvent[] {fireNetworkPaths(split)};
+        if (split.hasMainPaths()) {
+            result[0].threadPass = THREAD_PASS_MAIN;
+            DenizenCore.runOnMainThreadAndWait(() -> result[0] = (BukkitScriptEvent) result[0].fire());
+        }
+        return result[0];
     }
 
     @Override

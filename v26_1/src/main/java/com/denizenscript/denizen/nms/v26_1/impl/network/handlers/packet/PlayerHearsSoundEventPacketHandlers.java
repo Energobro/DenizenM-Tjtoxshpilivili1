@@ -22,11 +22,7 @@ public class PlayerHearsSoundEventPacketHandlers {
         if (!PlayerHearsSoundScriptEvent.instance.eventData.isEnabled) {
             return packet;
         }
-        if (!DenizenCore.isMainThread()) {
-            // A packet handler runs on whichever thread sent the packet, and 'playsound targets:...' is async-safe now, so that can be a script's own thread.
-            // Below this line the handler fires ordinary scripts through a shared event instance, and for the entity form resolves the sound's
-            // source through the live world - neither belongs off the main thread, so the whole thing goes over and this side waits.
-            // The wait only ever happens on a server that actually handles this event - without one loaded, the check above returns first.
+        if (!DenizenCore.isMainThread() && (PlayerHearsSoundScriptEvent.instance.threadSplit == null || !(packet instanceof ClientboundSoundPacket))) {
             Packet<ClientGamePacketListener>[] result = new Packet[] {packet};
             try {
                 DenizenCore.runOnMainThreadAndWait(() -> result[0] = processSoundPacket(networkManager, packet));

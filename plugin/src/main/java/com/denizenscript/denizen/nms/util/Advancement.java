@@ -21,6 +21,7 @@ public class Advancement {
 
     public float xOffset;
     public float yOffset;
+    public boolean explicitPosition;
 
     public int length;
 

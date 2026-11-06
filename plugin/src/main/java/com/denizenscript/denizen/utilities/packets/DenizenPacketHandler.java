@@ -8,7 +8,6 @@ import com.denizenscript.denizen.nms.interfaces.packets.PacketOutChat;
 import com.denizenscript.denizen.objects.EntityTag;
 import com.denizenscript.denizen.objects.PlayerTag;
 import com.denizenscript.denizen.scripts.commands.server.ExecuteCommand;
-import com.denizenscript.denizencore.DenizenCore;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import org.bukkit.Bukkit;
@@ -16,8 +15,6 @@ import org.bukkit.entity.Player;
 
 import java.util.HashSet;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.FutureTask;
 
 public class DenizenPacketHandler {
 
@@ -111,23 +108,8 @@ public class DenizenPacketHandler {
         }
         final PlayerReceivesMessageScriptEvent event = chat.isActionbar() ? PlayerReceivesActionbarScriptEvent.instance : PlayerReceivesMessageScriptEvent.instance;
         if (event.loaded) {
-            Callable<PlayerReceivesMessageScriptEvent> eventCall = () -> {
-                event.reset();
-                event.message = new ElementTag(chat.getMessage(), true);
-                event.rawJson = new ElementTag(chat.getRawJson(), true);
-                event.system = new ElementTag(chat.isSystem());
-                event.player = PlayerTag.mirrorBukkitPlayer(player);
-                return event.triggerNow();
-            };
             try {
-                if (DenizenCore.isMainThread()) {
-                    return eventCall.call();
-                }
-                else {
-                    FutureTask<PlayerReceivesMessageScriptEvent> futureTask = new FutureTask<>(eventCall);
-                    Bukkit.getScheduler().runTask(Denizen.getInstance(), futureTask);
-                    return futureTask.get();
-                }
+                return event.fireFor(player, chat.getMessage(), chat.getRawJson(), chat.isSystem());
             }
             catch (Exception e) {
                 Debug.echoError(e);

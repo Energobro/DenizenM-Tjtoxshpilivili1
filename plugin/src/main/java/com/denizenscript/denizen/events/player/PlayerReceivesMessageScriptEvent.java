@@ -5,10 +5,12 @@ import com.denizenscript.denizen.objects.PlayerTag;
 import com.denizenscript.denizen.utilities.PaperAPITools;
 import com.denizenscript.denizen.utilities.implementation.BukkitScriptEntryData;
 import com.denizenscript.denizen.utilities.packets.NetworkInterceptHelper;
+import com.denizenscript.denizencore.DenizenCore;
 import com.denizenscript.denizencore.objects.ObjectTag;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.scripts.ScriptEntryData;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
+import org.bukkit.entity.Player;
 
 public class PlayerReceivesMessageScriptEvent extends BukkitScriptEvent {
 
@@ -22,7 +24,9 @@ public class PlayerReceivesMessageScriptEvent extends BukkitScriptEvent {
     //
     // @Cancellable true
     //
-    // @Warning Using this will forcibly sync the chat thread.
+    // @Warning Using this will forcibly sync the chat thread, unless every path uses the 'thread:network' switch.
+    //
+    // @Switch thread:network to run the path right away on the thread that sends the message, without waiting for the main thread. See <@link language Network Thread Events>.
     //
     // @Triggers when a player receives any chat message from the server. This does not normally include *player* chat, instead prefer <@link event player chats> for that.
     //
@@ -41,6 +45,7 @@ public class PlayerReceivesMessageScriptEvent extends BukkitScriptEvent {
 
     public PlayerReceivesMessageScriptEvent() {
         instance = this;
+        registerSwitches("thread");
     }
 
     public static PlayerReceivesMessageScriptEvent instance;
@@ -68,8 +73,17 @@ public class PlayerReceivesMessageScriptEvent extends BukkitScriptEvent {
     }
 
     @Override
+    public boolean matches(ScriptPath path) {
+        if (!threadMatches(path)) {
+            return false;
+        }
+        return super.matches(path);
+    }
+
+    @Override
     public void init() {
         NetworkInterceptHelper.enable();
+        buildThreadSplit();
         loaded = true;
     }
 
@@ -116,5 +130,29 @@ public class PlayerReceivesMessageScriptEvent extends BukkitScriptEvent {
 
     public PlayerReceivesMessageScriptEvent triggerNow() {
         return (PlayerReceivesMessageScriptEvent) fire();
+    }
+
+    public void fill(Player target, String text, String json, boolean isSystem) {
+        reset();
+        player = new PlayerTag(target);
+        message = new ElementTag(text, true);
+        rawJson = new ElementTag(json, true);
+        system = new ElementTag(isSystem);
+    }
+
+    public PlayerReceivesMessageScriptEvent fireFor(Player target, String text, String json, boolean isSystem) {
+        if (DenizenCore.isMainThread()) {
+            fill(target, text, json, isSystem);
+            return triggerNow();
+        }
+        ThreadSplit split = threadSplit;
+        if (split != null) {
+            PlayerReceivesMessageScriptEvent copy = (PlayerReceivesMessageScriptEvent) clone();
+            copy.fill(target, text, json, isSystem);
+            return (PlayerReceivesMessageScriptEvent) copy.fireSplitAndWait(split);
+        }
+        PlayerReceivesMessageScriptEvent[] result = new PlayerReceivesMessageScriptEvent[1];
+        DenizenCore.runOnMainThreadAndWait(() -> result[0] = fireFor(target, text, json, isSystem));
+        return result[0];
     }
 }

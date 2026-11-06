@@ -14,7 +14,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.event.EventHandler;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class ServerListPingScriptEventPaperImpl extends ListPingScriptEvent {
 
@@ -72,16 +71,16 @@ public class ServerListPingScriptEventPaperImpl extends ListPingScriptEvent {
 
         public static void excludeListedPlayers(PaperServerListPingEvent event, Set<UUID> exclude) {
             int size = event.getListedPlayers().size();
-            AtomicInteger counter = new AtomicInteger();
-            event.getListedPlayers().removeIf(listedPlayerInfo -> {
+            final int[] counter = new int[1];
+            event.getListedPlayers().removeIf(listedPlayerInfo -> { // TODO: This should probably be a normal loop not a lambda
                 if (exclude.contains(listedPlayerInfo.id())) {
-                    counter.incrementAndGet();
+                    counter[0]++;
                     return true;
                 }
                 return false;
             });
             if (size == event.getNumPlayers()) {
-                event.setNumPlayers(event.getNumPlayers() - counter.get());
+                event.setNumPlayers(event.getNumPlayers() - counter[0]);
             }
         }
     }

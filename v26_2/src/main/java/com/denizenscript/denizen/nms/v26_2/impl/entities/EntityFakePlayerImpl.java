@@ -24,7 +24,7 @@ public class EntityFakePlayerImpl extends ServerPlayer {
         try {
             Handler.ENTITY_BUKKITYENTITY.set(this, new CraftFakePlayerImpl((CraftServer) Bukkit.getServer(), this));
             net.minecraft.network.Connection networkManager = new FakeNetworkManagerImpl(PacketFlow.CLIENTBOUND);
-            connection = new FakePlayerConnectionImpl(minecraftserver, networkManager, this, new CommonListenerCookie(gameprofile, 0, clientInfo, false));
+            connection = new FakePlayerConnectionImpl(minecraftserver, networkManager, this, CommonListenerCookie.createInitial(gameprofile, false));
             DenizenNetworkManagerImpl.Connection_packetListener.set(networkManager, connection);
         }
         catch (Exception ex) {

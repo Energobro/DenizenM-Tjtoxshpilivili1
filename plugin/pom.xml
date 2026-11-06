@@ -12,7 +12,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <BUILD_NUMBER>b7312M</BUILD_NUMBER>
+        <BUILD_NUMBER>b7314M</BUILD_NUMBER>
         <BUILD_CLASS>DEV</BUILD_CLASS>
     </properties>
 
@@ -77,7 +77,7 @@
         <dependency>
             <groupId>me.clip</groupId>
             <artifactId>placeholderapi</artifactId>
-            <version>2.11.6</version>
+            <version>2.12.3</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

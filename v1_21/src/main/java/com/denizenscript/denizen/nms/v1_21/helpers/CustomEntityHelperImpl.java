@@ -11,7 +11,6 @@ import com.denizenscript.denizen.nms.v1_21.impl.entities.CraftFakePlayerImpl;
 import com.denizenscript.denizen.nms.v1_21.impl.entities.EntityFakeArrowImpl;
 import com.denizenscript.denizen.nms.v1_21.impl.entities.EntityFakePlayerImpl;
 import com.denizenscript.denizen.nms.v1_21.impl.entities.EntityItemProjectileImpl;
-import com.denizenscript.denizen.utilities.BukkitImplDeprecations;
 import com.denizenscript.denizencore.utilities.CoreUtilities;
 import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.mojang.authlib.GameProfile;
@@ -48,7 +47,6 @@ public class CustomEntityHelperImpl implements CustomEntityHelper {
     }
 
     public FakePlayer spawnFakePlayer(Location location, String name, String skin, String blob, boolean doAdd) throws IllegalArgumentException {
-        BukkitImplDeprecations.fakePlayer.warn();
         String fullName = name;
         String prefix = null;
         String suffix = null;
@@ -118,7 +116,7 @@ public class CustomEntityHelperImpl implements CustomEntityHelper {
         GameProfile gameProfile = ProfileEditorImpl.getGameProfile(playerProfile);
         final EntityFakePlayerImpl fakePlayer = new EntityFakePlayerImpl(worldServer.getServer(), worldServer, gameProfile, ClientInformation.createDefault(), doAdd);
 
-        fakePlayer.forceSetPositionRotation(location.getX(), location.getY(), location.getZ(),
+        fakePlayer.snapTo(location.getX(), location.getY(), location.getZ(),
                 location.getYaw(), location.getPitch());
         CraftFakePlayerImpl craftFakePlayer = fakePlayer.getBukkitEntity();
         craftFakePlayer.fullName = fullName;

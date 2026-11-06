@@ -14,6 +14,8 @@ public class PlayerReceivesActionbarScriptEvent extends PlayerReceivesMessageScr
     //
     // @Warning Triggering new actionbar messages in this event will cause it to re-fire.
     //
+    // @Switch thread:network to run the path right away on the thread that sends the actionbar, without waiting for the main thread. See <@link language Network Thread Events>.
+    //
     // @Triggers when a player receives any actionbar from the server.
     //
     // @Context

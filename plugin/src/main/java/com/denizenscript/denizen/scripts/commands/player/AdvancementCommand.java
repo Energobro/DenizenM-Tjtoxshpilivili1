@@ -59,7 +59,9 @@ public class AdvancementCommand extends AbstractCommand {
     // The toast argument sets whether the advancement should display a toast message when a player completes it. Default is true.
     // The announce argument sets whether the advancement should display a chat message to the server when a player completes it. Default is true.
     // The hidden argument sets whether the advancement should be hidden until it is completed.
-    // The x and y arguments are offsets based on the size of an advancement icon in the menu. They are required for custom tabs to look reasonable.
+    // The x and y arguments are positions in the advancements menu, measured in advancement icons.
+    // If either is given, the advancement stays exactly there, with the other defaulting to 0.
+    // If neither is given, the game lays the advancement out automatically, and the order of advancements that share a parent can change between server restarts.
     //
     // When creating an advancement, optionally specify 'progress_length' to make it require multiple parts.
     // When granting an advancement, optionally specify 'progress_length' to only grant partial progress.
@@ -185,6 +187,9 @@ public class AdvancementCommand extends AbstractCommand {
         scriptEntry.defaultObject("toast", new ElementTag(true));
         scriptEntry.defaultObject("announce", new ElementTag(true));
         scriptEntry.defaultObject("hidden", new ElementTag(false));
+        if (scriptEntry.hasObject("x") || scriptEntry.hasObject("y")) {
+            scriptEntry.addObject("explicit_position", new ElementTag(true));
+        }
         scriptEntry.defaultObject("x", new ElementTag(0f));
         scriptEntry.defaultObject("y", new ElementTag(0f));
     }
@@ -240,6 +245,7 @@ public class AdvancementCommand extends AbstractCommand {
                     icon.getItemStack(), title.asString(), description.asString(),
                     backgroundKey, Advancement.Frame.valueOf(frame.asString().toUpperCase()),
                     toast.asBoolean(), announce.asBoolean(), hidden.asBoolean(), x.asFloat(), y.asFloat(), progressLength == null ? 1 : progressLength.asInt());
+            advancement.explicitPosition = scriptEntry.hasObject("explicit_position");
             NMSHandler.advancementHelper.register(advancement);
             customRegistered.put(key, advancement);
             return;

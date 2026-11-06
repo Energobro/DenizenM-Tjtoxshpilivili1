@@ -30,6 +30,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundUpdateTagsPacket;
 import net.minecraft.network.protocol.game.*;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -214,6 +216,9 @@ public class PlayerHelperImpl extends PlayerHelper {
         fake.triggerSpawnPacket = (player) -> {
             ServerPlayer nmsPlayer = ((CraftPlayer) player.getPlayerEntity()).getHandle();
             ServerGamePacketListenerImpl conn = nmsPlayer.connection;
+            if (nmsEntity instanceof ServerPlayer fakePlayer) {
+                conn.send(new ClientboundPlayerInfoUpdatePacket(EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER), List.of(fakePlayer)));
+            }
             final ServerEntity tracker = new ServerEntity(world.getHandle(), nmsEntity, 1, true, new FakeEntitySynchronizer(conn), Set.of(conn));
             tracker.addPairing(nmsPlayer);
             final TrackerData data = new TrackerData(player, tracker);
@@ -255,6 +260,9 @@ public class PlayerHelperImpl extends PlayerHelper {
             for (TrackerData tracker : trackers) {
                 if (tracker.player.isOnline()) {
                     tracker.tracker.removePairing(((CraftPlayer) tracker.player.getPlayerEntity()).getHandle());
+                    if (nmsEntity instanceof ServerPlayer) {
+                        ((CraftPlayer) tracker.player.getPlayerEntity()).getHandle().connection.send(new ClientboundPlayerInfoRemovePacket(List.of(nmsEntity.getUUID())));
+                    }
                 }
             }
             trackers.clear();

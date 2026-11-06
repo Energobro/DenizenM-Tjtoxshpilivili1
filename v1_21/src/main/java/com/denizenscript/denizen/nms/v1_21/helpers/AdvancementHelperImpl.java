@@ -27,6 +27,18 @@ public class AdvancementHelperImpl extends AdvancementHelper {
     private static final Map<String, Criterion<?>> IMPOSSIBLE_CRITERIA = Map.of(IMPOSSIBLE_KEY, new Criterion<>(new ImpossibleTrigger(), new ImpossibleTrigger.TriggerInstance()));
     private static final List<List<String>> IMPOSSIBLE_REQUIREMENTS = List.of(List.of(IMPOSSIBLE_KEY));
 
+    private static final Map<Identifier, float[]> explicitPositions = new HashMap<>();
+
+    private static void applyExplicitPositions(AdvancementNode node) {
+        float[] position = explicitPositions.get(node.holder().id());
+        if (position != null) {
+            node.holder().value().display().ifPresent(display -> display.setLocation(position[0], position[1]));
+        }
+        for (AdvancementNode child : node.children()) {
+            applyExplicitPositions(child);
+        }
+    }
+
     public static ServerAdvancementManager getNMSAdvancementManager() {
         return ((CraftServer) Bukkit.getServer()).getServer().getAdvancements();
     }
@@ -37,6 +49,12 @@ public class AdvancementHelperImpl extends AdvancementHelper {
             return;
         }
         AdvancementHolder nmsAdvancementHolder = asNMSCopy(advancement);
+        if (advancement.explicitPosition) {
+            explicitPositions.put(nmsAdvancementHolder.id(), new float[] {advancement.xOffset, advancement.yOffset});
+        }
+        else {
+            explicitPositions.remove(nmsAdvancementHolder.id());
+        }
         Map<Identifier, AdvancementHolder> nmsAdvancements = getNMSAdvancementManager().advancements;
         ImmutableMap.Builder<Identifier, AdvancementHolder> mapBuilder = ImmutableMap.builderWithExpectedSize(nmsAdvancements.size() + 1);
         mapBuilder.putAll(nmsAdvancements);
@@ -51,6 +69,7 @@ public class AdvancementHelperImpl extends AdvancementHelper {
             AdvancementNode root = node.root();
             if (root.holder().value().display().isPresent()) {
                 TreeNodePosition.run(root);
+                applyExplicitPositions(root);
             }
         }
         advancement.registered = true;
@@ -65,6 +84,7 @@ public class AdvancementHelperImpl extends AdvancementHelper {
             return;
         }
         Identifier nmsKey = CraftNamespacedKey.toMinecraft(advancement.key);
+        explicitPositions.remove(nmsKey);
         Map<Identifier, AdvancementHolder> nmsAdvancements = getNMSAdvancementManager().advancements;
         ImmutableMap.Builder<Identifier, AdvancementHolder> mapBuilder = ImmutableMap.builderWithExpectedSize(nmsAdvancements.size() - 1);
         for (Map.Entry<Identifier, AdvancementHolder> entry : nmsAdvancements.entrySet()) {
