@@ -534,7 +534,7 @@ public class CommonRegistries {
                 "random_offset", "simplex_3d", "vector_to_face", "center", "block", "rotate_yaw", "rotate_pitch", "to_cuboid", "to_ellipsoid", "face", "xyz",
                 "normalize", "vector_length", "vector_length_squared", "to_axis_angle_quaternion", "quaternion_between_vectors", "format",
                 "formatted", "raw", "note_name", "notable_name", "areas", "cuboids", "ellipsoids", "polygons",
-                "material", "collision_boxes", "block_facing", "with_facing_direction", "tree_distance", "other_block");
+                "material", "collision_boxes", "block_facing", "with_facing_direction", "tree_distance", "other_block", "find_blocks");
         // Note: no flag exception for entities and the rest - only player flags have thread-safe storage, everything else keeps its flags in live Bukkit data.
         // Two more get through here. 'uuid' is a stored field on the tag object and touches nothing at all - PlayerTag is only ever a UUID.
         // 'is_online' had to be earned: every route to it (PlayerTag.isOnline, CraftPlayer.isOnline, CraftOfflinePlayer.isOnline) ends at

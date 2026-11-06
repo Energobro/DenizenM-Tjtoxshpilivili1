@@ -17,6 +17,7 @@ import com.denizenscript.denizen.utilities.flags.DataPersistenceFlagTracker;
 import com.denizenscript.denizen.utilities.flags.LocationFlagSearchHelper;
 import com.denizenscript.denizen.utilities.world.PathFinder;
 import com.denizenscript.denizen.utilities.world.WorldListChangeTracker;
+import com.denizenscript.denizencore.DenizenCore;
 import com.denizenscript.denizencore.flags.AbstractFlagTracker;
 import com.denizenscript.denizencore.flags.FlaggableObject;
 import com.denizenscript.denizencore.objects.*;
@@ -100,6 +101,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
     public String backupWorld;
     public int trackedWorldChange;
     public WeakReference<World> internalWorld;
+    private BlockData prefetchedBlock;
 
     public String getWorldName() {
         if (backupWorld != null) {
@@ -1160,7 +1162,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // -->
         tagProcessor.registerTag(LocationTag.class, "highest", (attribute, object) -> {
             Location result = object.getHighestBlockForTag(attribute);
-            return new LocationTag(result);
+            return result == null ? null : new LocationTag(result);
         });
 
         // <--[tag]
@@ -1225,7 +1227,8 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         // @returns ListTag
         // @group world
         // @description
-        // Returns the collision boxes of the block at the location, each in the format "<low>|<high>", the same as <@link tag EntityTag.bounding_box>.
+        // Returns the collision boxes of the block at the location as a flat list of corners: each box is two entries, its low corner then its high corner.
+        // So a block with one box gives "<low>|<high>", the same as <@link tag EntityTag.bounding_box>, and a block with two gives "<low1>|<high1>|<low2>|<high2>".
         // The boxes are in world coordinates. Most blocks have one box, some have several (like stairs),
         // and blocks that can be walked through (like air, flowers, or an open fence gate) have none.
         // Blocks whose collision depends on what touches them (like scaffolding or powder snow) return the shape they have on their own.
@@ -1244,10 +1247,8 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
             String worldName = object.getWorldName();
             ListTag result = new ListTag();
             for (BoundingBox box : boxes) {
-                ListTag pair = new ListTag();
-                pair.addObject(new LocationTag(box.getMinX(), box.getMinY(), box.getMinZ(), worldName));
-                pair.addObject(new LocationTag(box.getMaxX(), box.getMaxY(), box.getMaxZ(), worldName));
-                result.addObject(pair);
+                result.addObject(new LocationTag(box.getMinX(), box.getMinY(), box.getMinZ(), worldName));
+                result.addObject(new LocationTag(box.getMaxX(), box.getMaxY(), box.getMaxZ(), worldName));
             }
             return result;
         });
@@ -2781,34 +2782,18 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
             }
             double radius = attribute.getDoubleContext(2);
             attribute.fulfill(1);
-            ListTag found = new ListTag();
-            int max = Settings.blockTagsMaxBlocks();
-            int index = 0;
-            Location tstart = object.getBlockLocation();
-            double tstartY = tstart.getY();
-            int radiusInt = (int) Math.ceil(radius);
-            fullloop:
-            for (int y = -radiusInt; y <= radiusInt; y++) {
-                double newY = y + tstartY;
-                if (!Utilities.isLocationYSafe(newY, object.getWorld())) {
-                    continue;
-                }
-                for (int x = -radiusInt; x <= radiusInt; x++) {
-                    for (int z = -radiusInt; z <= radiusInt; z++) {
-                        index++;
-                        if (index > max) {
-                            break fullloop;
-                        }
-                        if (Utilities.checkLocation(object, tstart.clone().add(x + 0.5, y + 0.5, z + 0.5), radius)) {
-                            if (matcher == null || new LocationTag(tstart.clone().add(x, y, z)).tryAdvancedMatcher(matcher, attribute.context)) {
-                                found.addObject(new LocationTag(tstart.clone().add(x, y, z)));
-                            }
-                        }
-                    }
+            if (DenizenCore.isMainThread()) {
+                return findBlocks(object, matcher, radius, attribute.context, false);
+            }
+            if (matcher == null || !matcherReadsLiveLocation(matcher)) {
+                ListTag found = findBlocks(object, matcher, radius, attribute.context, true);
+                if (found != null) {
+                    return found;
                 }
             }
-            found.objectForms.sort((loc1, loc2) -> object.compare((LocationTag) loc1, (LocationTag) loc2));
-            return found;
+            ListTag[] result = new ListTag[1];
+            DenizenCore.runOnMainThreadAndWait(() -> result[0] = findBlocks(object, matcher, radius, attribute.context, false));
+            return result[0];
         });
 
         // <--[tag]
@@ -5900,6 +5885,57 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
                 .replace(prefix + "z", formatNum.apply(getZ()));
     }
 
+    private static boolean matcherReadsLiveLocation(String matcher) {
+        String lowered = CoreUtilities.toLowerCase(matcher);
+        return lowered.contains("block_flagged:") || lowered.contains("location_in:");
+    }
+
+    private static ListTag findBlocks(LocationTag object, String matcher, double radius, TagContext context, boolean offThread) {
+        World world = object.getWorld();
+        if (offThread && world == null) {
+            return null;
+        }
+        ListTag found = new ListTag();
+        int max = Settings.blockTagsMaxBlocks();
+        int index = 0;
+        Location tstart = object.getBlockLocation();
+        double tstartY = tstart.getY();
+        int radiusInt = (int) Math.ceil(radius);
+        fullloop:
+        for (int y = -radiusInt; y <= radiusInt; y++) {
+            double newY = y + tstartY;
+            if (!Utilities.isLocationYSafe(newY, world)) {
+                continue;
+            }
+            for (int x = -radiusInt; x <= radiusInt; x++) {
+                for (int z = -radiusInt; z <= radiusInt; z++) {
+                    index++;
+                    if (index > max) {
+                        break fullloop;
+                    }
+                    if (Utilities.checkLocation(object, tstart.clone().add(x + 0.5, y + 0.5, z + 0.5), radius)) {
+                        if (matcher != null) {
+                            LocationTag candidate = new LocationTag(tstart.clone().add(x, y, z));
+                            if (offThread) {
+                                BlockData data = NMSHandler.blockHelper.getBlockDataIfLoaded(world, candidate.getBlockX(), candidate.getBlockY(), candidate.getBlockZ());
+                                if (data == null) {
+                                    return null;
+                                }
+                                candidate.prefetchedBlock = data;
+                            }
+                            if (!candidate.tryAdvancedMatcher(matcher, context)) {
+                                continue;
+                            }
+                        }
+                        found.addObject(new LocationTag(tstart.clone().add(x, y, z)));
+                    }
+                }
+            }
+        }
+        found.objectForms.sort((loc1, loc2) -> object.compare((LocationTag) loc1, (LocationTag) loc2));
+        return found;
+    }
+
     @Override
     public boolean advancedMatches(String matcher, TagContext context) {
         String matcherLow = CoreUtilities.toLowerCase(matcher);
@@ -5920,6 +5956,7 @@ public class LocationTag extends org.bukkit.Location implements VectorObject, Ob
         if (getY() < getWorld().getMinHeight() || getY() >= getWorld().getMaxHeight()) {
             return false;
         }
-        return new MaterialTag(getBlock()).advancedMatches(matcher, context);
+        BlockData data = prefetchedBlock;
+        return (data != null ? new MaterialTag(data) : new MaterialTag(getBlock())).advancedMatches(matcher, context);
     }
 }
